@@ -11,6 +11,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
     [CustomEditor(typeof(MixedRealityInputSimulationProfile))]
     public class MixedRealityInputSimulationProfileInspector : BaseMixedRealityToolkitConfigurationProfileInspector
     {
+        private SerializedProperty doublePressTime;
+
         private SerializedProperty isCameraControlEnabled;
 
         private SerializedProperty extraMouseSensitivityScale;
@@ -65,6 +67,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
         protected override void OnEnable()
         {
             base.OnEnable();
+
+            doublePressTime = serializedObject.FindProperty("doublePressTime");
 
             isCameraControlEnabled = serializedObject.FindProperty("isCameraControlEnabled");
 
@@ -123,6 +127,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             using (new GUIEnabledWrapper(!IsProfileLock((BaseMixedRealityProfile)target)))
             {
+                EditorGUILayout.PropertyField(doublePressTime);
+
                 EditorGUILayout.PropertyField(isCameraControlEnabled);
                 {
                     EditorGUILayout.BeginVertical("Label");

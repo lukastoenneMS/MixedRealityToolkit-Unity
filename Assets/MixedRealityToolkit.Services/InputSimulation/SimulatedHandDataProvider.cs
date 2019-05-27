@@ -156,14 +156,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private SimulatedHandState HandStateLeft;
         private SimulatedHandState HandStateRight;
 
+        // Most recent time hand control was enabled,
+        private float lastSimulationLeft = -1.0e6f;
+        private float lastSimulationRight = -1.0e6f;
         // If true then hands are controlled by user input
         private bool isSimulatingLeft = false;
         private bool isSimulatingRight = false;
         // Last frame's mouse position for computing delta
         private Vector3? lastMousePosition = null;
         // Last timestamp when hands were tracked
-        private long lastSimulatedTimestampLeft = 0;
-        private long lastSimulatedTimestampRight = 0;
+        private long lastHandTrackedTimestampLeft = 0;
+        private long lastHandTrackedTimestampRight = 0;
         // Cached delegates for hand joint generation
         private SimulatedHandData.HandJointDataGenerator generatorLeft;
         private SimulatedHandData.HandJointDataGenerator generatorRight;
@@ -216,6 +219,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// </summary>
         private void SimulateUserInput()
         {
+            float time = Time.time;
+
             if (UnityEngine.Input.GetKeyDown(profile.ToggleLeftHandKey))
             {
                 IsAlwaysVisibleLeft = !IsAlwaysVisibleLeft;
@@ -228,6 +233,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
             if (UnityEngine.Input.GetKeyDown(profile.LeftHandManipulationKey))
             {
                 isSimulatingLeft = true;
+                if (lastSimulationLeft > 0.0f && time - lastSimulationLeft <= profile.DoublePressTime)
+                {
+                    IsAlwaysVisibleLeft = !IsAlwaysVisibleLeft;
+                }
+                lastSimulationLeft = time;
             }
             if (UnityEngine.Input.GetKeyUp(profile.LeftHandManipulationKey))
             {
@@ -237,6 +247,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
             if (UnityEngine.Input.GetKeyDown(profile.RightHandManipulationKey))
             {
                 isSimulatingRight = true;
+                if (lastSimulationRight > 0.0f && time - lastSimulationRight <= profile.DoublePressTime)
+                {
+                    IsAlwaysVisibleRight = !IsAlwaysVisibleRight;
+                }
+                lastSimulationRight = time;
             }
             if (UnityEngine.Input.GetKeyUp(profile.RightHandManipulationKey))
             {
@@ -272,8 +287,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 rotationDeltaEulerAngles.z = -rotationDelta;
             }
 
-            SimulateHandInput(ref lastSimulatedTimestampLeft, HandStateLeft, isSimulatingLeft, IsAlwaysVisibleLeft, mouseDelta, rotationDeltaEulerAngles);
-            SimulateHandInput(ref lastSimulatedTimestampRight, HandStateRight, isSimulatingRight, IsAlwaysVisibleRight, mouseDelta, rotationDeltaEulerAngles);
+            SimulateHandInput(ref lastHandTrackedTimestampLeft, HandStateLeft, isSimulatingLeft, IsAlwaysVisibleLeft, mouseDelta, rotationDeltaEulerAngles);
+            SimulateHandInput(ref lastHandTrackedTimestampRight, HandStateRight, isSimulatingRight, IsAlwaysVisibleRight, mouseDelta, rotationDeltaEulerAngles);
 
             float gestureAnimDelta = profile.HandGestureAnimationSpeed * Time.deltaTime;
             HandStateLeft.GestureBlending += gestureAnimDelta;
@@ -284,7 +299,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         /// Apply changes to one hand and update tracking
         private void SimulateHandInput(
-            ref long lastSimulatedTimestamp,
+            ref long lastHandTrackedTimestamp,
             SimulatedHandState state,
             bool isSimulating,
             bool isAlwaysVisible,
@@ -323,11 +338,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
             if (enableTracking)
             {
                 state.IsTracked = true;
-                lastSimulatedTimestamp = currentTime.Ticks;
+                lastHandTrackedTimestamp = currentTime.Ticks;
             }
             else
             {
-                float timeSinceTracking = (float)currentTime.Subtract(new DateTime(lastSimulatedTimestamp)).TotalSeconds;
+                float timeSinceTracking = (float)currentTime.Subtract(new DateTime(lastHandTrackedTimestamp)).TotalSeconds;
                 if (timeSinceTracking > profile.HandHideTimeout)
                 {
                     state.IsTracked = false;

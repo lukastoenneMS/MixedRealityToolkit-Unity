@@ -10,6 +10,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
     [MixedRealityServiceProfile(typeof(IInputSimulationService))]
     public class MixedRealityInputSimulationProfile : BaseMixedRealityProfile
     {
+        [SerializeField]
+        [Tooltip("Maximum time interval for double press")]
+        private float doublePressTime = 0.4f;
+        public float DoublePressTime => doublePressTime;
+
         [Header("Camera Control")]
         [SerializeField]
         [Tooltip("Enable manual camera control")]
