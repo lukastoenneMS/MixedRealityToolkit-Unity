@@ -1103,11 +1103,14 @@ Shader "Mixed Reality Toolkit/Standard"
 #endif
 
 #if defined(_EMISSION)
-#if defined(_CHANNEL_MAP)
-                output.rgb += _EmissiveColor * channel.b;
-#else
-                output.rgb += _EmissiveColor;
+                fixed4 emission = _EmissiveColor;
+#if defined(_VERTEX_COLORS)
+                emission *= i.color;
 #endif
+#if defined(_CHANNEL_MAP)
+                emission *= channel.b;
+#endif
+                output.rgb += emission;
 #endif
 
                 // Inner glow.
