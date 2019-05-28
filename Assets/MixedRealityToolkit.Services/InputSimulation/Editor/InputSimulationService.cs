@@ -21,8 +21,16 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private ManualCameraControl cameraControl = null;
         private SimulatedHandDataProvider handDataProvider = null;
 
-        public readonly SimulatedHandData HandDataLeft = new SimulatedHandData();
-        public readonly SimulatedHandData HandDataRight = new SimulatedHandData();
+        private readonly SimulatedHandData handDataLeft = new SimulatedHandData();
+        private readonly SimulatedHandData handDataRight = new SimulatedHandData();
+        public SimulatedHandData HandDataLeft => handDataLeft;
+        public SimulatedHandData HandDataRight => handDataRight;
+
+        public bool IsSimulatingHandLeft => (handDataProvider != null ? handDataProvider.IsSimulatingLeft : false);
+        public bool IsSimulatingHandRight => (handDataProvider != null ? handDataProvider.IsSimulatingRight : false);
+
+        public bool IsAlwaysVisibleHandLeft => (handDataProvider != null ? handDataProvider.IsAlwaysVisibleLeft : false);
+        public bool IsAlwaysVisibleHandRight => (handDataProvider != null ? handDataProvider.IsAlwaysVisibleRight : false);
 
         /// <summary>
         /// If true then keyboard and mouse input are used to simulate hands.
@@ -43,6 +51,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// Timestamp of the last hand device update
         /// </summary>
         private long lastHandUpdateTimestamp = 0;
+
+        /// <summary>
+        /// Indicators to show input simulation state in the viewport.
+        /// </summary>
+        private GameObject indicators = null;
 
         #region BaseInputDeviceManager Implementation
 
@@ -68,11 +81,19 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// <inheritdoc />
         public override void Enable()
         {
+            var profile = InputSimulationProfile;
+
+            if (indicators == null && profile.IndicatorsPrefab)
+            {
+                indicators = GameObject.Instantiate(profile.IndicatorsPrefab);
+            }
         }
 
         /// <inheritdoc />
         public override void Disable()
         {
+            GameObject.Destroy(indicators);
+
             DisableCameraControl();
             DisableHandSimulation();
         }
@@ -112,7 +133,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
                     if (UserInputEnabled)
                     {
-                        handDataProvider.UpdateHandData(HandDataLeft, HandDataRight);
+                        handDataProvider.UpdateHandData(handDataLeft, handDataRight);
                     }
                     break;
             }
@@ -132,13 +153,13 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 // TODO implement custom hand device update frequency here, use 1000/fps instead of 0
                 if (msSinceLastHandUpdate > 0)
                 {
-                    if (HandDataLeft.Timestamp > lastHandUpdateTimestamp)
+                    if (handDataLeft.Timestamp > lastHandUpdateTimestamp)
                     {
-                        UpdateHandInputSource(Handedness.Left, HandDataLeft);
+                        UpdateHandInputSource(Handedness.Left, handDataLeft);
                     }
-                    if (HandDataRight.Timestamp > lastHandUpdateTimestamp)
+                    if (handDataRight.Timestamp > lastHandUpdateTimestamp)
                     {
-                        UpdateHandInputSource(Handedness.Right, HandDataRight);
+                        UpdateHandInputSource(Handedness.Right, handDataRight);
                     }
 
                     lastHandUpdateTimestamp = currentTime.Ticks;

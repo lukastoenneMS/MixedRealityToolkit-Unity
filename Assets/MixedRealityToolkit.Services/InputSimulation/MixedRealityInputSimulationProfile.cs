@@ -11,6 +11,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
     public class MixedRealityInputSimulationProfile : BaseMixedRealityProfile
     {
         [SerializeField]
+        [Tooltip("Indicator buttons to show input simulation state in the viewport")]
+        private GameObject indicatorsPrefab = null;
+        public GameObject IndicatorsPrefab => indicatorsPrefab;
+
+        [SerializeField]
         [Tooltip("Maximum time interval for double press")]
         private float doublePressTime = 0.4f;
         public float DoublePressTime => doublePressTime;

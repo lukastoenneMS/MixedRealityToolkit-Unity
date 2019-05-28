@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: DefaultMixedRealityInputSimulationProfile
   m_EditorClassIdentifier: 
   isCustomProfile: 0
+  indicatorsPrefab: {fileID: 88827165642526427, guid: 3c85e74c0577a084dae6342829f59931,
+    type: 3}
+  doublePressTime: 0.4
   isCameraControlEnabled: 1
   extraMouseSensitivityScale: 3
   defaultMouseSensitivity: 0.1

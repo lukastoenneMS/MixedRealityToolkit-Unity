@@ -9,5 +9,14 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// Typed representation of the ConfigurationProfile property.
         /// </summary>
         MixedRealityInputSimulationProfile InputSimulationProfile { get; }
+
+        SimulatedHandData HandDataLeft { get; }
+        SimulatedHandData HandDataRight { get; }
+
+        bool IsSimulatingHandLeft { get; }
+        bool IsSimulatingHandRight { get; }
+
+        bool IsAlwaysVisibleHandLeft { get; }
+        bool IsAlwaysVisibleHandRight { get; }
     }
 }

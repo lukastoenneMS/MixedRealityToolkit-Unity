@@ -162,6 +162,15 @@ namespace Microsoft.MixedReality.Toolkit.Input
         // If true then hands are controlled by user input
         private bool isSimulatingLeft = false;
         private bool isSimulatingRight = false;
+        /// <summary>
+        /// Left hand is controlled by user input.
+        /// </summary>
+        public bool IsSimulatingLeft => isSimulatingLeft;
+        /// <summary>
+        /// Right hand is controlled by user input.
+        /// </summary>
+        public bool IsSimulatingRight => isSimulatingRight;
+
         // Last frame's mouse position for computing delta
         private Vector3? lastMousePosition = null;
         // Last timestamp when hands were tracked
