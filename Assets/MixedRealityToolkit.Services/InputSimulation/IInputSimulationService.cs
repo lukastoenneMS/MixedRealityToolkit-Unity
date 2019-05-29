@@ -16,7 +16,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         bool IsSimulatingHandLeft { get; }
         bool IsSimulatingHandRight { get; }
 
-        bool IsAlwaysVisibleHandLeft { get; }
-        bool IsAlwaysVisibleHandRight { get; }
+        bool IsAlwaysVisibleHandLeft { get; set; }
+        bool IsAlwaysVisibleHandRight { get; set; }
     }
 }

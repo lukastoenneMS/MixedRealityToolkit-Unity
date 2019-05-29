@@ -29,8 +29,34 @@ namespace Microsoft.MixedReality.Toolkit.Input
         public bool IsSimulatingHandLeft => (handDataProvider != null ? handDataProvider.IsSimulatingLeft : false);
         public bool IsSimulatingHandRight => (handDataProvider != null ? handDataProvider.IsSimulatingRight : false);
 
-        public bool IsAlwaysVisibleHandLeft => (handDataProvider != null ? handDataProvider.IsAlwaysVisibleLeft : false);
-        public bool IsAlwaysVisibleHandRight => (handDataProvider != null ? handDataProvider.IsAlwaysVisibleRight : false);
+        public bool IsAlwaysVisibleHandLeft
+        {
+            get
+            {
+                return handDataProvider != null ? handDataProvider.IsAlwaysVisibleLeft : false;
+            }
+            set
+            {
+                if (handDataProvider != null)
+                {
+                    handDataProvider.IsAlwaysVisibleLeft = value;
+                }
+            }
+        }
+        public bool IsAlwaysVisibleHandRight
+        {
+            get
+            {
+                return handDataProvider != null ? handDataProvider.IsAlwaysVisibleRight : false;
+            }
+            set
+            {
+                if (handDataProvider != null)
+                {
+                    handDataProvider.IsAlwaysVisibleRight = value;
+                }
+            }
+        }
 
         /// <summary>
         /// If true then keyboard and mouse input are used to simulate hands.
