@@ -671,11 +671,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 3e7a5b0af2918884cb578aa933e3db81, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 3e7a5b0af2918884cb578aa933e3db81, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.075
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 3e7a5b0af2918884cb578aa933e3db81, type: 3}
       propertyPath: m_LocalPosition.z
@@ -699,7 +699,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 3e7a5b0af2918884cb578aa933e3db81, type: 3}
       propertyPath: m_RootOrder
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 3e7a5b0af2918884cb578aa933e3db81, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -860,7 +860,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 876083169}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.075, z: 0}
   m_LocalScale: {x: 20, y: 1, z: 20}
   m_Children: []
   m_Father: {fileID: 1347760528}
@@ -1706,6 +1706,7 @@ MonoBehaviour:
   - {fileID: 5354078483297974481, guid: 552c0d17b262bd547b833235ae5f4137, type: 3}
   Menu: {fileID: 1114572647}
   StagePlacement: {fileID: 705300879}
+  StageCollider: {fileID: 876083171}
   SnappingDistance: 0.2
   SnappingAngle: 20
   SnapAnimation:

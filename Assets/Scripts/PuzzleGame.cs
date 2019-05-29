@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace Parsley
 
         public GameObject Menu = null;
         public GameObject StagePlacement = null;
+        public Collider StageCollider = null;
 
         [Header("Snapping")]
         public float SnappingDistance = 0.2f;
@@ -138,11 +140,13 @@ namespace Parsley
         private void EnableStagePlacement()
         {
             StagePlacement.SetActive(true);
+            StageCollider.enabled = false;
         }
 
         private void DisableStagePlacement()
         {
             StagePlacement.SetActive(false);
+            StageCollider.enabled = true;
         }
 
         private void OpenPuzzleSelectionMenu()
@@ -166,6 +170,12 @@ namespace Parsley
             if (!StagePlacement)
             {
                 Debug.LogError("PuzzleGame needs a valid stage placement object");
+                enabled = false;
+                return;
+            }
+            if (!StageCollider)
+            {
+                Debug.LogError("PuzzleGame needs a valid stage collider");
                 enabled = false;
                 return;
             }
