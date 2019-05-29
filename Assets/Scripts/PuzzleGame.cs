@@ -14,8 +14,8 @@ namespace Parsley
         public GameObject[] PuzzlePrefabs = null;
 
         public GameObject Menu = null;
-        public GameObject StagePlacement = null;
-        public Collider StageCollider = null;
+        public GameObject Stage = null;
+        public GameObject StageGhost = null;
 
         [Header("Snapping")]
         public float SnappingDistance = 0.2f;
@@ -139,14 +139,18 @@ namespace Parsley
 
         private void EnableStagePlacement()
         {
-            StagePlacement.SetActive(true);
-            StageCollider.enabled = false;
+            Stage.SetActive(false);
+            StageGhost.transform.position = Stage.transform.position;
+            StageGhost.transform.rotation = Stage.transform.rotation;
+            StageGhost.SetActive(true);
         }
 
         private void DisableStagePlacement()
         {
-            StagePlacement.SetActive(false);
-            StageCollider.enabled = true;
+            StageGhost.SetActive(false);
+            Stage.transform.position = StageGhost.transform.position;
+            Stage.transform.rotation = StageGhost.transform.rotation;
+            Stage.SetActive(true);
         }
 
         private void OpenPuzzleSelectionMenu()
@@ -167,15 +171,15 @@ namespace Parsley
                 enabled = false;
                 return;
             }
-            if (!StagePlacement)
+            if (!Stage)
             {
-                Debug.LogError("PuzzleGame needs a valid stage placement object");
+                Debug.LogError("PuzzleGame needs a valid stage object");
                 enabled = false;
                 return;
             }
-            if (!StageCollider)
+            if (!StageGhost)
             {
-                Debug.LogError("PuzzleGame needs a valid stage collider");
+                Debug.LogError("PuzzleGame needs a valid stage ghost object");
                 enabled = false;
                 return;
             }
@@ -193,7 +197,7 @@ namespace Parsley
         {
             yield return UnloadPuzzleAsync();
 
-            var newPuzzleOb = GameObject.Instantiate(prefab, this.transform);
+            var newPuzzleOb = GameObject.Instantiate(prefab, Stage.transform);
             var newPuzzle = newPuzzleOb.GetComponent<Puzzle>();
 
             // Allow one frame to detect neighbors through collision
