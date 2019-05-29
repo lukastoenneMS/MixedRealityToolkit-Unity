@@ -5,6 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace Parsley
 {
     [Serializable]
@@ -59,12 +63,18 @@ namespace Parsley
 
         public void OpenMenu()
         {
+            DisableStagePlacement();
+            ClosePuzzleSelectionMenu();
+
             Menu.SetActive(true);
         }
 
         public void CloseMenu()
         {
             Menu.SetActive(false);
+
+            EnableStagePlacement();
+            OpenPuzzleSelectionMenu();
         }
 
         public void ToggleMenu()
@@ -79,7 +89,22 @@ namespace Parsley
             }
         }
 
-        public void StagePlaced()
+        public void QuitGame()
+        {
+#if UNITY_EDITOR
+            EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        public void StartStagePlacement()
+        {
+            CloseMenu();
+            TransitionTo(GameState.StagePlacement);
+        }
+
+        public void StopStagePlacement()
         {
             if (state != GameState.StagePlacement)
             {
@@ -107,38 +132,22 @@ namespace Parsley
                 return;
             }
 
-            switch (state)
-            {
-            case GameState.Intro:
-                break;
-            case GameState.StagePlacement:
-                DisableStagePlacement();
-                break;
-            case GameState.PuzzleSelection:
-                ClosePuzzleSelectionMenu();
-                break;
-            case GameState.Build:
-                break;
-            }
+            DisableStagePlacement();
+            ClosePuzzleSelectionMenu();
 
             state = newState;
-            switch (state)
-            {
-            case GameState.Intro:
-                break;
-            case GameState.StagePlacement:
-                EnableStagePlacement();
-                break;
-            case GameState.PuzzleSelection:
-                OpenPuzzleSelectionMenu();
-                break;
-            case GameState.Build:
-                break;
-            }
+
+            EnableStagePlacement();
+            OpenPuzzleSelectionMenu();
         }
 
         private void EnableStagePlacement()
         {
+            if (state != GameState.StagePlacement || IsMenuOpen)
+            {
+                return;
+            }
+
             Stage.SetActive(false);
             StageGhost.transform.position = Stage.transform.position;
             StageGhost.transform.rotation = Stage.transform.rotation;
@@ -155,6 +164,11 @@ namespace Parsley
 
         private void OpenPuzzleSelectionMenu()
         {
+            if (state != GameState.PuzzleSelection || IsMenuOpen)
+            {
+                return;
+            }
+
             // TODO
             PuzzleSelected(0);
         }
@@ -251,7 +265,14 @@ namespace Parsley
 
         public void AutoFinish(float duration)
         {
-            if (IsLoaded && puzzle.pieceCount > 0)
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            CloseMenu();
+
+            if (puzzle.pieceCount > 0)
             {
                 float mergeInterval = duration / puzzle.pieceCount;
                 StartCoroutine(AutoFinishAsync(mergeInterval, 83472));
@@ -278,6 +299,8 @@ namespace Parsley
             {
                 return;
             }
+
+            CloseMenu();
 
             var effect = new RimColorEffect(HighlightAnimation, NeighborColor);
 
