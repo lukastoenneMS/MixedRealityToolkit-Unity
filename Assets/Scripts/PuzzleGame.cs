@@ -37,16 +37,16 @@ namespace Parsley
         private Puzzle puzzle = null;
         public Puzzle Puzzle => puzzle;
 
+        // Maximum number of pieces held in the build list
+        const int numBuildSlots = 2;
+        private readonly List<PuzzlePiece> buildPieces = new List<PuzzlePiece>(numBuildSlots);
+
         public bool IsLoaded => (puzzle != null);
         public bool IsMenuOpen => Menu.activeSelf;
 
         private Suspender suspender = null;
         public Suspender Suspender => suspender;
 
-        // Maximum number of pieces held in the build list
-        const int numBuildSlots = 2;
-
-        private readonly List<PuzzlePiece> buildPieces = new List<PuzzlePiece>(numBuildSlots);
 
         public enum GameState
         {
@@ -226,6 +226,7 @@ namespace Parsley
             newPuzzle.ScatterPieces();
 
             puzzle = newPuzzle;
+            Debug.Assert(buildPieces.Count == 0);
 
             TransitionTo(GameState.Build);
         }
@@ -234,6 +235,7 @@ namespace Parsley
         {
             if (puzzle)
             {
+                buildPieces.Clear();
                 Destroy(puzzle.gameObject);
                 puzzle = null;
             }
