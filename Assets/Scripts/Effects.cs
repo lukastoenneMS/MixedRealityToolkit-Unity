@@ -64,7 +64,7 @@ namespace Parsley
         private float startTime = 0.0f;
         public float StartTime => startTime;
 
-        public float LocalTime => Time.time - startTime;
+        public float LocalTime => Mathf.Min(Time.time - startTime, duration);
 
         public Effect(float duration)
         {
