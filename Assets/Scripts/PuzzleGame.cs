@@ -114,6 +114,12 @@ namespace Parsley
             TransitionTo(IsLoaded ? GameState.Build : GameState.PuzzleSelection);
         }
 
+        public void StartPuzzleSelection()
+        {
+            CloseMenu();
+            TransitionTo(GameState.PuzzleSelection);
+        }
+
         public void PuzzleSelected(int index)
         {
             if (index < 0 || index >= PuzzlePrefabs.Length)
