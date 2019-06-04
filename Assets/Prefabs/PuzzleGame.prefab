@@ -270,8 +270,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  SnapAudioClip: {fileID: 0}
-  CollisionAudioClip: {fileID: 0}
+  SnapAudioClip: {fileID: 8300000, guid: 0df36c0ca5112464caa41c9fdeeebf83, type: 3}
+  CollisionAudioClip: {fileID: 8300000, guid: 731ddb8ec5777414590b75ba19ca5554, type: 3}
   HighlightAnimation:
     serializedVersion: 2
     m_Curve:
