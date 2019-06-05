@@ -34,6 +34,16 @@ namespace Parsley
         public AnimationCurve HighlightAnimation = PuzzleUtils.CreateHighlightCurve(2.5f);
         public Color NeighborColor = Color.green;
 
+        [Serializable]
+        public class DebugOptions
+        {
+            public GameObject PoseIndicator = null;
+        }
+
+        [Space]
+
+        public DebugOptions debugOptions;
+
         private Puzzle puzzle = null;
         public Puzzle Puzzle => puzzle;
 

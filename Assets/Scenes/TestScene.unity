@@ -823,11 +823,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 544376673}
     m_Modifications:
-    - target: {fileID: 426727773386531611, guid: f61a3add0b0eba24dbdd107da74c225f,
-        type: 3}
-      propertyPath: m_Name
-      value: PuzzleGame
-      objectReference: {fileID: 0}
     - target: {fileID: 426727773386531610, guid: f61a3add0b0eba24dbdd107da74c225f,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -882,6 +877,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426727773386531611, guid: f61a3add0b0eba24dbdd107da74c225f,
+        type: 3}
+      propertyPath: m_Name
+      value: PuzzleGame
       objectReference: {fileID: 0}
     - target: {fileID: 426727773386531608, guid: f61a3add0b0eba24dbdd107da74c225f,
         type: 3}
@@ -1012,6 +1012,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_isInputParsingRequired
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5782265858317840270, guid: f61a3add0b0eba24dbdd107da74c225f,
+        type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8167829235918285241, guid: f61a3add0b0eba24dbdd107da74c225f,
+        type: 3}
+      propertyPath: m_Mesh
+      value: 
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f61a3add0b0eba24dbdd107da74c225f, type: 3}

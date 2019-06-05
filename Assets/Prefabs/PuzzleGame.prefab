@@ -315,6 +315,9 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   NeighborColor: {r: 0, g: 1, b: 0, a: 1}
+  debugOptions:
+    PoseIndicator: {fileID: 6081935473146701081, guid: 3cdfa9d459e34a44095c1a4cf9929ef3,
+      type: 3}
 --- !u!1 &426727774602932500
 GameObject:
   m_ObjectHideFlags: 0
