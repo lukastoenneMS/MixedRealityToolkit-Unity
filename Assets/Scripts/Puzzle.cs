@@ -88,34 +88,43 @@ namespace Parsley
                 shard.gameObject.AddComponent<PuzzleShard>();
                 if (shard.gameObject.activeInHierarchy)
                 {
-                    CreatePiece(shard);
+                    var pose = new MixedRealityPose(shard.transform.position, shard.transform.rotation);
+                    // Piece starts at its goal
+                    var goal = pose;
+                    CreatePiece(shard, shard.parent, pose, goal);
                 }
             }
 
             mapping.UpdateIndices();
         }
 
-        private PuzzlePiece CreatePiece(Transform shard)
+        private PuzzlePiece CreatePiece(Transform shard, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
+        {
+            return CreatePiece(Enumerable.Repeat(shard, 1), parent, pose, goal);
+        }
+
+        private PuzzlePiece CreatePiece(IEnumerable<Transform> shards, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
         {
             GameObject pieceOb = new GameObject("PuzzlePiece");
-            // Insert piece as parent of the shard
-            // Note: parenting must happen before adding the component,
-            // since it expects a Puzzle ancestor compont on Awake()
-            pieceOb.transform.SetParent(shard.parent, false);
-            shard.SetParent(pieceOb.transform, false);
 
+            // Transform the piece
+            pieceOb.transform.SetParent(parent, false);
+            pieceOb.transform.position = pose.Position;
+            pieceOb.transform.rotation = pose.Rotation;
+
+            // Set piece as parent of the shards.
+            foreach (var shard in shards)
+            {
+                shard.SetParent(pieceOb.transform, true);
+            }
+
+            // Note: parenting must happen before adding components,
+            // since they expect a Puzzle ancestor compont on Awake()
             PuzzlePiece piece = pieceOb.AddComponent<PuzzlePiece>();
             pieces.Add(piece);
             int index = pieces.Count - 1;
 
-            // Transform the piece, move shard to local origin
-            piece.transform.position = shard.position;
-            piece.transform.rotation = shard.rotation;
-            shard.localPosition = Vector3.zero;
-            shard.localRotation = Quaternion.identity;
-
-            // Piece starts at its goal
-            piece.Goal = new MixedRealityPose(piece.transform.position, piece.transform.rotation);
+            piece.Goal = goal;
 
             return piece;
         }
@@ -201,6 +210,7 @@ namespace Parsley
             Array.Copy(shardsB, 0, allShards, shardsA.Length, shardsB.Length);
 
             PuzzleUtils.FindShardGoalPose(allShards, out MixedRealityPose goalOffset, out MixedRealityPose goalCenter);
+
             pa.Goal = goalCenter;
             // Move shards to A
             foreach (var shard in shardsB)
