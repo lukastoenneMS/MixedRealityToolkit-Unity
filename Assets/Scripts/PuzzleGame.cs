@@ -1,4 +1,5 @@
-﻿using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
+﻿using Microsoft.MixedReality.Toolkit.Utilities;
+using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -33,16 +34,6 @@ namespace Parsley
         [Header("Hints")]
         public AnimationCurve HighlightAnimation = PuzzleUtils.CreateHighlightCurve(2.5f);
         public Color NeighborColor = Color.green;
-
-        [Serializable]
-        public class DebugOptions
-        {
-            public GameObject PoseIndicator = null;
-        }
-
-        [Space]
-
-        public DebugOptions debugOptions;
 
         private Puzzle puzzle = null;
         public Puzzle Puzzle => puzzle;
