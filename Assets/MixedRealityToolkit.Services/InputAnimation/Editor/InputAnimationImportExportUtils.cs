@@ -114,7 +114,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
 
             // Curve may not exist in the animation clip, use a fallback
-            InputAnimationSerializationUtils.WriteFloatCurve(writer, curve ?? new AnimationCurve());
+            InputAnimationSerializationUtils.WriteFloatCurve(writer, curve ?? new AnimationCurve(), 0.0f);
         }
 
         /// Deserialize a float curve and insert it in the AnimationClip with the given binding.
@@ -134,7 +134,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
 
             // Curve may not exist in the animation clip, use a fallback
-            InputAnimationSerializationUtils.WriteBoolCurve(writer, curve ?? new AnimationCurve());
+            InputAnimationSerializationUtils.WriteBoolCurve(writer, curve ?? new AnimationCurve(), 0.0f);
         }
 
         /// Deserialize a bool curve and insert it in the AnimationClip with the given binding.
