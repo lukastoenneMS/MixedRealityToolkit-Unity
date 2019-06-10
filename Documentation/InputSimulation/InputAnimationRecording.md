@@ -55,7 +55,25 @@ The current animation time can also be controlled directly with the [LocalTime](
 
 # Conversion to and from AnimationClip
 
->TODO: added in separate PR
+When recording and saving input data it is stored in a binary format that is optimized for size. However, it can be desirable to edit input animations after recording, e.g. to prune and move keyframes. For this purpose input animations can be converted into [Unity AnimationClip](https://docs.unity3d.com/ScriptReference/AnimationClip.html) assets. To import a binary input animation file as AnimationClip:
+* Right-click on the binary file in the asset browser and select _Mixed Reality Toolkit > Import Input Animation_
+* OR Select _Mixed Reality Toolkit > Utilities > Import Input Animation_ from the main menu and select a binary file from the dialog.
+
+The resulting AnimationClip can be edited in the [Unity animation editor](https://docs.unity3d.com/Manual/animeditor-UsingAnimationEditor.html).
+
+<a target="_blank" href="../../Documentation/Images/InputSimulation/MRTK_InputAnimation_AnimationClipView.png">
+  <img src="../../Documentation/Images/InputSimulation/MRTK_InputAnimation_AnimationClipView.png" title="Editing input animation as AnimationClip in Unity" width="80%" class="center" />
+</a>
+
+It is recommended to export animations back to binary format after editing. To do this:
+* Right-click on an AnimationClip asset in the asset browser and select _Mixed Reality Toolkit > Export Input Animation_
+* OR Select an AnimationClip asset in the asset browser, then select _Mixed Reality Toolkit > Utilities > Export Input Animation_ from the main menu
+
+> [!WARNING]
+> The use of AnimationClips as permanent storage for input animation is not recommended:
+> * Regular Unity serialization uses YAML files, which are inefficient for large amounts of data and take a lot of space.
+> * AnimationClip are not designed for the amount of animation curves stored by the input recording (300+).
+> * Applying animation from AnimationClip requires a [GameObject-based dummy target](xref:Microsoft.MixedReality.Toolkit.Input.InputAnimationTarget) and supporting scene additions (AnimationController asset and Animator component).
 
 # Writing tests using input animation
 
