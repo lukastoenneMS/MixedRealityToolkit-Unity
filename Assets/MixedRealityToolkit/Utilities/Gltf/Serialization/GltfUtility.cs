@@ -401,7 +401,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
         /// Must be called from the main thread.
         /// If the <see href="https://docs.unity3d.com/ScriptReference/Application-isPlaying.html">Application.isPlaying</see> is false, then this method will run synchronously.
         /// </remarks>
-        public static async Task ImportGltfObjectToPathAsync(GltfObject gltfObject, string uri)
+        public static async Task ExportGltfObjectToPathAsync(GltfObject gltfObject, string uri)
         {
             if (!SyncContextUtility.IsMainThread)
             {
@@ -459,17 +459,15 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
                     UnityEngine.Windows.File.WriteAllBytes(uri, glbData);
                 }
 #else
-                using (FileStream stream = File.Open(uri, FileMode.Open))
+                using (FileStream stream = File.Open(uri, FileMode.Create))
                 {
-                    glbData = new byte[stream.Length];
-
                     if (useBackgroundThread)
                     {
-                        await stream.ReadAsync(glbData, 0, (int)stream.Length);
+                        await stream.WriteAsync(glbData, 0, glbData.Length);
                     }
                     else
                     {
-                        stream.Read(glbData, 0, (int)stream.Length);
+                        stream.Write(glbData, 0, glbData.Length);
                     }
                 }
 #endif
@@ -526,7 +524,8 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
 
             int headerSize = 3 * stride;
             int chunk0Size = 2 * stride + chunk0Length;
-            byte[] glbData = new byte[headerSize + chunk0Size];
+            int chunk1Size = 2 * stride + chunk1Length;
+            byte[] glbData = new byte[headerSize + chunk0Size + chunk1Size];
 
             int offset = 0;
             offset += SetBytes(glbData, offset, (int)GltfMagicNumber);
