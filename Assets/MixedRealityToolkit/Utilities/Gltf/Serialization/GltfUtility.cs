@@ -166,7 +166,10 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
 
             if (gltfObject.extensionsRequired?.Length > 0)
             {
-                Debug.LogError($"Required Extension Unsupported: {gltfObject.extensionsRequired[0]}");
+                for (int i = 0; i < gltfObject.extensionsRequired?.Length; i++)
+                {
+                    Debug.LogError($"Required Extension Unsupported: {gltfObject.extensionsRequired[i]}");
+                }
                 return null;
             }
 
@@ -387,6 +390,176 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
             jsonString = jsonString.Replace(":\"", string.Empty);
             jsonString = jsonString.Substring(0, jsonString.IndexOf("\"", StringComparison.Ordinal));
             return jsonString;
+        }
+
+        /// <summary>
+        /// Exports a glTF object to the provided uri.
+        /// </summary>
+        /// <param name="gltfObject"><see cref="Schema.GltfObject"/> to export to uri.</returns>
+        /// <param name="uri">the path to the file to save</param>
+        /// <remarks>
+        /// Must be called from the main thread.
+        /// If the <see href="https://docs.unity3d.com/ScriptReference/Application-isPlaying.html">Application.isPlaying</see> is false, then this method will run synchronously.
+        /// </remarks>
+        public static async Task ImportGltfObjectToPathAsync(GltfObject gltfObject, string uri)
+        {
+            if (!SyncContextUtility.IsMainThread)
+            {
+                Debug.LogError("ExportGltfObjectFromPathAsync must be called from the main thread!");
+                return;
+            }
+
+            if (gltfObject == null)
+            {
+                Debug.LogError("GLTF object is not valid.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(uri))
+            {
+                Debug.LogError("Uri is not valid.");
+                return;
+            }
+
+            bool useBackgroundThread = Application.isPlaying;
+
+            if (useBackgroundThread) { await BackgroundThread; }
+
+            if (uri.EndsWith(".gltf"))
+            {
+                string gltfJson = GetJsonFromGltfObject(gltfObject);
+
+                File.WriteAllText(uri, gltfJson);
+            }
+            else if (uri.EndsWith(".glb"))
+            {
+                byte[] glbData = GetGlbFromGltfObject(gltfObject);
+
+#if WINDOWS_UWP
+                if (useBackgroundThread)
+                {
+                    try
+                    {
+                        var storageFile = await storageFolder.CreateFileAsync(uri, Windows.Storage.CreationCollisionOption.ReplaceExisting);
+                        if (storageFile == null)
+                        {
+                            Debug.LogError($"Failed to create .glb file at {uri}");
+                            return null;
+                        }
+
+                        await Windows.Storage.FileIO.WriteBytesAsync(sampleFile, glbData);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError(e.Message);
+                        return null;
+                    }
+                }
+                else
+                {
+                    UnityEngine.Windows.File.WriteAllBytes(uri, glbData);
+                }
+#else
+                using (FileStream stream = File.Open(uri, FileMode.Open))
+                {
+                    glbData = new byte[stream.Length];
+
+                    if (useBackgroundThread)
+                    {
+                        await stream.ReadAsync(glbData, 0, (int)stream.Length);
+                    }
+                    else
+                    {
+                        stream.Read(glbData, 0, (int)stream.Length);
+                    }
+                }
+#endif
+            }
+            else
+            {
+                Debug.LogError("Unsupported file name extension.");
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Gets a glTF object from the provided json string.
+        /// </summary>
+        /// <param name="gltfObject"><see cref="Schema.GltfObject"/></param>
+        /// <returns>String defining a glTF Object.</returns>
+        public static string GetJsonFromGltfObject(GltfObject gltfObject)
+        {
+            if (gltfObject.extensionsRequired?.Length > 0)
+            {
+                for (int i = 0; i < gltfObject.extensionsRequired?.Length; i++)
+                {
+                    Debug.LogError($"Required Extension Unsupported: {gltfObject.extensionsRequired[i]}");
+                }
+                return null;
+            }
+
+            for (int i = 0; i < gltfObject.extensionsUsed?.Length; i++)
+            {
+                Debug.LogWarning($"Unsupported Extension: {gltfObject.extensionsUsed[i]}");
+            }
+
+            var jsonString = JsonUtility.ToJson(gltfObject);
+
+            return jsonString;
+        }
+
+        /// <summary>
+        /// Gets a byte array from the provided glTF object
+        /// </summary>
+        /// <param name="gltfObject"><see cref="Schema.GltfObject"/></param>
+        /// <returns>Raw glb byte data.</returns>
+        public static byte[] GetGlbFromGltfObject(GltfObject gltfObject)
+        {
+            const int stride = sizeof(uint);
+
+            int chunk0Type = (int)GltfChunkType.Json;
+            string chunk0Data = GetJsonFromGltfObject(gltfObject);
+            int chunk0Length = Encoding.ASCII.GetByteCount(chunk0Data);
+
+            int chunk1Type = (int)GltfChunkType.BIN;
+            byte[] chunk1Data = gltfObject.buffers.Length > 0 ? gltfObject.buffers[0].BufferData : new byte[0];
+            int chunk1Length = chunk1Data.Length;
+
+            int headerSize = 3 * stride;
+            int chunk0Size = 2 * stride + chunk0Length;
+            byte[] glbData = new byte[headerSize + chunk0Size];
+
+            int offset = 0;
+            offset += SetBytes(glbData, offset, (int)GltfMagicNumber);
+            offset += SetBytes(glbData, offset, (int)2);
+            offset += SetBytes(glbData, offset, (int)glbData.Length);
+
+            offset += SetBytes(glbData, offset, chunk0Length);
+            offset += SetBytes(glbData, offset, chunk0Type);
+            offset += SetBytes(glbData, offset, chunk0Data);
+
+            offset += SetBytes(glbData, offset, chunk1Length);
+            offset += SetBytes(glbData, offset, chunk1Type);
+            offset += SetBytes(glbData, offset, chunk1Data);
+
+            return glbData;
+        }
+
+        private static int SetBytes(byte[] buffer, int offset, byte[] value)
+        {
+            value.CopyTo(buffer, offset);
+            return value.Length;
+        }
+
+        private static int SetBytes(byte[] buffer, int offset, int value)
+        {
+            byte[] valueBytes = BitConverter.GetBytes(value);
+            valueBytes.CopyTo(buffer, offset);
+            return valueBytes.Length;
+        }
+
+        private static int SetBytes(byte[] buffer, int offset, string value)
+        {
+            return Encoding.ASCII.GetBytes(value, 0, value.Length, buffer, offset);
         }
     }
 }
