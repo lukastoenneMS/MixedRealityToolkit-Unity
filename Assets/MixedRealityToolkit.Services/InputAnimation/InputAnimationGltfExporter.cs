@@ -1,11 +1,12 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using Microsoft.MixedReality.Toolkit.Utilities;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
+using System.Collections.Generic;
 using System.IO;
-using UnityEditor;
-using UnityEditor.Experimental.AssetImporters;
+using System.Linq;
 using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.Input
@@ -16,119 +17,114 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             GltfObject exportedObject = new GltfObject();
 
-            exportedObject.extensionsUsed = new string[0];
-            exportedObject.extensionsRequired = new string[0];
+            exportedObject.extensionsUsed = null;
+            exportedObject.extensionsRequired = null;
             exportedObject.accessors = new GltfAccessor[0];
             exportedObject.animations = new GltfAnimation[0];
-            exportedObject.asset = new GltfAssetInfo();
             exportedObject.buffers = new GltfBuffer[0];
             exportedObject.bufferViews = new GltfBufferView[0];
-            exportedObject.cameras = new GltfCamera[0];
             exportedObject.images = new GltfImage[0];
             exportedObject.materials = new GltfMaterial[0];
             exportedObject.meshes = new GltfMesh[0];
-            exportedObject.nodes = new GltfNode[0];
             exportedObject.samplers = new GltfSampler[0];
-            exportedObject.scene = 0;
-            exportedObject.scenes = new GltfScene[0];
             exportedObject.skins = new GltfSkin[0];
             exportedObject.textures = new GltfTexture[0];
 
+            exportedObject.asset = CreateAssetInfo("MIT", "MRTK");
+
+            // Create a scene
+            exportedObject.scenes = new GltfScene[1];
+            exportedObject.scenes[0] = CreateScene("Scene", Enumerable.Range(0, 1));
+            exportedObject.scene = 0;
+
+            exportedObject.nodes = new GltfNode[1];
+            exportedObject.cameras = new GltfCamera[1];
+
+            exportedObject.nodes[0] = CreateNode("Camera", MixedRealityPose.ZeroIdentity, 0, 0);
+            if (CameraCache.Main)
+            {
+                var camera = CameraCache.Main;
+                exportedObject.cameras[0] = CreateCameraPerspective("Camera", camera.aspect, camera.fieldOfView, camera.nearClipPlane, camera.farClipPlane);
+            }
+            else
+            {
+                exportedObject.cameras[0] = CreateCameraPerspective("Camera", 4.0/3.0, 55.0, 0.1, 100.0);
+            }
+
             await GltfUtility.ExportGltfObjectToPathAsync(exportedObject, path);
+        }
 
-#if false
-            var importedObject = await GltfUtility.ImportGltfObjectFromPathAsync(context.assetPath);
+        public static GltfAssetInfo CreateAssetInfo(string copyright, string generator, string version = "2.0", string minVersion = "2.0")
+        {
+            GltfAssetInfo info = new GltfAssetInfo();
+            info.copyright = copyright;
+            info.generator = generator;
+            info.version = version;
+            info.minVersion = minVersion;
+            return info;
+        }
 
-            if (importedObject == null ||
-                importedObject.GameObjectReference == null)
-            {
-                Debug.LogError("Failed to import glTF object");
-                return;
-            }
+        public static GltfScene CreateScene(string name, IEnumerable<int> rootNodeIndices)
+        {
+            GltfScene scene = new GltfScene();
+            scene.name = "Scene";
 
-            var gltfAsset = (GltfAsset)ScriptableObject.CreateInstance(typeof(GltfAsset));
+            scene.nodes = rootNodeIndices.ToArray();
 
-            gltfAsset.GltfObject = importedObject;
-            gltfAsset.name = $"{gltfAsset.GltfObject.Name}{Path.GetExtension(context.assetPath)}";
-            gltfAsset.Model = importedObject.GameObjectReference;
-            context.AddObjectToAsset("main", gltfAsset.Model);
-            context.SetMainObject(importedObject.GameObjectReference);
-            context.AddObjectToAsset("glTF data", gltfAsset);
+            return scene;
+        }
 
-            bool reImport = false;
+        public static GltfNode CreateNode(string name, MixedRealityPose pose, int numChildren, int cameraIndex = -1)
+        {
+            GltfNode node = new GltfNode();
+            node.name = name;
 
-            for (var i = 0; i < gltfAsset.GltfObject.textures?.Length; i++)
-            {
-                GltfTexture gltfTexture = gltfAsset.GltfObject.textures[i];
+            node.useTRS = true;
+            node.rotation = new float[4] { 0f, 0f, 0f, 1f };
+            node.scale = new float[3] { 1f, 1f, 1f };
+            node.translation = new float[3] { 0f, 0f, 0f };
 
-                if (gltfTexture == null) { continue; }
+            node.camera = cameraIndex;
+            node.children = new int[0];
+            node.weights = new double[0];
 
-                var path = AssetDatabase.GetAssetPath(gltfTexture.Texture);
+            return node;
+        }
 
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    var textureName = gltfTexture.name;
+        public static GltfCamera CreateCameraPerspective(string name, double aspectRatio, double yFov, double zNear, double zFar)
+        {
+            GltfCamera camera = new GltfCamera();
+            camera.name = name;
 
-                    if (string.IsNullOrWhiteSpace(textureName))
-                    {
-                        textureName = $"Texture_{i}";
-                        gltfTexture.Texture.name = textureName;
-                    }
+            camera = new GltfCamera();
+            camera.orthographic = new GltfCameraOrthographic();
+            camera.perspective = new GltfCameraPerspective();
 
-                    context.AddObjectToAsset(textureName, gltfTexture.Texture);
-                }
-                else
-                {
-                    if (!gltfTexture.Texture.isReadable)
-                    {
-                        var textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
-                        if (textureImporter != null)
-                        {
-                            textureImporter.isReadable = true;
-                            textureImporter.SetPlatformTextureSettings(new TextureImporterPlatformSettings { format = TextureImporterFormat.RGBA32 });
-                            textureImporter.SaveAndReimport();
-                            reImport = true;
-                        }
-                    }
-                }
-            }
+            camera.type = GltfCameraType.perspective;
+            camera.perspective.aspectRatio = aspectRatio;
+            camera.perspective.yFov = yFov;
+            camera.perspective.zNear = zNear;
+            camera.perspective.zFar = zFar;
 
-            if (reImport)
-            {
-                var importer = AssetImporter.GetAtPath(context.assetPath);
-                importer.SaveAndReimport();
-                return;
-            }
+            return camera;
+        }
 
-            for (var i = 0; i < gltfAsset.GltfObject.meshes?.Length; i++)
-            {
-                GltfMesh gltfMesh = gltfAsset.GltfObject.meshes[i];
+        public static GltfCamera CreateCameraOrthographic(string name, double xMag, double yMag, double zNear, double zFar)
+        {
+            GltfCamera camera = new GltfCamera();
+            camera.name = name;
 
-                string meshName = string.IsNullOrWhiteSpace(gltfMesh.name) ? $"Mesh_{i}" : gltfMesh.name;
+            camera = new GltfCamera();
+            camera.orthographic = new GltfCameraOrthographic();
+            camera.perspective = new GltfCameraPerspective();
 
-                gltfMesh.Mesh.name = meshName;
-                context.AddObjectToAsset($"{meshName}", gltfMesh.Mesh);
-            }
+            camera.type = GltfCameraType.orthographic;
+            camera.orthographic.xMag = xMag;
+            camera.orthographic.yMag = yMag;
+            camera.orthographic.zNear = zNear;
+            camera.orthographic.zFar = zFar;
 
-            if (gltfAsset.GltfObject.materials != null)
-            {
-                foreach (GltfMaterial gltfMaterial in gltfAsset.GltfObject.materials)
-                {
-                    if (context.assetPath.EndsWith(".glb"))
-                    {
-                        context.AddObjectToAsset(gltfMaterial.name, gltfMaterial.Material);
-                    }
-                    else
-                    {
-                        var path = Path.GetFullPath(Path.GetDirectoryName(context.assetPath));
-                        path = path.Replace("\\", "/").Replace(Application.dataPath, "Assets");
-                        path = $"{path}/{gltfMaterial.name}.mat";
-                        AssetDatabase.CreateAsset(gltfMaterial.Material, path);
-                        gltfMaterial.Material = AssetDatabase.LoadAssetAtPath<Material>(path);
-                    }
-                }
-            }
-#endif
+            return camera;
         }
     }
 }
