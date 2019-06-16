@@ -10,6 +10,22 @@ using System.Reflection;
 namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 {
     /// <summary>
+    /// Details of converting enums to JSON values.
+    /// </summary>
+    [System.Serializable]
+    [AttributeUsage(AttributeTargets.All)]
+    public class JSONEnumAttribute : System.Attribute
+    {
+        private bool useIntValue;
+        public bool UseIntValue => useIntValue;
+
+        public JSONEnumAttribute(bool useIntValue)
+        {
+            this.useIntValue = useIntValue;
+        }
+    }
+
+    /// <summary>
     /// Attribute for JSON integer schema details.
     /// </summary>
     [System.Serializable]

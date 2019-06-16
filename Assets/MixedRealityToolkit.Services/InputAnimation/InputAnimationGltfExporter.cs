@@ -4,6 +4,7 @@
 using Microsoft.MixedReality.Toolkit.Utilities;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,10 +20,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             exportedObject.extensionsUsed = null;
             exportedObject.extensionsRequired = null;
-            exportedObject.accessors = new GltfAccessor[0];
             exportedObject.animations = new GltfAnimation[0];
-            exportedObject.buffers = new GltfBuffer[0];
-            exportedObject.bufferViews = new GltfBufferView[0];
             exportedObject.images = new GltfImage[0];
             exportedObject.materials = new GltfMaterial[0];
             exportedObject.meshes = new GltfMesh[0];
@@ -51,10 +49,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 exportedObject.cameras[0] = CreateCameraPerspective("Camera", 4.0/3.0, 55.0, 0.1, 100.0);
             }
 
+            CreateAnimationBuffer(animation, exportedObject);
+
             await GltfUtility.ExportGltfObjectToPathAsync(exportedObject, path);
         }
 
-        public static GltfAssetInfo CreateAssetInfo(string copyright, string generator, string version = "2.0", string minVersion = "2.0")
+        private static GltfAssetInfo CreateAssetInfo(string copyright, string generator, string version = "2.0", string minVersion = "2.0")
         {
             GltfAssetInfo info = new GltfAssetInfo();
             info.copyright = copyright;
@@ -64,7 +64,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return info;
         }
 
-        public static GltfScene CreateScene(string name, IEnumerable<int> rootNodeIndices)
+        private static GltfScene CreateScene(string name, IEnumerable<int> rootNodeIndices)
         {
             GltfScene scene = new GltfScene();
             scene.name = "Scene";
@@ -74,7 +74,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return scene;
         }
 
-        public static GltfNode CreateNode(string name, MixedRealityPose pose, int numChildren, int cameraIndex = -1)
+        private static GltfNode CreateNode(string name, MixedRealityPose pose, int numChildren, int cameraIndex = -1)
         {
             GltfNode node = new GltfNode();
             node.name = name;
@@ -92,7 +92,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return node;
         }
 
-        public static GltfCamera CreateCameraPerspective(string name, double aspectRatio, double yFov, double zNear, double zFar)
+        private static GltfCamera CreateCameraPerspective(string name, double aspectRatio, double yFov, double zNear, double zFar)
         {
             GltfCamera camera = new GltfCamera();
             camera.name = name;
@@ -111,7 +111,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return camera;
         }
 
-        public static GltfCamera CreateCameraOrthographic(string name, double xMag, double yMag, double zNear, double zFar)
+        private static GltfCamera CreateCameraOrthographic(string name, double xMag, double yMag, double zNear, double zFar)
         {
             GltfCamera camera = new GltfCamera();
             camera.name = name;
@@ -128,6 +128,164 @@ namespace Microsoft.MixedReality.Toolkit.Input
             camera.perspective = null;
 
             return camera;
+        }
+
+        private static TrackedHandJoint[] TrackedHandJointValues = (TrackedHandJoint[])Enum.GetValues(typeof(TrackedHandJoint));
+
+        private static void CreateAnimationBuffer(InputAnimation animation, GltfObject gltfObject)
+        {
+            int totalSize = GetTotalAnimationBufferSize(animation);
+
+            byte[] bufferData = new byte[totalSize];
+            var stream = new MemoryStream(bufferData, true);
+            var writer = new BinaryWriter(stream);
+            var accessors = new List<GltfAccessor>();
+            WriteAnimationBuffer(writer, accessors, animation);
+
+            var buffer = new GltfBuffer();
+            buffer.name = "AnimationData";
+            buffer.uri = null; // Stored internally
+            buffer.byteLength = totalSize;
+            buffer.BufferData = bufferData;
+
+            var bufferView = new GltfBufferView();
+            bufferView.name = "BufferView";
+            bufferView.buffer = 0;
+            bufferView.byteLength = totalSize;
+            bufferView.byteOffset = 0;
+            bufferView.target = GltfBufferViewTarget.None;
+
+            gltfObject.buffers = new GltfBuffer[1];
+            gltfObject.buffers[0] = buffer;
+            gltfObject.bufferViews = new GltfBufferView[1];
+            gltfObject.bufferViews[0] = bufferView;
+            gltfObject.accessors = accessors.ToArray();
+        }
+
+        private static void WriteAnimationBuffer(BinaryWriter writer, List<GltfAccessor> accessors, InputAnimation animation)
+        {
+            WritePoseCurvesBuffer(writer, accessors, animation.CameraCurves);
+
+            WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveLeft);
+            WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveRight);
+            WriteCurveBuffer(writer, accessors, animation.HandPinchCurveLeft);
+            WriteCurveBuffer(writer, accessors, animation.HandPinchCurveRight);
+
+            foreach (var joint in TrackedHandJointValues)
+            {
+                InputAnimation.PoseCurves jointCurves;
+                if (animation.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+                {
+                    WritePoseCurvesBuffer(writer, accessors, jointCurves);
+                }
+                if (animation.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
+                {
+                    WritePoseCurvesBuffer(writer, accessors, jointCurves);
+                }
+            }
+        }
+
+        private static void WritePoseCurvesBuffer(BinaryWriter writer, List<GltfAccessor> accessors, InputAnimation.PoseCurves poseCurves)
+        {
+            WriteCurveBuffer(writer, accessors, poseCurves.PositionX);
+        }
+
+        private static void WriteCurveBuffer(BinaryWriter writer, List<GltfAccessor> accessors, AnimationCurve curve)
+        {
+            WriteTimesBuffer(writer, accessors, curve);
+            WriteValuesBuffer(writer, accessors, curve);
+        }
+
+        private static void WriteTimesBuffer(BinaryWriter writer, List<GltfAccessor> accessors, AnimationCurve curve)
+        {
+            var acc = new GltfAccessor();
+            acc.bufferView = 0;
+            acc.byteOffset = (int)writer.BaseStream.Position;
+            acc.componentType = GltfComponentType.Float;
+            acc.normalized = false;
+            acc.count = curve.length;
+            acc.type = "SCALAR";
+
+            Keyframe[] keys = curve.keys;
+            for (int i = 0; i < keys.Length; ++i)
+            {
+                writer.Write(keys[i].time);
+            }
+
+            accessors.Add(acc);
+        }
+
+        private static void WriteValuesBuffer(BinaryWriter writer, List<GltfAccessor> accessors, AnimationCurve curve)
+        {
+            var acc = new GltfAccessor();
+            acc.bufferView = 0;
+            acc.byteOffset = (int)writer.BaseStream.Position;
+            acc.componentType = GltfComponentType.Float;
+            acc.normalized = false;
+            acc.count = curve.length;
+            acc.type = "SCALAR";
+
+            Keyframe[] keys = curve.keys;
+            for (int i = 0; i < keys.Length; ++i)
+            {
+                writer.Write(keys[i].value);
+            }
+
+            accessors.Add(acc);
+        }
+
+        private static int GetTotalAnimationBufferSize(InputAnimation animation)
+        {
+            int size = 0;
+
+            size += GetTotalPoseCurvesBufferSize(animation.CameraCurves);
+
+            size += GetTotalCurveBufferSize(animation.HandTrackedCurveLeft);
+            size += GetTotalCurveBufferSize(animation.HandTrackedCurveRight);
+            size += GetTotalCurveBufferSize(animation.HandPinchCurveLeft);
+            size += GetTotalCurveBufferSize(animation.HandPinchCurveRight);
+
+            foreach (var joint in TrackedHandJointValues)
+            {
+                InputAnimation.PoseCurves jointCurves;
+                if (animation.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+                {
+                    size += GetTotalPoseCurvesBufferSize(jointCurves);
+                }
+                if (animation.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
+                {
+                    size += GetTotalPoseCurvesBufferSize(jointCurves);
+                }
+            }
+            return size;
+        }
+
+        private static int GetTotalPoseCurvesBufferSize(InputAnimation.PoseCurves poseCurves)
+        {
+            int size = 0;
+            size += GetTotalCurveBufferSize(poseCurves.PositionX);
+            size += GetTotalCurveBufferSize(poseCurves.PositionY);
+            size += GetTotalCurveBufferSize(poseCurves.PositionZ);
+            size += GetTotalCurveBufferSize(poseCurves.RotationX);
+            size += GetTotalCurveBufferSize(poseCurves.RotationY);
+            size += GetTotalCurveBufferSize(poseCurves.RotationZ);
+            size += GetTotalCurveBufferSize(poseCurves.RotationW);
+            return size;
+        }
+
+        private static int GetTotalCurveBufferSize(AnimationCurve curve)
+        {
+            return GetTimesBufferSize(curve) + GetValuesBufferSize(curve);
+        }
+
+        private static int GetTimesBufferSize(AnimationCurve curve)
+        {
+            return sizeof(float) * curve.length;
+        }
+
+        private static int GetValuesBufferSize(AnimationCurve curve)
+        {
+            return sizeof(float) * curve.length;
         }
     }
 }

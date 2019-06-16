@@ -94,8 +94,21 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
 
             Type type = obj.GetType();
-            if (IsString(type) || type.IsEnum)
+            if (IsString(type))
             {
+                return "\"" + obj.ToString() + "\"";
+            }
+            else if (type.IsEnum)
+            {
+                var attr = member?.GetCustomAttribute<JSONEnumAttribute>();
+                if (attr != null)
+                {
+                    if (attr.UseIntValue)
+                    {
+                        return ((int)obj).ToString();
+                    }
+                }
+
                 return "\"" + obj.ToString() + "\"";
             }
             else if (IsInteger(type))

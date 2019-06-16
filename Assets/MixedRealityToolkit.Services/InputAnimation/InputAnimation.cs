@@ -58,12 +58,16 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         [SerializeField]
         private AnimationCurve handTrackedCurveLeft;
+        public AnimationCurve HandTrackedCurveLeft => handTrackedCurveLeft;
         [SerializeField]
         private AnimationCurve handTrackedCurveRight;
+        public AnimationCurve HandTrackedCurveRight => handTrackedCurveRight;
         [SerializeField]
         private AnimationCurve handPinchCurveLeft;
+        public AnimationCurve HandPinchCurveLeft => handPinchCurveLeft;
         [SerializeField]
         private AnimationCurve handPinchCurveRight;
+        public AnimationCurve HandPinchCurveRight => handPinchCurveRight;
         [SerializeField]
         private Dictionary<TrackedHandJoint, PoseCurves> handJointCurvesLeft;
         [SerializeField]
