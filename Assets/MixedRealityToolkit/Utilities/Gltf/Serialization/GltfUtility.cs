@@ -3,6 +3,7 @@
 
 using Microsoft.MixedReality.Toolkit.Utilities;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
+using Microsoft.MixedReality.Toolkit.Utilities.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -479,50 +480,6 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
             }
         }
 
-        // TODO find a better solution for this.
-        // JsonUtility creates empty lists even for null objects.
-        // Certain fields in glTF are expected to have either have at least one item or not exist at all.
-        // To avoid non-conformant glTF, use an intermediate type without those fields.
-        internal struct GltfMiniObject
-        {
-            public GltfMiniObject(GltfObject full)
-            {
-                accessors = full.accessors;
-                animations = full.animations;
-                asset = full.asset;
-                buffers = full.buffers;
-                bufferViews = full.bufferViews;
-                cameras = full.cameras;
-                images = full.images;
-                materials = full.materials;
-                meshes = full.meshes;
-                nodes = full.nodes;
-                samplers = full.samplers;
-                scene = full.scene;
-                scenes = full.scenes;
-                // skins = full.skins;
-                // textures = full.textures;
-            }
-
-            // public string[] extensionsUsed;
-            // public string[] extensionsRequired;
-            public GltfAccessor[] accessors;
-            public GltfAnimation[] animations;
-            public GltfAssetInfo asset;
-            public GltfBuffer[] buffers;
-            public GltfBufferView[] bufferViews;
-            public GltfCamera[] cameras;
-            public GltfImage[] images;
-            public GltfMaterial[] materials;
-            public GltfMesh[] meshes;
-            public GltfNode[] nodes;
-            public GltfSampler[] samplers;
-            public int scene;
-            public GltfScene[] scenes;
-            // public GltfSkin[] skins;
-            // public GltfTexture[] textures;
-        }
-
         /// <summary>
         /// Gets a glTF object from the provided json string.
         /// </summary>
@@ -540,11 +497,8 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
                 Debug.LogWarning($"Unsupported Extension: {gltfObject.extensionsUsed[i]}");
             }
 
-            // var jsonString = JsonUtility.ToJson(gltfObject);
-            var jsonString = JsonUtility.ToJson(new GltfMiniObject(gltfObject));
-
-            // glTF JSON chunk should end in whitespace character
-            jsonString += " ";
+            var builder = new JsonBuilder();
+            var jsonString = builder.Build(gltfObject);
 
             return jsonString;
         }
@@ -607,7 +561,14 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
 
         private static int SetBytes(byte[] buffer, int offset, string value)
         {
-            return Align4(Encoding.ASCII.GetBytes(value, 0, value.Length, buffer, offset));
+            int numBytes = Encoding.ASCII.GetBytes(value, 0, value.Length, buffer, offset);
+            int alignedBytes = Align4(numBytes);
+            // Clear padding to avoid invalid chars
+            for (int i = numBytes; i < alignedBytes; ++i)
+            {
+                buffer[offset + i] = 0x20;
+            }
+            return alignedBytes;
         }
     }
 }
