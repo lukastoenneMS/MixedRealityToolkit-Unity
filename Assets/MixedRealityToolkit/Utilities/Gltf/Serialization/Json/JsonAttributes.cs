@@ -10,6 +10,22 @@ using System.Reflection;
 namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 {
     /// <summary>
+    /// Attribute for JSON integer schema details.
+    /// </summary>
+    [System.Serializable]
+    [AttributeUsage(AttributeTargets.Field)]
+    public class JSONIntegerAttribute : System.Attribute
+    {
+        private int minimum;
+        public int Minimum => minimum;
+
+        public JSONIntegerAttribute(int minimum)
+        {
+            this.minimum = minimum;
+        }
+    }
+
+    /// <summary>
     /// Attribute for JSON array schema details.
     /// </summary>
     [System.Serializable]

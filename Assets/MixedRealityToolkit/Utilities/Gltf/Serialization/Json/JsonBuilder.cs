@@ -14,7 +14,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             return AppendObject(obj);
         }
 
-        private string AppendArray(Array array, JSONArrayAttribute attr)
+        private string AppendArray(Array array, MemberInfo member)
         {
             Type type = array.GetType();
             var builder = new StringBuilder();
@@ -38,6 +38,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
             builder.Append("]");
 
+            var attr = member?.GetCustomAttribute<JSONArrayAttribute>();
             if (attr != null)
             {
                 if (count < attr.MinItems)
@@ -97,7 +98,20 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             {
                 return "\"" + obj.ToString() + "\"";
             }
-            else if (IsNumber(type))
+            else if (IsInteger(type))
+            {
+                var attr = member?.GetCustomAttribute<JSONIntegerAttribute>();
+                if (attr != null)
+                {
+                    if ((int)obj < attr.Minimum)
+                    {
+                        return "";
+                    }
+                }
+
+                return obj.ToString();
+            }
+            else if (IsFloat(type))
             {
                 return obj.ToString();
             }
@@ -107,8 +121,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
             else if (type.IsArray)
             {
-                var attr = member.GetCustomAttribute<JSONArrayAttribute>();
-                return AppendArray(obj as Array, attr);
+                return AppendArray(obj as Array, member);
             }
             else
             {
@@ -121,7 +134,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             return s.Replace("\"", "\\\n");
         }
 
-        public static bool IsNumber(Type type)
+        public static bool IsInteger(Type type)
         {
             switch (Type.GetTypeCode(type))
             {
@@ -133,6 +146,16 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
                 case TypeCode.Int16:
                 case TypeCode.Int32:
                 case TypeCode.Int64:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsFloat(Type type)
+        {
+            switch (Type.GetTypeCode(type))
+            {
                 case TypeCode.Decimal:
                 case TypeCode.Double:
                 case TypeCode.Single:

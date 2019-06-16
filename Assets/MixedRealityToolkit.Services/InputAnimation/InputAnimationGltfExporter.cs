@@ -83,6 +83,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             node.rotation = new float[4] { 0f, 0f, 0f, 1f };
             node.scale = new float[3] { 1f, 1f, 1f };
             node.translation = new float[3] { 0f, 0f, 0f };
+            node.matrix = null;
 
             node.camera = cameraIndex;
             node.children = new int[0];
@@ -97,14 +98,15 @@ namespace Microsoft.MixedReality.Toolkit.Input
             camera.name = name;
 
             camera = new GltfCamera();
-            camera.orthographic = new GltfCameraOrthographic();
-            camera.perspective = new GltfCameraPerspective();
 
+            camera.perspective = new GltfCameraPerspective();
             camera.type = GltfCameraType.perspective;
             camera.perspective.aspectRatio = aspectRatio;
-            camera.perspective.yFov = yFov;
-            camera.perspective.zNear = zNear;
-            camera.perspective.zFar = zFar;
+            camera.perspective.yfov = yFov;
+            camera.perspective.znear = zNear;
+            camera.perspective.zfar = zFar;
+
+            camera.orthographic = null;
 
             return camera;
         }
@@ -115,14 +117,15 @@ namespace Microsoft.MixedReality.Toolkit.Input
             camera.name = name;
 
             camera = new GltfCamera();
-            camera.orthographic = new GltfCameraOrthographic();
-            camera.perspective = new GltfCameraPerspective();
 
+            camera.orthographic = new GltfCameraOrthographic();
             camera.type = GltfCameraType.orthographic;
-            camera.orthographic.xMag = xMag;
-            camera.orthographic.yMag = yMag;
-            camera.orthographic.zNear = zNear;
-            camera.orthographic.zFar = zFar;
+            camera.orthographic.xmag = xMag;
+            camera.orthographic.ymag = yMag;
+            camera.orthographic.znear = zNear;
+            camera.orthographic.zfar = zFar;
+
+            camera.perspective = null;
 
             return camera;
         }
