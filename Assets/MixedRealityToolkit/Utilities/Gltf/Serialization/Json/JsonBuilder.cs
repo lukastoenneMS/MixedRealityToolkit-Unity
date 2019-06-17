@@ -154,7 +154,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 
         private static string SanitizeString(string s)
         {
-            return s.Replace("\"", "\\\n");
+            return s.Replace("\"", "\\\"");
         }
 
         public static bool IsInteger(Type type)
