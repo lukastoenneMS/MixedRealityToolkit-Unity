@@ -76,7 +76,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <maxItems>16</maxItems>
         /// </summary>
         [JSONArray(1)]
-        public float[] max;
+        public double[] max;
 
         /// <summary>
         /// Minimum value of each component in this attribute.
@@ -95,7 +95,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <maxItems>16</maxItems>
         /// </summary>
         [JSONArray(1)]
-        public float[] min;
+        public double[] min;
 
         /// <summary>
         /// Sparse storage of attributes that deviate from their initialization value.

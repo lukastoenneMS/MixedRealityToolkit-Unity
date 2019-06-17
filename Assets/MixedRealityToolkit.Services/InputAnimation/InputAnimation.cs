@@ -254,6 +254,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             float sqrThreshold = threshold * threshold;
 
+            rotation.Normalize();
+
             int iX = FindKeyframeInterval(curveX, time);
             int iY = FindKeyframeInterval(curveY, time);
             int iZ = FindKeyframeInterval(curveZ, time);

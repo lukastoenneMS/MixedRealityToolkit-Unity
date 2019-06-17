@@ -19,9 +19,13 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
         private bool useIntValue;
         public bool UseIntValue => useIntValue;
 
-        public JSONEnumAttribute(bool useIntValue)
+        private object[] ignoreValues;
+        public object[] IgnoreValues => ignoreValues;
+
+        public JSONEnumAttribute(bool useIntValue, object[] ignoreValues = null)
         {
             this.useIntValue = useIntValue;
+            this.ignoreValues = ignoreValues;
         }
     }
 

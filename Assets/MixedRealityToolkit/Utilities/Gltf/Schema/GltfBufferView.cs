@@ -44,7 +44,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// All valid values correspond to WebGL enums.
         /// When this is not provided, the bufferView contains animation or skin data.
         /// </summary>
-        [JSONEnum(true)]
+        [JSONEnum(true, new object[] {GltfBufferViewTarget.None})]
         public GltfBufferViewTarget target = GltfBufferViewTarget.None;
 
         /// <summary>

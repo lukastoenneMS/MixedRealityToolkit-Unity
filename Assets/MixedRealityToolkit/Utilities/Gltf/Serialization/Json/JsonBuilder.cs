@@ -103,6 +103,16 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
                 var attr = member?.GetCustomAttribute<JSONEnumAttribute>();
                 if (attr != null)
                 {
+                    if (attr.IgnoreValues != null)
+                    {
+                        foreach (var ignoreValue in attr.IgnoreValues)
+                        {
+                            if ((int)obj == (int)ignoreValue)
+                            {
+                                return "";
+                            }
+                        }
+                    }
                     if (attr.UseIntValue)
                     {
                         return ((int)obj).ToString();

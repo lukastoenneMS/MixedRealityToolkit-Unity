@@ -14,13 +14,34 @@ namespace Microsoft.MixedReality.Toolkit.Input
 {
     public static class InputAnimationGltfExporter
     {
+        private struct Context
+        {
+            public List<GltfNode> nodes;
+            public List<GltfCamera> cameras;
+            public List<GltfAccessor> accessors;
+            public List<GltfAnimation> animations;
+            public List<GltfAnimationChannel> animationChannels;
+            public List<GltfAnimationSampler> animationSamplers;
+            public List<GltfBuffer> buffers;
+            public List<GltfBufferView> bufferViews;
+
+            public BinaryWriter writer;
+        }
+
         public static async void OnExportInputAnimation(InputAnimation animation, string path)
         {
+            var context = new Context();
+            context.nodes = new List<GltfNode>();
+            context.cameras = new List<GltfCamera>();
+            context.accessors = new List<GltfAccessor>();
+            context.animations = new List<GltfAnimation>();
+            context.buffers = new List<GltfBuffer>();
+            context.bufferViews = new List<GltfBufferView>();
+
             GltfObject exportedObject = new GltfObject();
 
             exportedObject.extensionsUsed = null;
             exportedObject.extensionsRequired = null;
-            exportedObject.animations = new GltfAnimation[0];
             exportedObject.images = new GltfImage[0];
             exportedObject.materials = new GltfMaterial[0];
             exportedObject.meshes = new GltfMesh[0];
@@ -35,21 +56,27 @@ namespace Microsoft.MixedReality.Toolkit.Input
             exportedObject.scenes[0] = CreateScene("Scene", Enumerable.Range(0, 1));
             exportedObject.scene = 0;
 
-            exportedObject.nodes = new GltfNode[1];
             exportedObject.cameras = new GltfCamera[1];
 
-            exportedObject.nodes[0] = CreateNode("Camera", MixedRealityPose.ZeroIdentity, 0, 0);
+            int camera;
             if (CameraCache.Main)
             {
-                var camera = CameraCache.Main;
-                exportedObject.cameras[0] = CreateCameraPerspective("Camera", camera.aspect, camera.fieldOfView, camera.nearClipPlane, camera.farClipPlane);
+                var cameraData = CameraCache.Main;
+                camera = CreateCameraPerspective(context, "Camera", cameraData.aspect, cameraData.fieldOfView, cameraData.nearClipPlane, cameraData.farClipPlane);
             }
             else
             {
-                exportedObject.cameras[0] = CreateCameraPerspective("Camera", 4.0/3.0, 55.0, 0.1, 100.0);
+                camera = CreateCameraPerspective(context, "Camera", 4.0/3.0, 55.0, 0.1, 100.0);
             }
 
-            CreateAnimationBuffer(animation, exportedObject);
+            CreateAnimationBuffer(context, animation, camera);
+
+            exportedObject.nodes = context.nodes.ToArray();
+            exportedObject.cameras = context.cameras.ToArray();
+            exportedObject.accessors = context.accessors.ToArray();
+            exportedObject.animations = context.animations.ToArray();
+            exportedObject.buffers = context.buffers.ToArray();
+            exportedObject.bufferViews = context.bufferViews.ToArray();
 
             await GltfUtility.ExportGltfObjectToPathAsync(exportedObject, path);
         }
@@ -74,7 +101,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return scene;
         }
 
-        private static GltfNode CreateNode(string name, MixedRealityPose pose, int numChildren, int cameraIndex = -1)
+        private static int CreateNode(Context context, string name, MixedRealityPose pose, int numChildren, int camera = -1)
         {
             GltfNode node = new GltfNode();
             node.name = name;
@@ -85,14 +112,15 @@ namespace Microsoft.MixedReality.Toolkit.Input
             node.translation = new float[3] { 0f, 0f, 0f };
             node.matrix = null;
 
-            node.camera = cameraIndex;
+            node.camera = camera;
             node.children = new int[0];
             node.weights = new double[0];
 
-            return node;
+            context.nodes.Add(node);
+            return context.nodes.Count - 1;
         }
 
-        private static GltfCamera CreateCameraPerspective(string name, double aspectRatio, double yFov, double zNear, double zFar)
+        private static int CreateCameraPerspective(Context context, string name, double aspectRatio, double yFov, double zNear, double zFar)
         {
             GltfCamera camera = new GltfCamera();
             camera.name = name;
@@ -108,10 +136,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             camera.orthographic = null;
 
-            return camera;
+            context.cameras.Add(camera);
+            return context.cameras.Count - 1;
         }
 
-        private static GltfCamera CreateCameraOrthographic(string name, double xMag, double yMag, double zNear, double zFar)
+        private static int CreateCameraOrthographic(Context context, string name, double xMag, double yMag, double zNear, double zFar)
         {
             GltfCamera camera = new GltfCamera();
             camera.name = name;
@@ -127,31 +156,20 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             camera.perspective = null;
 
-            return camera;
+            context.cameras.Add(camera);
+            return context.cameras.Count - 1;
         }
 
         private static TrackedHandJoint[] TrackedHandJointValues = (TrackedHandJoint[])Enum.GetValues(typeof(TrackedHandJoint));
 
-        private struct AnimationContext
+        private static void CreateAnimationBuffer(Context context, InputAnimation input, int camera)
         {
-            public BinaryWriter writer;
-            public List<GltfAccessor> accessors;
-            public List<GltfAnimationChannel> channels;
-            public List<GltfAnimationSampler> samplers;
-        }
-
-        private static void CreateAnimationBuffer(InputAnimation animation, GltfObject gltfObject)
-        {
-            int totalSize = GetTotalAnimationBufferSize(animation);
+            int totalSize = GetTotalAnimationBufferSize(input);
 
             byte[] bufferData = new byte[totalSize];
             var stream = new MemoryStream(bufferData, true);
-            var context = new AnimationContext();
             context.writer = new BinaryWriter(stream);
-            context.accessors = new List<GltfAccessor>();
-            context.channels = new List<GltfAnimationChannel>();
-            context.samplers = new List<GltfAnimationSampler>();
-            WriteAnimationBuffer(context, animation);
+            CreateAnimation(context, input, camera);
 
             var buffer = new GltfBuffer();
             buffer.name = "AnimationData";
@@ -166,44 +184,53 @@ namespace Microsoft.MixedReality.Toolkit.Input
             bufferView.byteOffset = 0;
             bufferView.target = GltfBufferViewTarget.None;
 
-            gltfObject.buffers = new GltfBuffer[1];
-            gltfObject.buffers[0] = buffer;
-            gltfObject.bufferViews = new GltfBufferView[1];
-            gltfObject.bufferViews[0] = bufferView;
-            gltfObject.accessors = context.accessors.ToArray();
+            context.buffers.Add(buffer);
+            context.bufferViews.Add(bufferView);
         }
 
-        private static void CreateInputAnimation(AnimationContext context, InputAnimation animation)
+        private static int CreateAnimation(Context context, InputAnimation input, int camera)
         {
-            CreateNode()
-            CreatePoseAnimation(context, animation.CameraCurves, GltfInterpolationType.LINEAR, );
+            context.animationChannels = new List<GltfAnimationChannel>();
+            context.animationSamplers = new List<GltfAnimationSampler>();
 
-            WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveLeft);
-            WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveRight);
-            WriteCurveBuffer(writer, accessors, animation.HandPinchCurveLeft);
-            WriteCurveBuffer(writer, accessors, animation.HandPinchCurveRight);
+            int cameraNode = CreateNode(context, "Camera", MixedRealityPose.ZeroIdentity, 0, camera);
+            CreatePoseAnimation(context, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
 
-            foreach (var joint in TrackedHandJointValues)
-            {
-                InputAnimation.PoseCurves jointCurves;
-                if (animation.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
-                {
-                    WritePoseCurvesBuffer(writer, accessors, jointCurves);
-                }
-                if (animation.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
-                {
-                    WritePoseCurvesBuffer(writer, accessors, jointCurves);
-                }
-            }
+            // WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveLeft);
+            // WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveRight);
+            // WriteCurveBuffer(writer, accessors, animation.HandPinchCurveLeft);
+            // WriteCurveBuffer(writer, accessors, animation.HandPinchCurveRight);
+
+            // foreach (var joint in TrackedHandJointValues)
+            // {
+            //     InputAnimation.PoseCurves jointCurves;
+            //     if (animation.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+            //     {
+            //         WritePoseCurvesBuffer(writer, accessors, jointCurves);
+            //     }
+            //     if (animation.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
+            //     {
+            //         WritePoseCurvesBuffer(writer, accessors, jointCurves);
+            //     }
+            // }
+
+            var animation = new GltfAnimation();
+            animation.channels = context.animationChannels.ToArray();
+            animation.samplers = context.animationSamplers.ToArray();
+            context.animationChannels = null;
+            context.animationSamplers = null;
+
+            context.animations.Add(animation);
+            return context.animations.Count - 1;
         }
 
-        private static void CreatePoseAnimation(AnimationContext context, InputAnimation.PoseCurves poseCurves, GltfInterpolationType interpolation, int node)
+        private static void CreatePoseAnimation(Context context, InputAnimation.PoseCurves poseCurves, GltfInterpolationType interpolation, int node)
         {
             CreateTranslationAnimation(context, poseCurves.PositionX, poseCurves.PositionY, poseCurves.PositionZ, interpolation, node);
             CreateRotationAnimation(context, poseCurves.RotationW, poseCurves.RotationY, poseCurves.RotationZ, poseCurves.RotationW, interpolation, node);
         }
 
-        private static void CreateWeightsAnimation(AnimationContext context, AnimationCurve curve, GltfInterpolationType interpolation, int node)
+        private static void CreateWeightsAnimation(Context context, AnimationCurve curve, GltfInterpolationType interpolation, int node)
         {
             int start = (int)context.writer.BaseStream.Position;
             int accTime = WriteTimesBuffer(context, curve);
@@ -219,17 +246,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
             sampler.input = accTime;
             sampler.output = accValue;
             sampler.interpolation = interpolation;
-            context.samplers.Add(sampler);
+            context.animationSamplers.Add(sampler);
 
             var channel = new GltfAnimationChannel();
-            channel.sampler = context.samplers.Count - 1;
+            channel.sampler = context.animationSamplers.Count - 1;
             channel.target = new GltfAnimationChannelTarget();
             channel.target.node = node;
             channel.target.path = GltfAnimationChannelPath.weights;
-            context.channels.Add(channel);
+            context.animationChannels.Add(channel);
         }
 
-        private static void CreateTranslationAnimation(AnimationContext context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, GltfInterpolationType interpolation, int node)
+        private static void CreateTranslationAnimation(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, GltfInterpolationType interpolation, int node)
         {
             int start = (int)context.writer.BaseStream.Position;
             int accTime = WriteTimesBuffer(context, curveX);
@@ -245,17 +272,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
             sampler.input = accTime;
             sampler.output = accValue;
             sampler.interpolation = interpolation;
-            context.samplers.Add(sampler);
+            context.animationSamplers.Add(sampler);
 
             var channel = new GltfAnimationChannel();
-            channel.sampler = context.samplers.Count - 1;
+            channel.sampler = context.animationSamplers.Count - 1;
             channel.target = new GltfAnimationChannelTarget();
             channel.target.node = node;
             channel.target.path = GltfAnimationChannelPath.translation;
-            context.channels.Add(channel);
+            context.animationChannels.Add(channel);
         }
 
-        private static void CreateRotationAnimation(AnimationContext context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW, GltfInterpolationType interpolation, int node)
+        private static void CreateRotationAnimation(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW, GltfInterpolationType interpolation, int node)
         {
             int start = (int)context.writer.BaseStream.Position;
             int accTime = WriteTimesBuffer(context, curveX);
@@ -271,17 +298,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
             sampler.input = accTime;
             sampler.output = accValue;
             sampler.interpolation = interpolation;
-            context.samplers.Add(sampler);
+            context.animationSamplers.Add(sampler);
 
             var channel = new GltfAnimationChannel();
-            channel.sampler = context.samplers.Count - 1;
+            channel.sampler = context.animationSamplers.Count - 1;
             channel.target = new GltfAnimationChannelTarget();
             channel.target.node = node;
             channel.target.path = GltfAnimationChannelPath.rotation;
-            context.channels.Add(channel);
+            context.animationChannels.Add(channel);
         }
 
-        private static int WriteTimesBuffer(AnimationContext context, AnimationCurve curve)
+        private static int WriteTimesBuffer(Context context, AnimationCurve curve)
         {
             var acc = new GltfAccessor();
             acc.bufferView = 0;
@@ -291,17 +318,21 @@ namespace Microsoft.MixedReality.Toolkit.Input
             acc.count = curve.length;
             acc.type = "SCALAR";
 
+            acc.min = new double[] { float.MaxValue };
+            acc.max = new double[] { float.MinValue };
             Keyframe[] keys = curve.keys;
             for (int i = 0; i < keys.Length; ++i)
             {
                 context.writer.Write(keys[i].time);
+                acc.min[0] = Math.Min(acc.min[0], keys[i].time);
+                acc.max[0] = Math.Max(acc.max[0], keys[i].time);
             }
 
             context.accessors.Add(acc);
             return context.accessors.Count - 1;
         }
 
-        private static int WriteScalarBuffer(AnimationContext context, AnimationCurve curve)
+        private static int WriteScalarBuffer(Context context, AnimationCurve curve)
         {
             var acc = new GltfAccessor();
             acc.bufferView = 0;
@@ -311,17 +342,21 @@ namespace Microsoft.MixedReality.Toolkit.Input
             acc.count = curve.length;
             acc.type = "SCALAR";
 
+            acc.min = new double[] { float.MaxValue };
+            acc.max = new double[] { float.MinValue };
             Keyframe[] keys = curve.keys;
             for (int i = 0; i < keys.Length; ++i)
             {
                 context.writer.Write(keys[i].value);
+                acc.min[0] = Math.Min(acc.min[0], keys[i].value);
+                acc.max[0] = Math.Max(acc.max[0], keys[i].value);
             }
 
             context.accessors.Add(acc);
             return context.accessors.Count - 1;
         }
 
-        private static int WriteVec3Buffer(AnimationContext context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ)
+        private static int WriteVec3Buffer(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ)
         {
             if (!Vec3CurvesMatch(curveX, curveY, curveZ))
             {
@@ -336,6 +371,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
             acc.count = curveX.length;
             acc.type = "VEC3";
 
+            acc.min = new double[] { float.MaxValue, float.MaxValue, float.MaxValue };
+            acc.max = new double[] { float.MinValue, float.MinValue, float.MinValue };
             Keyframe[] keysX = curveX.keys;
             Keyframe[] keysY = curveY.keys;
             Keyframe[] keysZ = curveZ.keys;
@@ -344,13 +381,46 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 context.writer.Write(keysX[i].value);
                 context.writer.Write(keysY[i].value);
                 context.writer.Write(keysZ[i].value);
+                acc.min[0] = Math.Min(acc.min[0], keysX[i].value);
+                acc.min[1] = Math.Min(acc.min[1], keysY[i].value);
+                acc.min[2] = Math.Min(acc.min[2], keysZ[i].value);
+                acc.max[0] = Math.Max(acc.max[0], keysX[i].value);
+                acc.max[1] = Math.Max(acc.max[1], keysY[i].value);
+                acc.max[2] = Math.Max(acc.max[2], keysZ[i].value);
             }
 
             context.accessors.Add(acc);
             return context.accessors.Count - 1;
         }
 
-        private static int WriteVec4Buffer(AnimationContext context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW)
+        public enum GltfAccessorType
+        {
+            SCALAR,
+            VEC2,
+            VEC3,
+            VEC4,
+            MAT2,
+            MAT3,
+            MAT4,
+        }
+
+        private static int CreateAccessor(Context context, GltfAccessorType type, int count, double[] min, double[] max)
+        {
+            var acc = new GltfAccessor();
+            acc.bufferView = 0;
+            acc.byteOffset = (int)context.writer.BaseStream.Position;
+            acc.componentType = GltfComponentType.Float;
+            acc.normalized = false;
+            acc.count = count;
+            acc.type = Enum.GetName(typeof(GltfAccessorType), type);
+            acc.min = min;
+            acc.max = max;
+
+            context.accessors.Add(acc);
+            return context.accessors.Count - 1;
+        }
+
+        private static int WriteVec4Buffer(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW)
         {
             if (!Vec4CurvesMatch(curveX, curveY, curveZ, curveW))
             {
@@ -365,6 +435,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
             acc.count = curveX.length;
             acc.type = "VEC4";
 
+            acc.min = new double[] { float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue };
+            acc.max = new double[] { float.MinValue, float.MinValue, float.MinValue, float.MinValue };
             Keyframe[] keysX = curveX.keys;
             Keyframe[] keysY = curveY.keys;
             Keyframe[] keysZ = curveZ.keys;
@@ -375,6 +447,14 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 context.writer.Write(keysY[i].value);
                 context.writer.Write(keysZ[i].value);
                 context.writer.Write(keysW[i].value);
+                acc.min[0] = Math.Min(acc.min[0], keysX[i].value);
+                acc.min[1] = Math.Min(acc.min[1], keysY[i].value);
+                acc.min[2] = Math.Min(acc.min[2], keysZ[i].value);
+                acc.min[3] = Math.Min(acc.min[3], keysW[i].value);
+                acc.max[0] = Math.Max(acc.max[0], keysX[i].value);
+                acc.max[1] = Math.Max(acc.max[1], keysY[i].value);
+                acc.max[2] = Math.Max(acc.max[2], keysZ[i].value);
+                acc.max[3] = Math.Max(acc.max[3], keysW[i].value);
             }
 
             context.accessors.Add(acc);
@@ -422,7 +502,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         private static int GetVec3BufferSize(AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ)
         {
-            if (Vec3CurvesMatch(curveX, curveY, curveZ))
+            if (!Vec3CurvesMatch(curveX, curveY, curveZ))
             {
                 Debug.LogWarning("Invalid Vector3 animation, component animation curves must have matching length");
                 return 0;
