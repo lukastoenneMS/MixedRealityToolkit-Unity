@@ -72,8 +72,26 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             CreateBuffer(context);
 
-            // Add all nodes to the scene
-            exportedObject.scenes[0].nodes = Enumerable.Range(0, context.nodes.Count).ToArray();
+            // Add all root nodes to the scene
+            {
+                bool[] isRootNode = new bool[context.nodes.Count];
+                for (int i = 0; i < isRootNode.Length; ++i)
+                {
+                    isRootNode[i] = true;
+                }
+                foreach (var node in context.nodes)
+                {
+                    if (node.children != null)
+                    {
+                        foreach (var childIndex in node.children)
+                        {
+                            isRootNode[childIndex] = false;
+                        }
+                    }
+                }
+
+                exportedObject.scenes[0].nodes = Enumerable.Range(0, context.nodes.Count).Where((i) => isRootNode[i]).ToArray();
+            }
 
             exportedObject.nodes = context.nodes.ToArray();
             exportedObject.cameras = context.cameras.ToArray();
