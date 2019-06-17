@@ -52,7 +52,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             // Create a scene
             exportedObject.scenes = new GltfScene[1];
-            exportedObject.scenes[0] = CreateScene("Scene", Enumerable.Range(0, 1));
+            exportedObject.scenes[0] = CreateScene("Scene");
             exportedObject.scene = 0;
 
             exportedObject.cameras = new GltfCamera[1];
@@ -71,6 +71,9 @@ namespace Microsoft.MixedReality.Toolkit.Input
             CreateAnimation(context, input, camera);
 
             CreateBuffer(context);
+
+            // Add all nodes to the scene
+            exportedObject.scenes[0].nodes = Enumerable.Range(0, context.nodes.Count).ToArray();
 
             exportedObject.nodes = context.nodes.ToArray();
             exportedObject.cameras = context.cameras.ToArray();
@@ -92,12 +95,10 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return info;
         }
 
-        private static GltfScene CreateScene(string name, IEnumerable<int> rootNodeIndices)
+        private static GltfScene CreateScene(string name)
         {
             GltfScene scene = new GltfScene();
             scene.name = "Scene";
-
-            scene.nodes = rootNodeIndices.ToArray();
 
             return scene;
         }
