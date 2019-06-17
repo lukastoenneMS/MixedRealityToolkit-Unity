@@ -14,21 +14,24 @@ namespace Microsoft.MixedReality.Toolkit.Input
 {
     public static class InputAnimationGltfExporter
     {
-        private struct Context
+        private class Context
         {
             public List<GltfNode> nodes;
             public List<GltfCamera> cameras;
             public List<GltfAccessor> accessors;
             public List<GltfAnimation> animations;
-            public List<GltfAnimationChannel> animationChannels;
-            public List<GltfAnimationSampler> animationSamplers;
             public List<GltfBuffer> buffers;
             public List<GltfBufferView> bufferViews;
 
-            public BinaryWriter writer;
+            public List<GltfAnimationChannel> animationChannels;
+            // Animation curves for each channel
+            // for deferred writing of the buffer after all animation channels are created.
+            public List<AnimationCurve[]> animationCurves;
+            public List<GltfAnimationSampler> animationSamplers;
+            public int bufferSize;
         }
 
-        public static async void OnExportInputAnimation(InputAnimation animation, string path)
+        public static async void OnExportInputAnimation(InputAnimation input, string path)
         {
             var context = new Context();
             context.nodes = new List<GltfNode>();
@@ -38,16 +41,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
             context.buffers = new List<GltfBuffer>();
             context.bufferViews = new List<GltfBufferView>();
 
-            GltfObject exportedObject = new GltfObject();
+            context.animationChannels = new List<GltfAnimationChannel>();
+            context.animationCurves = new List<AnimationCurve[]>();
+            context.animationSamplers = new List<GltfAnimationSampler>();
+            context.bufferSize = 0;
 
-            exportedObject.extensionsUsed = null;
-            exportedObject.extensionsRequired = null;
-            exportedObject.images = new GltfImage[0];
-            exportedObject.materials = new GltfMaterial[0];
-            exportedObject.meshes = new GltfMesh[0];
-            exportedObject.samplers = new GltfSampler[0];
-            exportedObject.skins = new GltfSkin[0];
-            exportedObject.textures = new GltfTexture[0];
+            GltfObject exportedObject = new GltfObject();
 
             exportedObject.asset = CreateAssetInfo("MIT", "MRTK");
 
@@ -69,7 +68,9 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 camera = CreateCameraPerspective(context, "Camera", 4.0/3.0, 55.0, 0.1, 100.0);
             }
 
-            CreateAnimationBuffer(context, animation, camera);
+            CreateAnimation(context, input, camera);
+
+            CreateBuffer(context);
 
             exportedObject.nodes = context.nodes.ToArray();
             exportedObject.cameras = context.cameras.ToArray();
@@ -162,37 +163,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         private static TrackedHandJoint[] TrackedHandJointValues = (TrackedHandJoint[])Enum.GetValues(typeof(TrackedHandJoint));
 
-        private static void CreateAnimationBuffer(Context context, InputAnimation input, int camera)
-        {
-            int totalSize = GetTotalAnimationBufferSize(input);
-
-            byte[] bufferData = new byte[totalSize];
-            var stream = new MemoryStream(bufferData, true);
-            context.writer = new BinaryWriter(stream);
-            CreateAnimation(context, input, camera);
-
-            var buffer = new GltfBuffer();
-            buffer.name = "AnimationData";
-            buffer.uri = null; // Stored internally
-            buffer.byteLength = totalSize;
-            buffer.BufferData = bufferData;
-
-            var bufferView = new GltfBufferView();
-            bufferView.name = "BufferView";
-            bufferView.buffer = 0;
-            bufferView.byteLength = totalSize;
-            bufferView.byteOffset = 0;
-            bufferView.target = GltfBufferViewTarget.None;
-
-            context.buffers.Add(buffer);
-            context.bufferViews.Add(bufferView);
-        }
-
         private static int CreateAnimation(Context context, InputAnimation input, int camera)
         {
-            context.animationChannels = new List<GltfAnimationChannel>();
-            context.animationSamplers = new List<GltfAnimationSampler>();
-
             int cameraNode = CreateNode(context, "Camera", MixedRealityPose.ZeroIdentity, 0, camera);
             CreatePoseAnimation(context, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
 
@@ -217,8 +189,6 @@ namespace Microsoft.MixedReality.Toolkit.Input
             var animation = new GltfAnimation();
             animation.channels = context.animationChannels.ToArray();
             animation.samplers = context.animationSamplers.ToArray();
-            context.animationChannels = null;
-            context.animationSamplers = null;
 
             context.animations.Add(animation);
             return context.animations.Count - 1;
@@ -226,21 +196,14 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         private static void CreatePoseAnimation(Context context, InputAnimation.PoseCurves poseCurves, GltfInterpolationType interpolation, int node)
         {
-            CreateTranslationAnimation(context, poseCurves.PositionX, poseCurves.PositionY, poseCurves.PositionZ, interpolation, node);
-            CreateRotationAnimation(context, poseCurves.RotationW, poseCurves.RotationY, poseCurves.RotationZ, poseCurves.RotationW, interpolation, node);
+            CreateTranslationAnimation(context, new AnimationCurve[] { poseCurves.PositionX, poseCurves.PositionY, poseCurves.PositionZ }, interpolation, node);
+            CreateRotationAnimation(context, new AnimationCurve[] { poseCurves.RotationX, poseCurves.RotationY, poseCurves.RotationZ, poseCurves.RotationW }, interpolation, node);
         }
 
         private static void CreateWeightsAnimation(Context context, AnimationCurve curve, GltfInterpolationType interpolation, int node)
         {
-            int start = (int)context.writer.BaseStream.Position;
-            int accTime = WriteTimesBuffer(context, curve);
-            int accValue = WriteScalarBuffer(context, curve);
-            if (accTime < 0 || accValue < 0)
-            {
-                // Reset writer if failed
-                context.writer.Seek(start, SeekOrigin.Begin);
-                return;
-            }
+            int accTime = CreateAccessor(context, "SCALAR", GltfComponentType.Float, curve.length);
+            int accValue = CreateAccessor(context, "SCALAR", GltfComponentType.Float, curve.length);
 
             var sampler = new GltfAnimationSampler();
             sampler.input = accTime;
@@ -254,19 +217,18 @@ namespace Microsoft.MixedReality.Toolkit.Input
             channel.target.node = node;
             channel.target.path = GltfAnimationChannelPath.weights;
             context.animationChannels.Add(channel);
+            context.animationCurves.Add(new AnimationCurve[] { curve });
         }
 
-        private static void CreateTranslationAnimation(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, GltfInterpolationType interpolation, int node)
+        private static void CreateTranslationAnimation(Context context, AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
         {
-            int start = (int)context.writer.BaseStream.Position;
-            int accTime = WriteTimesBuffer(context, curveX);
-            int accValue = WriteVec3Buffer(context, curveX, curveY, curveZ);
-            if (accTime < 0 || accValue < 0)
+            if (!Vec3CurvesMatch(curves))
             {
-                // Reset writer if failed
-                context.writer.Seek(start, SeekOrigin.Begin);
                 return;
             }
+
+            int accTime = CreateAccessor(context, "SCALAR", GltfComponentType.Float, curves[0].length);
+            int accValue = CreateAccessor(context, "VEC3", GltfComponentType.Float, curves[0].length);
 
             var sampler = new GltfAnimationSampler();
             sampler.input = accTime;
@@ -280,19 +242,18 @@ namespace Microsoft.MixedReality.Toolkit.Input
             channel.target.node = node;
             channel.target.path = GltfAnimationChannelPath.translation;
             context.animationChannels.Add(channel);
+            context.animationCurves.Add(curves);
         }
 
-        private static void CreateRotationAnimation(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW, GltfInterpolationType interpolation, int node)
+        private static void CreateRotationAnimation(Context context, AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
         {
-            int start = (int)context.writer.BaseStream.Position;
-            int accTime = WriteTimesBuffer(context, curveX);
-            int accValue = WriteVec4Buffer(context, curveX, curveY, curveZ, curveW);
-            if (accTime < 0 || accValue < 0)
+            if (!Vec4CurvesMatch(curves))
             {
-                // Reset writer if failed
-                context.writer.Seek(start, SeekOrigin.Begin);
                 return;
             }
+
+            int accTime = CreateAccessor(context, "SCALAR", GltfComponentType.Float, curves[0].length);
+            int accValue = CreateAccessor(context, "VEC4", GltfComponentType.Float, curves[0].length);
 
             var sampler = new GltfAnimationSampler();
             sampler.input = accTime;
@@ -306,234 +267,164 @@ namespace Microsoft.MixedReality.Toolkit.Input
             channel.target.node = node;
             channel.target.path = GltfAnimationChannelPath.rotation;
             context.animationChannels.Add(channel);
+            context.animationCurves.Add(curves);
         }
 
-        private static int WriteTimesBuffer(Context context, AnimationCurve curve)
+        private static int GetNumComponents(string type)
         {
-            var acc = new GltfAccessor();
-            acc.bufferView = 0;
-            acc.byteOffset = (int)context.writer.BaseStream.Position;
-            acc.componentType = GltfComponentType.Float;
-            acc.normalized = false;
-            acc.count = curve.length;
-            acc.type = "SCALAR";
-
-            acc.min = new double[] { float.MaxValue };
-            acc.max = new double[] { float.MinValue };
-            Keyframe[] keys = curve.keys;
-            for (int i = 0; i < keys.Length; ++i)
+            switch (type)
             {
-                context.writer.Write(keys[i].time);
-                acc.min[0] = Math.Min(acc.min[0], keys[i].time);
-                acc.max[0] = Math.Max(acc.max[0], keys[i].time);
+                case "SCALAR": return 1;
+                case "VEC2": return 2;
+                case "VEC3": return 3;
+                case "VEC4": return 4;
+                case "MAT2": return 4;
+                case "MAT3": return 9;
+                case "MAT4": return 16;
             }
-
-            context.accessors.Add(acc);
-            return context.accessors.Count - 1;
+            return 0;
         }
 
-        private static int WriteScalarBuffer(Context context, AnimationCurve curve)
+        private static int GetComponentSize(GltfComponentType type)
         {
-            var acc = new GltfAccessor();
-            acc.bufferView = 0;
-            acc.byteOffset = (int)context.writer.BaseStream.Position;
-            acc.componentType = GltfComponentType.Float;
-            acc.normalized = false;
-            acc.count = curve.length;
-            acc.type = "SCALAR";
-
-            acc.min = new double[] { float.MaxValue };
-            acc.max = new double[] { float.MinValue };
-            Keyframe[] keys = curve.keys;
-            for (int i = 0; i < keys.Length; ++i)
+            switch (type)
             {
-                context.writer.Write(keys[i].value);
-                acc.min[0] = Math.Min(acc.min[0], keys[i].value);
-                acc.max[0] = Math.Max(acc.max[0], keys[i].value);
+                case GltfComponentType.Byte: return 1;
+                case GltfComponentType.UnsignedByte: return 1;
+                case GltfComponentType.Short: return 2;
+                case GltfComponentType.UnsignedShort: return 2;
+                case GltfComponentType.UnsignedInt: return 4;
+                case GltfComponentType.Float : return 4;
             }
-
-            context.accessors.Add(acc);
-            return context.accessors.Count - 1;
+            return 0;
         }
 
-        private static int WriteVec3Buffer(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ)
+        private static int CreateAccessor(Context context, string accType, GltfComponentType compType, int count)
         {
-            if (!Vec3CurvesMatch(curveX, curveY, curveZ))
-            {
-                return -1;
-            }
+            int stride = GetNumComponents(accType) * GetComponentSize(compType);
+            // Align to full element size
+            int byteOffset = context.bufferSize == 0 ? 0 : context.bufferSize + stride - (context.bufferSize % stride);
+            int byteSize = stride * count;
+            context.bufferSize = byteOffset + byteSize;
 
             var acc = new GltfAccessor();
             acc.bufferView = 0;
-            acc.byteOffset = (int)context.writer.BaseStream.Position;
-            acc.componentType = GltfComponentType.Float;
-            acc.normalized = false;
-            acc.count = curveX.length;
-            acc.type = "VEC3";
-
-            acc.min = new double[] { float.MaxValue, float.MaxValue, float.MaxValue };
-            acc.max = new double[] { float.MinValue, float.MinValue, float.MinValue };
-            Keyframe[] keysX = curveX.keys;
-            Keyframe[] keysY = curveY.keys;
-            Keyframe[] keysZ = curveZ.keys;
-            for (int i = 0; i < keysX.Length; ++i)
-            {
-                context.writer.Write(keysX[i].value);
-                context.writer.Write(keysY[i].value);
-                context.writer.Write(keysZ[i].value);
-                acc.min[0] = Math.Min(acc.min[0], keysX[i].value);
-                acc.min[1] = Math.Min(acc.min[1], keysY[i].value);
-                acc.min[2] = Math.Min(acc.min[2], keysZ[i].value);
-                acc.max[0] = Math.Max(acc.max[0], keysX[i].value);
-                acc.max[1] = Math.Max(acc.max[1], keysY[i].value);
-                acc.max[2] = Math.Max(acc.max[2], keysZ[i].value);
-            }
-
-            context.accessors.Add(acc);
-            return context.accessors.Count - 1;
-        }
-
-        public enum GltfAccessorType
-        {
-            SCALAR,
-            VEC2,
-            VEC3,
-            VEC4,
-            MAT2,
-            MAT3,
-            MAT4,
-        }
-
-        private static int CreateAccessor(Context context, GltfAccessorType type, int count, double[] min, double[] max)
-        {
-            var acc = new GltfAccessor();
-            acc.bufferView = 0;
-            acc.byteOffset = (int)context.writer.BaseStream.Position;
-            acc.componentType = GltfComponentType.Float;
+            acc.byteOffset = byteOffset;
+            acc.type = accType;
+            acc.componentType = compType;
             acc.normalized = false;
             acc.count = count;
-            acc.type = Enum.GetName(typeof(GltfAccessorType), type);
-            acc.min = min;
-            acc.max = max;
 
             context.accessors.Add(acc);
             return context.accessors.Count - 1;
         }
 
-        private static int WriteVec4Buffer(Context context, AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW)
+        private static int GetAccessorByteSize(GltfAccessor accessor)
         {
-            if (!Vec4CurvesMatch(curveX, curveY, curveZ, curveW))
-            {
-                return -1;
-            }
-
-            var acc = new GltfAccessor();
-            acc.bufferView = 0;
-            acc.byteOffset = (int)context.writer.BaseStream.Position;
-            acc.componentType = GltfComponentType.Float;
-            acc.normalized = false;
-            acc.count = curveX.length;
-            acc.type = "VEC4";
-
-            acc.min = new double[] { float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue };
-            acc.max = new double[] { float.MinValue, float.MinValue, float.MinValue, float.MinValue };
-            Keyframe[] keysX = curveX.keys;
-            Keyframe[] keysY = curveY.keys;
-            Keyframe[] keysZ = curveZ.keys;
-            Keyframe[] keysW = curveW.keys;
-            for (int i = 0; i < keysX.Length; ++i)
-            {
-                context.writer.Write(keysX[i].value);
-                context.writer.Write(keysY[i].value);
-                context.writer.Write(keysZ[i].value);
-                context.writer.Write(keysW[i].value);
-                acc.min[0] = Math.Min(acc.min[0], keysX[i].value);
-                acc.min[1] = Math.Min(acc.min[1], keysY[i].value);
-                acc.min[2] = Math.Min(acc.min[2], keysZ[i].value);
-                acc.min[3] = Math.Min(acc.min[3], keysW[i].value);
-                acc.max[0] = Math.Max(acc.max[0], keysX[i].value);
-                acc.max[1] = Math.Max(acc.max[1], keysY[i].value);
-                acc.max[2] = Math.Max(acc.max[2], keysZ[i].value);
-                acc.max[3] = Math.Max(acc.max[3], keysW[i].value);
-            }
-
-            context.accessors.Add(acc);
-            return context.accessors.Count - 1;
+            int stride = GetNumComponents(accessor.type) * GetComponentSize(accessor.componentType);
+            return stride * accessor.count;
         }
 
-        private static int GetTotalAnimationBufferSize(InputAnimation animation)
+        private static void CreateBuffer(Context context)
         {
-            int size = 0;
+            byte[] bufferData = new byte[context.bufferSize];
 
-            size += GetPoseCurvesBufferSize(animation.CameraCurves);
-
-            size += GetScalarBufferSize(animation.HandTrackedCurveLeft);
-            size += GetScalarBufferSize(animation.HandTrackedCurveRight);
-            size += GetScalarBufferSize(animation.HandPinchCurveLeft);
-            size += GetScalarBufferSize(animation.HandPinchCurveRight);
-
-            foreach (var joint in TrackedHandJointValues)
+            Debug.Assert(context.animationChannels.Count == context.animationCurves.Count);
+            for (int i = 0; i < context.animationChannels.Count; ++i)
             {
-                InputAnimation.PoseCurves jointCurves;
-                if (animation.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+                var channel = context.animationChannels[i];
+                var sampler = context.animationSamplers[channel.sampler];
+                var input = context.accessors[sampler.input];
+                var output = context.accessors[sampler.output];
+
+                var curves = context.animationCurves[i];
+
+                WriteTimeBuffer(bufferData, input, curves);
+                WriteValueBuffer(bufferData, output, curves);
+            }
+
+            var buffer = new GltfBuffer();
+            buffer.name = "AnimationData";
+            buffer.uri = null; // Stored internally
+            buffer.byteLength = context.bufferSize;
+            buffer.BufferData = bufferData;
+
+            var bufferView = new GltfBufferView();
+            bufferView.name = "BufferView";
+            bufferView.buffer = 0;
+            bufferView.byteLength = context.bufferSize;
+            bufferView.byteOffset = 0;
+            bufferView.target = GltfBufferViewTarget.None;
+
+            context.buffers.Add(buffer);
+            context.bufferViews.Add(bufferView);
+        }
+
+        private static void WriteTimeBuffer(byte[] bufferData, GltfAccessor accessor, AnimationCurve[] curves)
+        {
+            int byteSize = GetAccessorByteSize(accessor);
+            var stream = new MemoryStream(bufferData, accessor.byteOffset, byteSize, true);
+            var writer = new BinaryWriter(stream);
+
+            Debug.Assert(curves[0].keys.Length == accessor.count);
+
+            accessor.min = new double[] { float.MaxValue };
+            accessor.max = new double[] { float.MinValue };
+            for (int i = 0; i < accessor.count; ++i)
+            {
+                float time = curves[0].keys[i].time;
+
+                // Slightly expensive ...
+                // Debug.Assert(curves.All((curve) => curve.keys[i].time == time));
+
+                writer.Write(time);
+
+                accessor.min[0] = Math.Min(accessor.min[0], time);
+                accessor.max[0] = Math.Max(accessor.max[0], time);
+            }
+        }
+
+        private static void WriteValueBuffer(byte[] bufferData, GltfAccessor accessor, AnimationCurve[] curves)
+        {
+            int byteSize = GetAccessorByteSize(accessor);
+            var stream = new MemoryStream(bufferData, accessor.byteOffset, byteSize, true);
+            var writer = new BinaryWriter(stream);
+
+            int numComponents = GetNumComponents(accessor.type);
+            Debug.Assert(curves.Length == numComponents);
+            Debug.Assert(curves.All((curve) => curve.keys.Length == accessor.count));
+
+            accessor.min = new double[numComponents];
+            accessor.max = new double[numComponents];
+            for (int c = 0; c < numComponents; ++c)
+            {
+                accessor.min[c] = float.MaxValue;
+                accessor.max[c] = float.MinValue;
+            }
+            for (int i = 0; i < accessor.count; ++i)
+            {
+                for (int c = 0; c < numComponents; ++c)
                 {
-                    size += GetPoseCurvesBufferSize(jointCurves);
+                    float value = curves[c].keys[i].value;
+
+                    writer.Write(value);
+
+                    accessor.min[c] = Math.Min(accessor.min[c], value);
+                    accessor.max[c] = Math.Max(accessor.max[c], value);
                 }
-                if (animation.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
-                {
-                    size += GetPoseCurvesBufferSize(jointCurves);
-                }
             }
-            return size;
         }
 
-        private static int GetScalarBufferSize(AnimationCurve curve)
+        private static bool Vec3CurvesMatch(AnimationCurve[] curves)
         {
-            int length = curve.length;
-            // times + 1 component
-            return sizeof(float) * 2 * length;
+            Debug.Assert(curves.Length == 3);
+            return curves[0].length == curves[1].length && curves[1].length == curves[2].length;
         }
 
-        private static int GetPoseCurvesBufferSize(InputAnimation.PoseCurves poseCurves)
+        private static bool Vec4CurvesMatch(AnimationCurve[] curves)
         {
-            return GetVec3BufferSize(poseCurves.PositionX, poseCurves.PositionY, poseCurves.PositionZ)
-                + GetVec4BufferSize(poseCurves.RotationX, poseCurves.RotationY, poseCurves.RotationZ, poseCurves.RotationW);
-        }
-
-        private static int GetVec3BufferSize(AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ)
-        {
-            if (!Vec3CurvesMatch(curveX, curveY, curveZ))
-            {
-                Debug.LogWarning("Invalid Vector3 animation, component animation curves must have matching length");
-                return 0;
-            }
-
-            int length = curveX.length;
-            // times + 3 components
-            return sizeof(float) * 4 * length;
-        }
-
-        private static int GetVec4BufferSize(AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW)
-        {
-            if (!Vec4CurvesMatch(curveX, curveY, curveZ, curveW))
-            {
-                Debug.LogWarning("Invalid Quaternion animation, component animation curves must have matching length");
-                return 0;
-            }
-
-            int length = curveX.length;
-            // times + 4 components
-            return sizeof(float) * 5 * length;
-        }
-
-        private static bool Vec3CurvesMatch(AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ)
-        {
-            return curveX.length == curveY.length && curveY.length == curveZ.length;
-        }
-
-        private static bool Vec4CurvesMatch(AnimationCurve curveX, AnimationCurve curveY, AnimationCurve curveZ, AnimationCurve curveW)
-        {
-            return curveX.length == curveY.length && curveY.length == curveZ.length && curveZ.length == curveW.length;
+            Debug.Assert(curves.Length == 4);
+            return curves[0].length == curves[1].length && curves[1].length == curves[2].length && curves[2].length == curves[3].length;
         }
     }
 }
