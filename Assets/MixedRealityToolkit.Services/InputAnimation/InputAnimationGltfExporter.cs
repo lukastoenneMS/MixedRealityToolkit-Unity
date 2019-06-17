@@ -102,7 +102,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return scene;
         }
 
-        private static int CreateNode(Context context, string name, MixedRealityPose pose, int numChildren, int camera = -1)
+        private static int CreateNode(Context context, string name, MixedRealityPose pose, int parent = -1, int camera = -1)
         {
             GltfNode node = new GltfNode();
             node.name = name;
@@ -114,11 +114,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
             node.matrix = null;
 
             node.camera = camera;
-            node.children = new int[0];
-            node.weights = new double[0];
 
             context.nodes.Add(node);
-            return context.nodes.Count - 1;
+            int index = context.nodes.Count - 1;
+
+            if (parent >= 0)
+            {
+                GltfNode parentNode = context.nodes[parent];
+                parentNode.children = parentNode.children != null ? parentNode.children.Append(index).ToArray() : new int[] { index };
+            }
+
+            return index;
         }
 
         private static int CreateCameraPerspective(Context context, string name, double aspectRatio, double yFov, double zNear, double zFar)
@@ -165,26 +171,37 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         private static int CreateAnimation(Context context, InputAnimation input, int camera)
         {
-            int cameraNode = CreateNode(context, "Camera", MixedRealityPose.ZeroIdentity, 0, camera);
+            int cameraNode = CreateNode(context, "Camera", MixedRealityPose.ZeroIdentity, -1, camera);
             CreatePoseAnimation(context, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
 
-            // WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveLeft);
-            // WriteCurveBuffer(writer, accessors, animation.HandTrackedCurveRight);
-            // WriteCurveBuffer(writer, accessors, animation.HandPinchCurveLeft);
-            // WriteCurveBuffer(writer, accessors, animation.HandPinchCurveRight);
+            int leftHandNode = CreateNode(context, "Hand.Left", MixedRealityPose.ZeroIdentity);
+            int rightHandNode = CreateNode(context, "Hand.Right", MixedRealityPose.ZeroIdentity);
 
-            // foreach (var joint in TrackedHandJointValues)
-            // {
-            //     InputAnimation.PoseCurves jointCurves;
-            //     if (animation.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
-            //     {
-            //         WritePoseCurvesBuffer(writer, accessors, jointCurves);
-            //     }
-            //     if (animation.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
-            //     {
-            //         WritePoseCurvesBuffer(writer, accessors, jointCurves);
-            //     }
-            // }
+            int leftPinchNode = CreateNode(context, "Pinch", MixedRealityPose.ZeroIdentity, leftHandNode);
+            int rightPinchNode = CreateNode(context, "Pinch", MixedRealityPose.ZeroIdentity, rightHandNode);
+
+            // TODO: need morph targets to create weights animations - use fake position instead?
+            // CreateWeightsAnimation(context, input.HandTrackedCurveLeft, GltfInterpolationType.STEP, leftHandNode);
+            // CreateWeightsAnimation(context, input.HandTrackedCurveRight, GltfInterpolationType.STEP, rightHandNode);
+            // CreateWeightsAnimation(context, input.HandPinchCurveLeft, GltfInterpolationType.STEP, leftPinchNode);
+            // CreateWeightsAnimation(context, input.HandPinchCurveRight, GltfInterpolationType.STEP, rightPinchNode);
+
+            foreach (var joint in TrackedHandJointValues)
+            {
+                string jointName = Enum.GetName(typeof(TrackedHandJoint), joint);
+                int leftJointNode = CreateNode(context, jointName, MixedRealityPose.ZeroIdentity, leftHandNode);
+                int rightJointNode = CreateNode(context, jointName, MixedRealityPose.ZeroIdentity, rightHandNode);
+
+                InputAnimation.PoseCurves jointCurves;
+                if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+                {
+                    CreatePoseAnimation(context, jointCurves, GltfInterpolationType.LINEAR, leftJointNode);
+                }
+                if (input.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
+                {
+                    CreatePoseAnimation(context, jointCurves, GltfInterpolationType.LINEAR, rightJointNode);
+                }
+            }
 
             var animation = new GltfAnimation();
             animation.channels = context.animationChannels.ToArray();
