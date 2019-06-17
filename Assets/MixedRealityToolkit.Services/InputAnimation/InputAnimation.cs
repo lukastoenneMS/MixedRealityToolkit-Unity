@@ -265,7 +265,6 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 Quaternion q0 = new Quaternion(curveX.keys[iX - 1].value, curveY.keys[iY - 1].value, curveZ.keys[iZ - 1].value, curveW.keys[iW - 1].value);
                 Quaternion q1 = new Quaternion(curveX.keys[iX].value, curveY.keys[iY].value, curveZ.keys[iZ].value, curveW.keys[iW].value);
 
-                // Merge the preceding two intervals if difference is small enough
                 (q0 * Quaternion.Inverse(q1)).ToAngleAxis(out float angle0, out Vector3 axis0);
                 (rotation * Quaternion.Inverse(q0)).ToAngleAxis(out float angle1, out Vector3 axis1);
                 if (angle0 <= sqrThreshold && angle1 <= sqrThreshold)
@@ -275,6 +274,13 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     curveZ.RemoveKey(iZ);
                     curveW.RemoveKey(iW);
                 }
+
+                // TODO make use of Bezier interpolation to allow more aggressive compression
+                // and use tangents and weights to accurately merge adjacent splines.
+                AddFloatKey(curveX, time, rotation.x);
+                AddFloatKey(curveY, time, rotation.y);
+                AddFloatKey(curveZ, time, rotation.z);
+                AddFloatKey(curveW, time, rotation.w);
             }
 
             // TODO make use of Bezier interpolation to allow more aggressive compression
