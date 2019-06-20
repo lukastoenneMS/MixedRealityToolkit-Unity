@@ -103,21 +103,11 @@ namespace Parsley
         private MixedRealityPose localTarget;
         private MixedRealityPose localTargetOrigin;
 
-        public SnapEffect(AnimationCurve animationCurve, Transform transform, MixedRealityPose target)
+        public SnapEffect(AnimationCurve animationCurve, Transform transform, MixedRealityPose localTarget)
             : base(animationCurve)
         {
             this.localTargetOrigin = new MixedRealityPose(transform.localPosition, transform.localRotation);
-
-            if (transform.parent)
-            {
-                this.localTarget = new MixedRealityPose(
-                    transform.parent.InverseTransformPoint(target.Position),
-                    Quaternion.Inverse(transform.parent.rotation) * target.Rotation);
-            }
-            else
-            {
-                this.localTarget = target;
-            }
+            this.localTarget = localTarget;
         }
 
         public static bool Evaluate(IEnumerable<SnapEffect> effects, out MixedRealityPose result)

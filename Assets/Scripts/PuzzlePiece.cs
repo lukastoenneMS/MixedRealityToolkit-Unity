@@ -75,14 +75,16 @@ namespace Parsley
             // puzzleGame.StopBuilding(this);
         }
 
-        public void Snap(MixedRealityPose goalOffset)
+        public void Snap()
         {
+            var invGoal = Goal.Inverse();
+
             PuzzleShard[] shards = GetComponentsInChildren<PuzzleShard>();
             foreach (var shard in shards)
             {
-                // Define targets to snap shards into place relative to each other
-                var target = goalOffset.Multiply(shard.Goal);
-                shard.StartEffect(new SnapEffect(puzzleGame.SnapAnimation, shard.transform, target));
+                // Local space goal is defined by difference between shard goal and piece goal
+                var localTarget = invGoal.Multiply(shard.Goal);
+                shard.StartEffect(new SnapEffect(puzzleGame.SnapAnimation, shard.transform, localTarget));
             }
 
             if (puzzleGame.SnapAudioClip)

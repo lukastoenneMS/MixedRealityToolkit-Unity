@@ -62,11 +62,11 @@ namespace Parsley
         }
 
         /// Find a pose P such that distance of each shard from its transformed goal is minimal.
-        public static bool FindShardGoalPose(PuzzleShard[] shards, out MixedRealityPose goalOffset, out MixedRealityPose goalCenter)
+        public static bool FindShardCenter(PuzzleShard[] shards, out MixedRealityPose center, out MixedRealityPose goalCenter)
         {
             if (shards.Length == 0)
             {
-                goalOffset = MixedRealityPose.ZeroIdentity;
+                center = MixedRealityPose.ZeroIdentity;
                 goalCenter = MixedRealityPose.ZeroIdentity;
                 return false;
             }
@@ -95,7 +95,7 @@ namespace Parsley
             Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
             Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
 
-            goalOffset = new MixedRealityPose(centroid - rotation * goalCentroid, rotation);
+            center = new MixedRealityPose(centroid, rotation);
             goalCenter = new MixedRealityPose(goalCentroid, Quaternion.identity);
             return true;
         }

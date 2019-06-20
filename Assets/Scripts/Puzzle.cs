@@ -10,50 +10,12 @@ using UnityEngine;
 
 namespace Parsley
 {
-    internal class PuzzlePieceMapping : IPieceMapping
-    {
-        private readonly List<PuzzlePiece> pieces;
-        private readonly Dictionary<PuzzlePiece, int> pieceIndices = new Dictionary<PuzzlePiece, int>();
-
-        public PuzzlePieceMapping(List<PuzzlePiece> pieces)
-        {
-            this.pieces = pieces;
-        }
-
-        public int Count => pieces.Count;
-
-        public PuzzlePiece GetPiece(int index)
-        {
-            return pieces[index];
-        }
-
-        public int GetIndex(PuzzlePiece piece)
-        {
-            if (!pieceIndices.TryGetValue(piece, out int index))
-            {
-                Debug.LogError($"Piece {piece.gameObject.name} is not part of the puzzle");
-                return -1;
-            }
-            return index;
-        }
-
-        public void UpdateIndices()
-        {
-            pieceIndices.Clear();
-            for (int i = 0; i < pieces.Count; ++i)
-            {
-                pieceIndices.Add(pieces[i], i);
-            }
-        }
-   }
-
     [Serializable]
     public class Puzzle : MonoBehaviour
     {
         public GameObject ShardsContainer = null;
 
         private readonly List<PuzzlePiece> pieces;
-        private readonly PuzzlePieceMapping mapping;
 
         public int pieceCount => pieces.Count;
         public PuzzlePiece GetPiece(int index) { return pieces[index]; }
@@ -63,7 +25,6 @@ namespace Parsley
         public Puzzle()
         {
             pieces = new List<PuzzlePiece>();
-            mapping = new PuzzlePieceMapping(pieces);
         }
 
         void Awake()
@@ -94,8 +55,6 @@ namespace Parsley
                     CreatePiece(shard, shard.parent, pose, goal);
                 }
             }
-
-            mapping.UpdateIndices();
         }
 
         private PuzzlePiece CreatePiece(Transform shard, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
@@ -122,31 +81,36 @@ namespace Parsley
             // since they expect a Puzzle ancestor compont on Awake()
             PuzzlePiece piece = pieceOb.AddComponent<PuzzlePiece>();
             pieces.Add(piece);
-            int index = pieces.Count - 1;
 
             piece.Goal = goal;
 
             return piece;
         }
 
+        public void RemovePiece(PuzzlePiece piece)
+        {
+            pieces.Remove(piece);
+            Destroy(piece.gameObject);
+        }
+
         public IEnumerable<PuzzlePiece> GetNeighbors(IEnumerable<PuzzlePiece> input)
         {
-            return neighborMap.GetNeighbors(mapping, input);
+            return neighborMap.GetNeighbors(input);
         }
 
         public IEnumerable<PuzzlePiece> GetExternalNeighbors(IEnumerable<PuzzlePiece> input)
         {
-            return neighborMap.GetExternalNeighbors(mapping, input);
+            return neighborMap.GetExternalNeighbors(input);
         }
 
         public IEnumerable<PuzzlePiece> GetInternalNeighbors(IEnumerable<PuzzlePiece> input)
         {
-            return neighborMap.GetInternalNeighbors(mapping, input);
+            return neighborMap.GetInternalNeighbors(input);
         }
 
         public IEnumerator DetectNeighborsAsync()
         {
-            return neighborMap.DetectNeighborsAsync(mapping);
+            return neighborMap.DetectNeighborsAsync(pieces);
         }
 
         public void ScatterPieces()
@@ -185,73 +149,28 @@ namespace Parsley
             }
         }
 
-        public PuzzlePiece MergePieces(PuzzlePiece a, PuzzlePiece b, AnimationCurve snapAnimation)
+        public PuzzlePiece MergePieces(PuzzlePiece pa, PuzzlePiece pb, AnimationCurve snapAnimation)
         {
-            int indexA = mapping.GetIndex(a);
-            int indexB = mapping.GetIndex(b);
-            int newIndex = MergePieces(indexA, indexB, snapAnimation);
-            return mapping.GetPiece(newIndex);
-        }
-
-        private int MergePieces(int a, int b, AnimationCurve snapAnimation)
-        {
-            if (a == b)
-            {
-                // Nothing to do
-                return a;
-            }
-
-            var pa = pieces[a];
-            var pb = pieces[b];
             PuzzleShard[] shardsA = pa.gameObject.GetComponentsInChildren<PuzzleShard>();
             PuzzleShard[] shardsB = pb.gameObject.GetComponentsInChildren<PuzzleShard>();
             PuzzleShard[] allShards = new PuzzleShard[shardsA.Length + shardsB.Length];
             Array.Copy(shardsA, 0, allShards, 0, shardsA.Length);
             Array.Copy(shardsB, 0, allShards, shardsA.Length, shardsB.Length);
 
-            PuzzleUtils.FindShardGoalPose(allShards, out MixedRealityPose goalOffset, out MixedRealityPose goalCenter);
+            PuzzleUtils.FindShardCenter(allShards, out MixedRealityPose center, out MixedRealityPose goalCenter);
 
-            pa.Goal = goalCenter;
-            // Move shards to A
-            foreach (var shard in shardsB)
-            {
-                shard.transform.SetParent(pa.transform, true);
-            }
+            Transform parent = pa.transform.parent;
+            PuzzlePiece pn = CreatePiece(allShards.Select((shard) => shard.transform), parent, center, goalCenter);
 
-            // Recenter the piece on the shared center of shards
-            MixedRealityPose center = goalOffset.Multiply(goalCenter);
-            MixedRealityPose invParentOffset = center.Inverse().Multiply(new MixedRealityPose(pa.transform.position, pa.transform.rotation));
-            pa.transform.position = center.Position;
-            pa.transform.rotation = center.Rotation;
-            foreach (var shard in allShards)
-            {
-                // Parent has been moved, make sure world transform stays the same
-                shard.transform.localPosition = invParentOffset.Multiply(shard.transform.localPosition);
-                shard.transform.localRotation = invParentOffset.Multiply(shard.transform.localRotation);
-            }
+            neighborMap.MoveNeighbors(pa, pn);
+            neighborMap.MoveNeighbors(pb, pn);
 
-            pa.Snap(goalOffset);
+            RemovePiece(pa);
+            RemovePiece(pb);
 
-            // Remove the piece
-            pieces.RemoveAt(b);
-            GameObject.Destroy(pb.gameObject);
-            mapping.UpdateIndices();
-            int newA = (a < b ? a : a-1);
+            pn.Snap();
 
-            // Maps old index to new:
-            // < b  : unchanged
-            // > b  : shift left 1
-            // == b : -1, removed
-            Func<int, int> mapIndex = (n) => (n < b ? n : (n > b ? n-1 : -1));
-            // Maps old neighbor index to new:
-            // < b  : unchanged
-            // > b  : shift left 1
-            // == b : becomes a
-            Func<int, int> mapNeighbor = (n) => (n < b ? n : (n > b ? n-1 : newA));
-            // Modify neighbor map
-            neighborMap.MapIndices(mapping, mapIndex, mapNeighbor);
-
-            return newA;
+            return pn;
         }
 
         public MixedRealityPose GetGoalDistance(PuzzlePiece a, PuzzlePiece b)

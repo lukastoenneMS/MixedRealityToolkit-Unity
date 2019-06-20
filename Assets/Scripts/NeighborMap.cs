@@ -7,6 +7,9 @@ using UnityEngine;
 
 namespace Parsley
 {
+    using NeighborSet = HashSet<PuzzlePiece>;
+    using NeighborDict = Dictionary<PuzzlePiece, HashSet<PuzzlePiece>>;
+
     public interface IPieceMapping
     {
         int Count { get; }
@@ -23,232 +26,168 @@ namespace Parsley
         #endif
 
         // Neighbor map for connecting pieces
-        private readonly List<int> neighborCount = new List<int>();
-        private readonly List<int> neighborStart = new List<int>();
-        private readonly List<int> neighbors = new List<int>();
+        private readonly NeighborDict neighbors = new NeighborDict();
 
-        public IEnumerator DetectNeighborsAsync(IPieceMapping mapping)
+        public IEnumerator DetectNeighborsAsync(IEnumerable<PuzzlePiece> pieces)
         {
             using (var builder = new NeighborDetection.NeighborMapBuilder())
             {
-                for (int i = 0; i < mapping.Count; ++i)
+                foreach (var piece in pieces)
                 {
-                    builder.Add(mapping.GetPiece(i).gameObject, i);
+                    builder.Add(piece);
                 }
 
                 // Wait for one frame to register collisions
                 yield return new WaitForFixedUpdate();
 
-                BuildNeighborMap(mapping, builder.NeighborSet);
+                BuildNeighborMap(builder.NeighborPairs);
             }
         }
 
-        private void BuildNeighborMap(IPieceMapping mapping, NeighborDetection.NeighborIndexSet neighborSet)
+        private void BuildNeighborMap(NeighborDetection.NeighborPairSet neighborPairs)
         {
-            int count = mapping.Count;
-            neighborCount.Clear();
-            neighborStart.Clear();
             neighbors.Clear();
-            neighborCount.Capacity = count;
-            neighborStart.Capacity = count;
-            // NeighborSet only has one key per symmetric pair, we want both in the map
-            int numNeighbors = neighborSet.Count * 2;
-            neighbors.Capacity = numNeighbors;
-            for (int i = 0; i < count; ++i)
-            {
-                neighborStart.Add(0);
-                neighborCount.Add(0);
-            }
-            for (int i = 0; i < numNeighbors; ++i)
-            {
-                neighbors.Add(-1);
-            }
 
-            // Count neighbors
-            foreach (NeighborDetection.NeighborIndexPair pair in neighborSet)
+            foreach (var pair in neighborPairs)
             {
-                ++neighborCount[pair.indexMinor];
-                ++neighborCount[pair.indexMajor];
+                InsertOneSided(pair.pieceA, pair.pieceB);
+                InsertOneSided(pair.pieceB, pair.pieceA);
             }
-            UpdateNeighborStart();
-
-            // Actual neighbor indices in the map
-            {
-                int[] nextNeighbor = new int[count];
-                for (int i = 0; i < count; ++i)
-                {
-                    nextNeighbor[i] = neighborStart[i];
-                }
-                foreach (NeighborDetection.NeighborIndexPair pair in neighborSet)
-                {
-                    neighbors[nextNeighbor[pair.indexMinor]++] = pair.indexMajor;
-                    neighbors[nextNeighbor[pair.indexMajor]++] = pair.indexMinor;
-                }
-            }
-
-            // string s = "";
-            // foreach (int n in neighbors) { s += $"{n}, "; }
-            // Debug.Log($"Neighbor map: {s}");
 
             ValidateNeighborMap();
         }
 
-        private void UpdateNeighborStart()
+        private void InsertOneSided(PuzzlePiece piece, PuzzlePiece neighbor)
         {
-            Debug.Assert(neighborStart.Count == neighborCount.Count);
-
-            // Sum for offset in the neighbors map
-            int start = 0;
-            for (int i = 0; i < neighborCount.Count; ++i)
+            if (!neighbors.TryGetValue(piece, out NeighborSet neighborSet))
             {
-                neighborStart[i] = start;
-                start += neighborCount[i];
+                neighborSet = new NeighborSet();
+                neighbors.Add(piece, neighborSet);
             }
+            neighborSet.Add(neighbor);
         }
 
         private void ValidateNeighborMap()
         {
             #if DEBUG_VALIDATE
 
-            Debug.Assert(neighborCount.Count == pieces.Count);
-            Debug.Assert(neighborStart.Count == pieces.Count);
-            if (pieces.Count == 0)
+            // Ensure neighbor map is symmetric
+            foreach (var item in neighbors)
             {
-                Debug.Assert(neighbors.Count == 0);
-                return;
-            }
-
-            int total = 0;
-            for (int i = 0; i < pieces.Count; ++i)
-            {
-                int start = neighborStart[i];
-                int count = neighborCount[i];
-
-                Debug.Assert(start == total);
-                Debug.Assert(start + count <= neighbors.Count);
-                Debug.Assert(total <= neighbors.Count);
-
-                for (int j = 0; j < count; ++j)
+                foreach (var neighbor in item.Value)
                 {
-                    int other = neighbors[start + j];
-                    Debug.Assert(other < pieces.Count);
-
-                    // Ensure neighbor map is symmetric
-                    int otherStart = neighborStart[other];
-                    int otherCount = neighborCount[other];
-                    bool isSymmetric = false;
-                    for (int jj = 0; jj < otherCount; ++jj)
-                    {
-                        if (neighbors[otherStart + jj] == i)
-                        {
-                            isSymmetric = true;
-                        }
-                    }
-                    Debug.Assert(isSymmetric);
+                    Debug.Assert(neighbors.TryGetValue(neighbor, out NeighborSet neighborNeighbors));
+                    Debug.Assert(neighborNeighbors.Contains(item.Key));
                 }
-
-                total += count;
             }
-            Debug.Assert(neighbors.Count == total);
+
             #endif
         }
 
-        public void MapIndices(IPieceMapping mapping, Func<int, int> mapIndex, Func<int, int> mapNeighbor)
+        public IEnumerable<PuzzlePiece> GetNeighbors(IEnumerable<PuzzlePiece> input)
         {
-            var neighborSet = new NeighborDetection.NeighborIndexSet();
-            for (int i = 0; i < neighborStart.Count; ++i)
-            {
-                int newIndex = mapIndex(i);
-                if (newIndex >= 0)
-                {
-                    int start = neighborStart[i];
-                    int count = neighborCount[i];
-                    for (int j = 0; j < count; ++j)
-                    {
-                        int newNeighbor = mapNeighbor(neighbors[start + j]);
-                        if (newNeighbor >= 0)
-                        {
-                            neighborSet.Add(new NeighborDetection.NeighborIndexPair(newIndex, newNeighbor));
-                        }
-                    }
-                }
-            }
-
-            BuildNeighborMap(mapping, neighborSet);
-        }
-
-        public IEnumerable<PuzzlePiece> GetNeighbors(IPieceMapping mapping, IEnumerable<PuzzlePiece> input)
-        {
-            var inPieces = new HashSet<int>();
-            var result = new HashSet<int>();
-
+            var combined = new NeighborSet();
             foreach (var piece in input)
             {
-                inPieces.Add(mapping.GetIndex(piece));
-            }
-            foreach (int p in inPieces)
-            {
-                foreach (int n in Enumerable.Range(neighborStart[p], neighborCount[p]))
+                if (neighbors.TryGetValue(piece, out var neighborSet))
                 {
-                    int pn = neighbors[n];
-                    result.Add(pn);
+                    combined.Union(neighborSet);
                 }
             }
-            foreach (int p in result)
+            foreach (var neighbor in combined)
             {
-                yield return mapping.GetPiece(p);
+                yield return neighbor;
             }
         }
 
-        public IEnumerable<PuzzlePiece> GetExternalNeighbors(IPieceMapping mapping, IEnumerable<PuzzlePiece> input)
+        public IEnumerable<PuzzlePiece> GetExternalNeighbors(IEnumerable<PuzzlePiece> input)
         {
-            var inPieces = new HashSet<int>();
-            var result = new HashSet<int>();
-
+            var combined = new NeighborSet();
+            var inputSet = new NeighborSet();
             foreach (var piece in input)
             {
-                inPieces.Add(mapping.GetIndex(piece));
-            }
-            foreach (int p in inPieces)
-            {
-                foreach (int n in Enumerable.Range(neighborStart[p], neighborCount[p]))
+                inputSet.Add(piece);
+                if (neighbors.TryGetValue(piece, out var neighborSet))
                 {
-                    int pn = neighbors[n];
-                    if (!inPieces.Contains(pn))
-                    {
-                        result.Add(pn);
-                    }
+                    combined.Union(neighborSet);
                 }
             }
-            foreach (int p in result)
+
+            combined.ExceptWith(inputSet);
+
+            foreach (var neighbor in combined)
             {
-                yield return mapping.GetPiece(p);
+                yield return neighbor;
             }
         }
 
-        public IEnumerable<PuzzlePiece> GetInternalNeighbors(IPieceMapping mapping, IEnumerable<PuzzlePiece> input)
+        public IEnumerable<PuzzlePiece> GetInternalNeighbors(IEnumerable<PuzzlePiece> input)
         {
-            var inPieces = new HashSet<int>();
-            var result = new HashSet<int>();
-
+            var combined = new NeighborSet();
+            var inputSet = new NeighborSet();
             foreach (var piece in input)
             {
-                inPieces.Add(mapping.GetIndex(piece));
-            }
-            foreach (int p in inPieces)
-            {
-                foreach (int n in Enumerable.Range(neighborStart[p], neighborCount[p]))
+                inputSet.Add(piece);
+                if (neighbors.TryGetValue(piece, out var neighborSet))
                 {
-                    int pn = neighbors[n];
-                    if (inPieces.Contains(pn))
-                    {
-                        result.Add(pn);
-                    }
+                    combined.Union(neighborSet);
                 }
             }
-            foreach (int p in result)
+
+            combined.IntersectWith(inputSet);
+
+            foreach (var neighbor in combined)
             {
-                yield return mapping.GetPiece(p);
+                yield return neighbor;
+            }
+        }
+
+        /// <summary>
+        /// Remove piece from the neighbor map.
+        /// </summary>
+        public void RemovePiece(PuzzlePiece piece)
+        {
+            neighbors.Remove(piece);
+
+            foreach (var neighborSet in neighbors.Values)
+            {
+                neighborSet.Remove(piece);
+            }
+        }
+
+        /// <summary>
+        /// All neighbors of oldPiece become neighbors of newPiece.
+        /// </summary>
+        public void MoveNeighbors(PuzzlePiece oldPiece, PuzzlePiece newPiece)
+        {
+            neighbors.TryGetValue(newPiece, out var newNeighborSet);
+            if (newNeighborSet != null)
+            {
+                neighbors.Remove(oldPiece);
+            }
+
+            if (neighbors.TryGetValue(oldPiece, out var oldNeighborSet))
+            {
+                oldNeighborSet.Remove(newPiece);
+                if (newNeighborSet == null)
+                {
+                    neighbors.Add(newPiece, oldNeighborSet);
+                }
+                else
+                {
+                    newNeighborSet.UnionWith(oldNeighborSet);
+                }
+
+                foreach (var neighbor in oldNeighborSet)
+                {
+                    if (neighbors.TryGetValue(neighbor, out var neighborNeighbors))
+                    {
+                        neighborNeighbors.Remove(oldPiece);
+                        neighborNeighbors.Add(newPiece);
+                    }
+                }
+
+                neighbors.Remove(oldPiece);
             }
         }
     }

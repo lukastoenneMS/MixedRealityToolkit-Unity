@@ -6,48 +6,46 @@ using UnityEngine;
 
 namespace Parsley.NeighborDetection
 {
-    public struct NeighborIndexPair : IEquatable<NeighborIndexPair>
+    public struct NeighborPair : IEquatable<NeighborPair>
     {
-        public readonly int indexMinor;
-        public readonly int indexMajor;
+        public readonly PuzzlePiece pieceA;
+        public readonly PuzzlePiece pieceB;
 
-        public NeighborIndexPair(int a, int b)
+        public NeighborPair(PuzzlePiece a, PuzzlePiece b)
         {
-            if (a <= b)
+            if (a.GetHashCode() <= b.GetHashCode())
             {
-                indexMinor = a;
-                indexMajor = b;
+                pieceA = a;
+                pieceB = b;
             }
             else
             {
-                indexMinor = b;
-                indexMajor = a;
+                pieceA = b;
+                pieceB = a;
             }
         }
 
-        public bool Equals(NeighborIndexPair other)
+        public bool Equals(NeighborPair other)
         {
-            return indexMinor == other.indexMinor && indexMajor == other.indexMajor;
+            return pieceA == other.pieceA && pieceB == other.pieceB;
         }
     }
 
-    public class NeighborIndexSet : HashSet<NeighborIndexPair>
-    {
-    }
+    public class NeighborPairSet : HashSet<NeighborPair>
+    {}
 
     internal class NeighborDetector : MonoBehaviour
     {
-        public int Index = -1;
+        public PuzzlePiece Piece;
 
-        public NeighborIndexSet neighborSet = null;
+        public NeighborPairSet neighborPairs = null;
 
         void OnCollisionEnter(Collision collision)
         {
             var otherDetector = collision.gameObject.FindAncestorComponent<NeighborDetector>();
             if (otherDetector != null)
             {
-                // Debug.Log($"{name}|{Index} collided with {collision.gameObject.name}|{otherDetector.Index}");
-                neighborSet.Add(new NeighborIndexPair(Index, otherDetector.Index));
+                neighborPairs.Add(new NeighborPair(Piece, otherDetector.Piece));
             }
         }
     }
@@ -56,15 +54,15 @@ namespace Parsley.NeighborDetection
     public class NeighborMapBuilder : IDisposable
     {
         // Temp. variables for constructing neighbor map
-        private NeighborIndexSet neighborSet = null;
-        public NeighborIndexSet NeighborSet => neighborSet;
+        private NeighborPairSet neighborPairs = null;
+        public NeighborPairSet NeighborPairs => neighborPairs;
 
         private List<NeighborDetector> neighborDetectors = null;
 
         public NeighborMapBuilder()
         {
             // Start collecting neighbor pairs
-            neighborSet = new NeighborIndexSet();
+            neighborPairs = new NeighborPairSet();
             neighborDetectors = new List<NeighborDetector>();
         }
 
@@ -76,16 +74,16 @@ namespace Parsley.NeighborDetection
                 GameObject.Destroy(neighborDetectors[i]);
             }
             neighborDetectors = null;
-            neighborSet = null;
+            neighborPairs = null;
         }
 
         /// Add a temporary neighbor detector to a game object to build the neighbor map
-        public void Add(GameObject go, int index)
+        public void Add(PuzzlePiece piece)
         {
-            var neighborDetector = go.AddComponent<NeighborDetector>();
+            var neighborDetector = piece.gameObject.AddComponent<NeighborDetector>();
             neighborDetectors.Add(neighborDetector);
-            neighborDetector.Index = index;
-            neighborDetector.neighborSet = neighborSet;
+            neighborDetector.Piece = piece;
+            neighborDetector.neighborPairs = neighborPairs;
         }
     }
 }
