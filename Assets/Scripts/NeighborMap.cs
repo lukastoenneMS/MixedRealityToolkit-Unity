@@ -91,7 +91,7 @@ namespace Parsley
             {
                 if (neighbors.TryGetValue(piece, out var neighborSet))
                 {
-                    combined.Union(neighborSet);
+                    combined.UnionWith(neighborSet);
                 }
             }
             foreach (var neighbor in combined)
@@ -109,7 +109,7 @@ namespace Parsley
                 inputSet.Add(piece);
                 if (neighbors.TryGetValue(piece, out var neighborSet))
                 {
-                    combined.Union(neighborSet);
+                    combined.UnionWith(neighborSet);
                 }
             }
 
@@ -130,7 +130,7 @@ namespace Parsley
                 inputSet.Add(piece);
                 if (neighbors.TryGetValue(piece, out var neighborSet))
                 {
-                    combined.Union(neighborSet);
+                    combined.UnionWith(neighborSet);
                 }
             }
 
