@@ -153,6 +153,12 @@ namespace Parsley
 
         public PuzzlePiece MergePieces(PuzzlePiece pa, PuzzlePiece pb, AnimationCurve snapAnimation)
         {
+            if (pa == pb)
+            {
+                // Nothing to do, can't merge with itself
+                return pa;
+            }
+
             PuzzleShard[] shardsA = pa.gameObject.GetComponentsInChildren<PuzzleShard>();
             PuzzleShard[] shardsB = pb.gameObject.GetComponentsInChildren<PuzzleShard>();
             PuzzleShard[] allShards = new PuzzleShard[shardsA.Length + shardsB.Length];

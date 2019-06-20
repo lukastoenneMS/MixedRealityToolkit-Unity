@@ -69,15 +69,23 @@ namespace Parsley
 
         private void ValidateNeighborMap()
         {
-            #if DEBUG_VALIDATE
+            // #if DEBUG_VALIDATE
+            #if true
 
             // Ensure neighbor map is symmetric
             foreach (var item in neighbors)
             {
                 foreach (var neighbor in item.Value)
                 {
-                    Debug.Assert(neighbors.TryGetValue(neighbor, out NeighborSet neighborNeighbors));
-                    Debug.Assert(neighborNeighbors.Contains(item.Key));
+                    // Ensure neighbors don't contain themselves (non-reflexive map)
+                    Debug.Assert(neighbor != item.Key,
+                        $"Piece {item.Key.name} neighbor map contains itself");
+
+                    // Ensure neighbor map is symmetric
+                    Debug.Assert(neighbors.TryGetValue(neighbor, out NeighborSet neighborNeighbors),
+                        $"Piece {item.Key.name} neighbor {neighbor.name} does not have neighbors itself");
+                    Debug.Assert(neighborNeighbors.Contains(item.Key),
+                        $"Piece {item.Key.name} neighbor {neighbor.name} does not contain piece in turn");
                 }
             }
 
@@ -161,13 +169,11 @@ namespace Parsley
         public void MoveNeighbors(PuzzlePiece oldPiece, PuzzlePiece newPiece)
         {
             neighbors.TryGetValue(newPiece, out var newNeighborSet);
-            if (newNeighborSet != null)
-            {
-                neighbors.Remove(oldPiece);
-            }
+            neighbors.TryGetValue(oldPiece, out var oldNeighborSet);
 
-            if (neighbors.TryGetValue(oldPiece, out var oldNeighborSet))
+            if (oldNeighborSet != null)
             {
+                // New piece neighbor set includes old piece neighbor set, without itself
                 oldNeighborSet.Remove(newPiece);
                 if (newNeighborSet == null)
                 {
@@ -178,17 +184,23 @@ namespace Parsley
                     newNeighborSet.UnionWith(oldNeighborSet);
                 }
 
-                foreach (var neighbor in oldNeighborSet)
+                // Remove the old neighbor set
+                neighbors.Remove(oldPiece);
+
+                // Replace any reference to the old piece by the new piece
+                foreach (var item in neighbors)
                 {
-                    if (neighbors.TryGetValue(neighbor, out var neighborNeighbors))
+                    if (item.Value.Remove(oldPiece))
                     {
-                        neighborNeighbors.Remove(oldPiece);
-                        neighborNeighbors.Add(newPiece);
+                        if (item.Key != newPiece)
+                        {
+                            item.Value.Add(newPiece);
+                        }
                     }
                 }
-
-                neighbors.Remove(oldPiece);
             }
+
+            ValidateNeighborMap();
         }
     }
 }
