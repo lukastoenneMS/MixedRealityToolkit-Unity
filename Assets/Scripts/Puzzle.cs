@@ -22,6 +22,8 @@ namespace Parsley
 
         private readonly NeighborMap neighborMap = new NeighborMap();
 
+        private static string namePrefix = "Piece ";
+
         public Puzzle()
         {
             pieces = new List<PuzzlePiece>();
@@ -52,19 +54,19 @@ namespace Parsley
                     var pose = new MixedRealityPose(shard.transform.position, shard.transform.rotation);
                     // Piece starts at its goal
                     var goal = pose;
-                    CreatePiece(shard, shard.parent, pose, goal);
+                    CreatePiece($"{namePrefix}{pieces.Count}", shard, shard.parent, pose, goal);
                 }
             }
         }
 
-        private PuzzlePiece CreatePiece(Transform shard, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
+        private PuzzlePiece CreatePiece(string name, Transform shard, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
         {
-            return CreatePiece(Enumerable.Repeat(shard, 1), parent, pose, goal);
+            return CreatePiece(name, Enumerable.Repeat(shard, 1), parent, pose, goal);
         }
 
-        private PuzzlePiece CreatePiece(IEnumerable<Transform> shards, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
+        private PuzzlePiece CreatePiece(string name, IEnumerable<Transform> shards, Transform parent, MixedRealityPose pose, MixedRealityPose goal)
         {
-            GameObject pieceOb = new GameObject("PuzzlePiece");
+            GameObject pieceOb = new GameObject(name);
 
             // Transform the piece
             pieceOb.transform.SetParent(parent, false);
@@ -160,7 +162,8 @@ namespace Parsley
             PuzzleUtils.FindShardCenter(allShards, out MixedRealityPose center, out MixedRealityPose goalCenter);
 
             Transform parent = pa.transform.parent;
-            PuzzlePiece pn = CreatePiece(allShards.Select((shard) => shard.transform), parent, center, goalCenter);
+            string name = namePrefix + pa.name.Substring(namePrefix.Length) + "+" + pb.name.Substring(namePrefix.Length);
+            PuzzlePiece pn = CreatePiece(name, allShards.Select((shard) => shard.transform), parent, center, goalCenter);
 
             neighborMap.MoveNeighbors(pa, pn);
             neighborMap.MoveNeighbors(pb, pn);
