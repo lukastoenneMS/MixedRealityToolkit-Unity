@@ -50,7 +50,6 @@ namespace Parsley
         private Suspender suspender = null;
         public Suspender Suspender => suspender;
 
-
         public enum GameState
         {
             Init = 0,

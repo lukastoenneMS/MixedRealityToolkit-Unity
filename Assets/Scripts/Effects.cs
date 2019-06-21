@@ -43,7 +43,7 @@ namespace Parsley
                 RimColorRenderer.SetPropertyBlock(materialProps);
             }
 
-            if (GhostEffect.Evaluate(effects.OfType<GhostEffect>(), this.transform))
+            if (GhostEffect.Evaluate(effects.OfType<GhostEffect>()))
             {
                 // nothing further to do
             }
@@ -73,6 +73,23 @@ namespace Parsley
         private float duration = 0.0f;
         public float Duration => duration;
 
+        private bool isFinite = true;
+        public bool IsFinite
+        {
+            get => isFinite;
+            set
+            {
+                if (isFinite != value)
+                {
+                    isFinite = value;
+                    if (isFinite)
+                    {
+                        startTime = Time.time;
+                    }
+                }
+            }
+        }
+
         private float startTime = 0.0f;
         public float StartTime => startTime;
 
@@ -92,9 +109,15 @@ namespace Parsley
             this.startTime = Time.time;
         }
 
+        public void Stop()
+        {
+            isFinite = false;
+            duration = 0.0f;
+        }
+
         public bool HasEnded()
         {
-            return Time.time - startTime >= duration;
+            return isFinite ? Time.time - startTime >= duration : false;
         }
     }
 
@@ -110,7 +133,7 @@ namespace Parsley
 
         public float GetWeight()
         {
-            return animationCurve.Evaluate(LocalTime);
+            return IsFinite ? animationCurve.Evaluate(LocalTime) : 1.0f;
         }
     }
 
@@ -190,29 +213,52 @@ namespace Parsley
 
     public class GhostEffect : AnimatedEffect
     {
-        private GameObject ghostObj;
-        private MeshRenderer ghostRenderer;
+        public Transform GhostParent
+        {
+            get => ghostObj.transform.parent;
+        }
 
-        private Color color;
+        public void SetGhostParent(Transform ghostParent)
+        {
+            ghostObj.transform.SetParent(ghostParent, false);
+        }
+
+        public Color Color;
+
+        public MixedRealityPose LocalGhostPose
+        {
+            get => new MixedRealityPose(ghostObj.transform.localPosition, ghostObj.transform.localRotation);
+            set
+            {
+                ghostObj.transform.localPosition = value.Position;
+                ghostObj.transform.localRotation = value.Rotation;
+            }
+        }
+
+        private GameObject ghostObj;
+        private MeshRenderer[] ghostRenderers;
 
         private MaterialPropertyBlock materialProps;
 
-        public GhostEffect(GameObject obj, MixedRealityPose localPose, AnimationCurve animationCurve, Material ghostMaterial, Color color)
+        public GhostEffect(GameObject obj, Transform ghostParent, MixedRealityPose localPose, AnimationCurve animationCurve, Material ghostMaterial, Color color)
             : base(animationCurve)
         {
-            this.color = color;
+            this.Color = color;
 
             this.ghostObj = new GameObject($"Ghost_{obj.name}");
             this.ghostObj.transform.localPosition = localPose.Position;
             this.ghostObj.transform.localRotation = localPose.Rotation;
 
-            var renderer = obj.GetComponentInChildren<MeshRenderer>();
-            if (renderer)
+            var renderers = obj.GetComponentsInChildren<MeshRenderer>();
+            ghostRenderers = new MeshRenderer[renderers.Length];
+            for (int i = 0; i < renderers.Length; ++i)
             {
-                Transform ghostParent;
+                var renderer = renderers[i];
+
+                Transform ghostRenderObj;
                 if (renderer.transform == obj.transform)
                 {
-                    ghostParent = ghostObj.transform;
+                    ghostRenderObj = ghostObj.transform;
                 }
                 else
                 {
@@ -220,18 +266,20 @@ namespace Parsley
                     offsetObj.transform.SetParent(ghostObj.transform, false);
                     offsetObj.transform.localPosition = obj.transform.InverseTransformPoint(renderer.transform.position);
                     offsetObj.transform.localRotation = Quaternion.Inverse(obj.transform.rotation) * renderer.transform.rotation;
-                    ghostParent = offsetObj.transform;
+                    ghostRenderObj = offsetObj.transform;
                 }
 
-                ghostRenderer = ghostParent.gameObject.AddComponent<MeshRenderer>();
-                ghostRenderer.materials = Enumerable.Repeat(ghostMaterial, renderer.materials.Length).ToArray();
+                ghostRenderers[i] = ghostRenderObj.gameObject.AddComponent<MeshRenderer>();
+                ghostRenderers[i].materials = Enumerable.Repeat(ghostMaterial, renderer.materials.Length).ToArray();
 
                 var mesh = renderer.GetComponent<MeshFilter>();
-                var ghostMesh = ghostParent.gameObject.AddComponent<MeshFilter>();
+                var ghostMesh = ghostRenderObj.gameObject.AddComponent<MeshFilter>();
                 ghostMesh.name = mesh.name;
                 // Creates a mutable copy of the mesh so we can change mateials
                 ghostMesh.mesh = mesh.sharedMesh;
             }
+
+            ghostObj.transform.SetParent(ghostParent, false);
         }
 
         public new void Dispose()
@@ -239,26 +287,22 @@ namespace Parsley
             GameObject.Destroy(ghostObj);
         }
 
-        public static bool Evaluate(IEnumerable<GhostEffect> effects, Transform parent)
+        public static bool Evaluate(IEnumerable<GhostEffect> effects)
         {
             foreach (var effect in effects)
             {
-                if (effect.ghostRenderer)
+                // Lazy init
+                if (effect.materialProps == null)
                 {
-                    // Lazy init
-                    if (effect.materialProps == null)
-                    {
-                        effect.materialProps = new MaterialPropertyBlock();
-                    }
-
-                    float weight = effect.GetWeight();
-                    effect.materialProps.SetColor("_Color", effect.color * weight);
-                    effect.ghostRenderer.SetPropertyBlock(effect.materialProps);
+                    effect.materialProps = new MaterialPropertyBlock();
                 }
 
-                if (effect.ghostObj.transform.parent != parent)
+                float weight = effect.GetWeight();
+                effect.materialProps.SetColor("_Color", effect.Color * weight);
+
+                foreach (var ghostRenderer in effect.ghostRenderers)
                 {
-                    effect.ghostObj.transform.SetParent(parent, false);
+                    ghostRenderer.SetPropertyBlock(effect.materialProps);
                 }
             }
 
