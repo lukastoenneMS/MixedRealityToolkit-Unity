@@ -86,11 +86,12 @@ namespace Parsley
                 var localTarget = invGoal.Multiply(shard.Goal);
                 shard.StartEffect(new SnapEffect(puzzleGame.SnapAnimation, shard.transform, localTarget));
 
-                var shardRenderer = shard.GetComponentInChildren<Renderer>();
-                if (shardRenderer)
-                {
-                    StartEffect(new GhostEffect(shardRenderer.gameObject, localTarget, puzzleGame.HighlightAnimation, puzzleGame.GhostMaterial, puzzleGame.GhostColor));
-                }
+                // var shardRenderer = shard.GetComponentInChildren<Renderer>();
+                // if (shardRenderer)
+                // {
+                //     StartEffect(new GhostEffect(shardRenderer.gameObject, localTarget, puzzleGame.HighlightAnimation, puzzleGame.GhostMaterial, puzzleGame.GhostColor));
+                // }
+                StartEffect(new GhostEffect(shard.gameObject, localTarget, puzzleGame.HighlightAnimation, puzzleGame.GhostMaterial, puzzleGame.GhostColor));
             }
 
             if (puzzleGame.SnapAudioClip)

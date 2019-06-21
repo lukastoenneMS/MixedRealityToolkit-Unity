@@ -206,20 +206,31 @@ namespace Parsley
             this.ghostObj.transform.localPosition = localPose.Position;
             this.ghostObj.transform.localRotation = localPose.Rotation;
 
-            var mesh = obj.GetComponent<MeshFilter>();
-            if (mesh)
+            var renderer = obj.GetComponentInChildren<MeshRenderer>();
+            if (renderer)
             {
-                var ghostMesh = ghostObj.AddComponent<MeshFilter>();
+                Transform ghostParent;
+                if (renderer.transform == obj.transform)
+                {
+                    ghostParent = ghostObj.transform;
+                }
+                else
+                {
+                    var offsetObj = new GameObject("Mesh Offset");
+                    offsetObj.transform.SetParent(ghostObj.transform, false);
+                    offsetObj.transform.localPosition = obj.transform.InverseTransformPoint(renderer.transform.position);
+                    offsetObj.transform.localRotation = Quaternion.Inverse(obj.transform.rotation) * renderer.transform.rotation;
+                    ghostParent = offsetObj.transform;
+                }
+
+                ghostRenderer = ghostParent.gameObject.AddComponent<MeshRenderer>();
+                ghostRenderer.materials = Enumerable.Repeat(ghostMaterial, renderer.materials.Length).ToArray();
+
+                var mesh = renderer.GetComponent<MeshFilter>();
+                var ghostMesh = ghostParent.gameObject.AddComponent<MeshFilter>();
                 ghostMesh.name = mesh.name;
                 // Creates a mutable copy of the mesh so we can change mateials
                 ghostMesh.mesh = mesh.sharedMesh;
-            }
-
-            var renderer = obj.GetComponent<MeshRenderer>();
-            if (renderer)
-            {
-                ghostRenderer = ghostObj.AddComponent<MeshRenderer>();
-                ghostRenderer.materials = Enumerable.Repeat(ghostMaterial, renderer.materials.Length).ToArray();
             }
         }
 
