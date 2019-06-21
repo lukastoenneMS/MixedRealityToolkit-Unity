@@ -2,8 +2,6 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using Microsoft.MixedReality.Toolkit.Input;
-using Microsoft.MixedReality.Toolkit.Utilities;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -97,6 +95,16 @@ namespace Microsoft.MixedReality.Toolkit.UI
             ActivateByProximityAndPointer,
             ActivateManually
         }
+
+        /// <summary>
+        /// This enum defines the type of collider in use when a rotation handle prefab is provided.
+        /// </summary>
+        public enum RotationHandlePrefabCollider
+        {
+            Sphere,
+            Box
+        }
+
         #endregion Enums
 
         #region Serialized Fields
@@ -108,6 +116,23 @@ namespace Microsoft.MixedReality.Toolkit.UI
         [SerializeField]
         [FormerlySerializedAs("BoxColliderToUse")]
         private BoxCollider boundsOverride = null;
+        public BoxCollider BoundsOverride
+        {
+            get { return boundsOverride; }
+            set 
+            {
+                if (boundsOverride != value)
+                {
+                    boundsOverride = value;
+                    
+                    if (boundsOverride == null)
+                    {
+                        prevBoundsOverride = new Bounds();
+                    }
+                    CreateRig();
+                }
+            }
+        }
 
         [Header("Behavior")]
         [SerializeField]
@@ -405,6 +430,25 @@ namespace Microsoft.MixedReality.Toolkit.UI
         }
 
         [SerializeField]
+        [Tooltip("Only used if rotationHandlePrefab is specified. Determines the type of collider that will surround the rotation handle prefab.")]
+        private RotationHandlePrefabCollider rotationHandlePrefabColliderType = RotationHandlePrefabCollider.Sphere;
+        public RotationHandlePrefabCollider RotationHandlePrefabColliderType
+        {
+            get
+            {
+                return rotationHandlePrefabColliderType;
+            }
+            set
+            {
+                if (rotationHandlePrefabColliderType != value)
+                {
+                    rotationHandlePrefabColliderType = value;
+                    CreateRig();
+                }
+            }
+        }
+
+        [SerializeField]
         [Tooltip("Check to show scale handles")]
         private bool showScaleHandles = true;
 
@@ -545,10 +589,10 @@ namespace Microsoft.MixedReality.Toolkit.UI
         }
 
         [Header("Events")]
-        public UnityEvent RotateStarted;
-        public UnityEvent RotateStopped;
-        public UnityEvent ScaleStarted;
-        public UnityEvent ScaleStopped;
+        public UnityEvent RotateStarted = new UnityEvent();
+        public UnityEvent RotateStopped = new UnityEvent();
+        public UnityEvent ScaleStarted = new UnityEvent();
+        public UnityEvent ScaleStopped = new UnityEvent();
         #endregion Serialized Fields
 
         #region Private Properties
@@ -571,8 +615,6 @@ namespace Microsoft.MixedReality.Toolkit.UI
         private Vector3 currentBoundsExtents;
 
         private BoundsCalculationMethod boundsMethod;
-
-
 
         private List<IMixedRealityInputSource> touchingSources = new List<IMixedRealityInputSource>();
         private List<Transform> links;
@@ -614,7 +656,10 @@ namespace Microsoft.MixedReality.Toolkit.UI
         private Vector3 diagonalDir;
 
         private HandleType currentHandleType;
-        private Vector3 lastBounds;
+
+        // The size, position of boundsOverride object in the previous frame
+        // Used to determine if boundsOverride size has changed.
+        private Bounds prevBoundsOverride = new Bounds();
 
         // TODO Review this, it feels like we should be using Behaviour.enabled instead.
         private bool active = false;
@@ -705,6 +750,25 @@ namespace Microsoft.MixedReality.Toolkit.UI
             }
         }
 
+        /// <summary>
+        /// Destroys and re-creates the rig around the bounding box
+        /// </summary>
+        public void CreateRig()
+        {
+            DestroyRig();
+            SetMaterials();
+            InitializeDataStructures();
+            SetBoundingBoxCollider();
+            UpdateBounds();
+            AddCorners();
+            AddLinks();
+            AddBoxDisplay();
+            UpdateRigHandles();
+            Flatten();
+            ResetHandleVisibility();
+            rigRoot.gameObject.SetActive(active);
+            UpdateRigVisibilityInInspector();
+        }
         #endregion
 
         #region MonoBehaviour Methods
@@ -740,26 +804,30 @@ namespace Microsoft.MixedReality.Toolkit.UI
                 UpdateRigHandles();
                 Target.transform.hasChanged = false;
             }
+            else if (boundsOverride != null && HasBoundsOverrideChanged())
+            {
+                UpdateBounds();
+                UpdateRigHandles();
+            }
+        }
+
+        /// <summary>
+        /// Assumes that boundsOverride is not null
+        /// Returns true if the size / location of boundsOverride has changed.
+        /// If boundsOverride gets set to null, rig is re-created in BoundsOverride
+        /// property setter.
+        /// </summary>
+        private bool HasBoundsOverrideChanged()
+        {
+            Debug.Assert(boundsOverride != null, "HasBoundsOverrideChanged called but boundsOverride is null");
+            Bounds curBounds = boundsOverride.bounds;
+            bool result = curBounds != prevBoundsOverride;
+            prevBoundsOverride = curBounds;
+            return result;
         }
         #endregion MonoBehaviour Methods
 
         #region Private Methods
-        private void CreateRig()
-        {
-            DestroyRig();
-            SetMaterials();
-            InitializeDataStructures();
-            SetBoundingBoxCollider();
-            UpdateBounds();
-            AddCorners();
-            AddLinks();
-            AddBoxDisplay();
-            UpdateRigHandles();
-            Flatten();
-            ResetHandleVisibility();
-            rigRoot.gameObject.SetActive(active);
-            UpdateRigVisibilityInInspector();
-        }
 
         private void DestroyRig()
         {
@@ -1037,8 +1105,17 @@ namespace Microsoft.MixedReality.Toolkit.UI
                     ball.name = "midpoint_" + i.ToString();
                     ball.transform.localPosition = edgeCenters[i];
 
-                    SphereCollider collider = ball.AddComponent<SphereCollider>();
-                    collider.radius = 0.5f * rotationHandleDiameter;
+                    if (rotationHandlePrefabColliderType == RotationHandlePrefabCollider.Sphere)
+                    {
+                        SphereCollider collider = ball.AddComponent<SphereCollider>();
+                        collider.radius = 0.5f * rotationHandleDiameter;
+                    }
+                    else
+                    {
+                        Debug.Assert(rotationHandlePrefabColliderType == RotationHandlePrefabCollider.Box);
+                        BoxCollider collider = ball.AddComponent<BoxCollider>();
+                        collider.size = rotationHandleDiameter * Vector3.one;
+                    }
 
                     // In order for the ball to be grabbed using near interaction we need
                     // to add NearInteractionGrabbable;
@@ -1563,7 +1640,6 @@ namespace Microsoft.MixedReality.Toolkit.UI
 
         private void UpdateBounds()
         {
-
             if (cachedTargetCollider != null)
             {
                 // Store current rotation then zero out the rotation so that the bounds
@@ -1602,6 +1678,10 @@ namespace Microsoft.MixedReality.Toolkit.UI
         {
             if (rigRoot != null && Target != null)
             {
+                // We move the rigRoot to the scene root to ensure that non-uniform scaling performed
+                // anywhere above the rigRoot does not impact the position of rig corners / edges
+                rigRoot.parent = null;
+
                 rigRoot.rotation = Quaternion.identity;
                 rigRoot.position = Vector3.zero;
 
@@ -1648,6 +1728,8 @@ namespace Microsoft.MixedReality.Toolkit.UI
                 //move rig into position and rotation
                 rigRoot.position = cachedTargetCollider.bounds.center;
                 rigRoot.rotation = Target.transform.rotation;
+
+                rigRoot.parent = transform;
             }
         }
         private HandleType GetHandleType(Transform handle)
