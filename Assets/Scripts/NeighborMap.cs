@@ -69,8 +69,7 @@ namespace Parsley
 
         private void ValidateNeighborMap()
         {
-            // #if DEBUG_VALIDATE
-            #if true
+            #if DEBUG_VALIDATE
 
             // Ensure neighbor map is symmetric
             foreach (var item in neighbors)
