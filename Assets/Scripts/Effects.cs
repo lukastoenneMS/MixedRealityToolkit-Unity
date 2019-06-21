@@ -238,11 +238,11 @@ namespace Parsley
                     if (effect.materialProps == null)
                     {
                         effect.materialProps = new MaterialPropertyBlock();
-                        effect.ghostRenderer.SetPropertyBlock(effect.materialProps);
                     }
 
                     float weight = effect.GetWeight();
                     effect.materialProps.SetColor("_Color", effect.color * weight);
+                    effect.ghostRenderer.SetPropertyBlock(effect.materialProps);
                 }
 
                 if (effect.ghostObj.transform.parent != parent)

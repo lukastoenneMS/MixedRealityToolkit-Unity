@@ -89,7 +89,7 @@ namespace Parsley
                 var shardRenderer = shard.GetComponentInChildren<Renderer>();
                 if (shardRenderer)
                 {
-                    StartEffect(new GhostEffect(shardRenderer.gameObject, localTarget, puzzleGame.SnapAnimation, puzzleGame.GhostMaterial, Color.red));
+                    StartEffect(new GhostEffect(shardRenderer.gameObject, localTarget, puzzleGame.HighlightAnimation, puzzleGame.GhostMaterial, puzzleGame.GhostColor));
                 }
             }
 
