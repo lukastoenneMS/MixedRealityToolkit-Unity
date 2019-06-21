@@ -43,8 +43,18 @@ namespace Parsley
                 RimColorRenderer.SetPropertyBlock(materialProps);
             }
 
+            if (GhostEffect.Evaluate(effects.OfType<GhostEffect>(), this.transform))
+            {
+                // nothing further to do
+            }
+
             // Remove ended effects
-            effects.RemoveAll((effect) => effect.HasEnded());
+            var endedEffects = effects.Where((e) => e.HasEnded()).ToList();
+            foreach (var effect in endedEffects)
+            {
+                effects.Remove(effect);
+                effect.Dispose();
+            }
         }
 
         public void StartEffect(Effect effect)
@@ -56,7 +66,7 @@ namespace Parsley
         public virtual Renderer RimColorRenderer { get; } = null;
     }
 
-    public abstract class Effect
+    public abstract class Effect : IDisposable
     {
         private float duration = 0.0f;
         public float Duration => duration;
@@ -69,6 +79,10 @@ namespace Parsley
         public Effect(float duration)
         {
             this.duration = duration;
+        }
+
+        public void Dispose()
+        {
         }
 
         public void Start()
@@ -169,6 +183,73 @@ namespace Parsley
         {
             source.PlayOneShot(clip);
             source.pitch = clip.length / duration;
+        }
+    }
+
+    public class GhostEffect : AnimatedEffect
+    {
+        private GameObject ghostObj;
+        private MeshRenderer ghostRenderer;
+
+        private Color color;
+
+        private MaterialPropertyBlock materialProps;
+
+        public GhostEffect(GameObject obj, MixedRealityPose localPose, AnimationCurve animationCurve, Material ghostMaterial, Color color)
+            : base(animationCurve)
+        {
+            this.color = color;
+
+            this.ghostObj = new GameObject($"Ghost_{obj.name}");
+            this.ghostObj.transform.localPosition = localPose.Position;
+            this.ghostObj.transform.localRotation = localPose.Rotation;
+
+            var mesh = obj.GetComponent<MeshFilter>();
+            if (mesh)
+            {
+                var ghostMesh = ghostObj.AddComponent<MeshFilter>();
+                ghostMesh.name = mesh.name;
+                // Creates a mutable copy of the mesh so we can change mateials
+                ghostMesh.mesh = mesh.sharedMesh;
+            }
+
+            var renderer = obj.GetComponent<MeshRenderer>();
+            if (renderer)
+            {
+                ghostRenderer = ghostObj.AddComponent<MeshRenderer>();
+                ghostRenderer.materials = Enumerable.Repeat(ghostMaterial, renderer.materials.Length).ToArray();
+            }
+        }
+
+        public new void Dispose()
+        {
+            GameObject.Destroy(ghostObj);
+        }
+
+        public static bool Evaluate(IEnumerable<GhostEffect> effects, Transform parent)
+        {
+            foreach (var effect in effects)
+            {
+                if (effect.ghostRenderer)
+                {
+                    // Lazy init
+                    if (effect.materialProps == null)
+                    {
+                        effect.materialProps = new MaterialPropertyBlock();
+                        effect.ghostRenderer.SetPropertyBlock(effect.materialProps);
+                    }
+
+                    float weight = effect.GetWeight();
+                    effect.materialProps.SetColor("_Color", effect.color * weight);
+                }
+
+                if (effect.ghostObj.transform.parent != parent)
+                {
+                    effect.ghostObj.transform.SetParent(parent, false);
+                }
+            }
+
+            return true;
         }
     }
 }

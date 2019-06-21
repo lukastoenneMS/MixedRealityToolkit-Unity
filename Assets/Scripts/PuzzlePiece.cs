@@ -85,6 +85,12 @@ namespace Parsley
                 // Local space goal is defined by difference between shard goal and piece goal
                 var localTarget = invGoal.Multiply(shard.Goal);
                 shard.StartEffect(new SnapEffect(puzzleGame.SnapAnimation, shard.transform, localTarget));
+
+                var shardRenderer = shard.GetComponentInChildren<Renderer>();
+                if (shardRenderer)
+                {
+                    StartEffect(new GhostEffect(shardRenderer.gameObject, localTarget, puzzleGame.SnapAnimation, puzzleGame.GhostMaterial, Color.red));
+                }
             }
 
             if (puzzleGame.SnapAudioClip)

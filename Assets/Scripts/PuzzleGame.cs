@@ -34,6 +34,7 @@ namespace Parsley
         [Header("Hints")]
         public AnimationCurve HighlightAnimation = PuzzleUtils.CreateHighlightCurve(2.5f);
         public Color NeighborColor = Color.green;
+        public Material GhostMaterial = null;
 
         private Puzzle puzzle = null;
         public Puzzle Puzzle => puzzle;
@@ -333,7 +334,7 @@ namespace Parsley
             // Remove older entries of the same piece, it gets pushed back on top
             bool existedAlready = buildPieces.Remove(piece);
 
-            // Make sure the list does not outgrow the allowed limite
+            // Make sure the list does not outgrow the allowed limit
             if (!existedAlready)
             {
                 while (buildPieces.Count >= numBuildSlots)
