@@ -61,6 +61,8 @@ namespace Parsley
         {
             effects.Add(effect);
             effect.Start();
+
+            Update();
         }
 
         public virtual Renderer RimColorRenderer { get; } = null;
