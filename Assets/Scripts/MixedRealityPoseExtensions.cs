@@ -23,4 +23,14 @@ public static class MixedRealityPoseExtensions
         Quaternion invRot = Quaternion.Inverse(self.Rotation);
         return new MixedRealityPose(-(invRot * self.Position), invRot);
     }
+
+    public static MixedRealityPose AsMixedRealityPose(this Transform self)
+    {
+        return new MixedRealityPose(self.position, self.rotation);
+    }
+
+    public static MixedRealityPose AsMixedRealityPoseLocal(this Transform self)
+    {
+        return new MixedRealityPose(self.localPosition, self.localRotation);
+    }
 }

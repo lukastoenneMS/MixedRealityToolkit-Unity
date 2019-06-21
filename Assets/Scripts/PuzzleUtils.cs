@@ -5,6 +5,7 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Parsley
@@ -62,41 +63,72 @@ namespace Parsley
         }
 
         /// Find a pose P such that distance of each shard from its transformed goal is minimal.
-        public static bool FindShardCenter(PuzzleShard[] shards, out MixedRealityPose center, out MixedRealityPose goalCenter)
+        public static bool FindShardCenter(IEnumerable<PuzzleShard> shards, out MixedRealityPose goalOffset, out Vector3 goalCentroid)
         {
-            if (shards.Length == 0)
+            return FindMinErrorTransform(
+                shards.Select((s) => Tuple.Create(s.Goal, new MixedRealityPose(s.transform.position, s.transform.rotation))),
+                out goalOffset, out goalCentroid);
+        }
+
+        public static bool FindMinErrorTransform(IEnumerable<Tuple<MixedRealityPose, MixedRealityPose>> points, out MixedRealityPose result, out Vector3 fromCentroid)
+        {
+            fromCentroid = Vector3.zero;
+            Vector3 toCentroid = Vector3.zero;
+            int count = 0;
+            foreach (var p in points)
             {
-                center = MixedRealityPose.ZeroIdentity;
-                goalCenter = MixedRealityPose.ZeroIdentity;
+                fromCentroid += p.Item1.Position;
+                toCentroid += p.Item2.Position;
+                ++count;
+            }
+            if (count == 0)
+            {
+                result = MixedRealityPose.ZeroIdentity;
                 return false;
             }
-
-            Vector3 centroid = Vector3.zero;
-            Vector3 goalCentroid = Vector3.zero;
-            for (int i = 0; i < shards.Length; ++i)
+            if (count == 1)
             {
-                centroid += shards[i].transform.position;
-                goalCentroid += shards[i].Goal.Position;
+                result = new MixedRealityPose(toCentroid - fromCentroid, Quaternion.identity);
+                return true;
             }
-            centroid /= shards.Length;
-            goalCentroid /= shards.Length;
+
+            fromCentroid /= count;
+            toCentroid /= count;
+
+            if (count == 2)
+            {
+                var pointsArray = points.ToArray();
+                Vector3 vFrom = pointsArray[1].Item1.Position - pointsArray[0].Item1.Position;
+                Vector3 vTo = pointsArray[1].Item2.Position - pointsArray[0].Item2.Position;
+                // result = new MixedRealityPose(toCentroid - fromCentroid, Quaternion.FromToRotation(vFrom, vTo));
+                result = new MixedRealityPose(fromCentroid, Quaternion.identity).Inverse().Multiply(new MixedRealityPose(toCentroid, Quaternion.FromToRotation(vFrom, vTo)));
+                return true;
+            }
+
+            // count >= 3, use Singular Value Decomposition to find least-squares solution
 
             // Build covariance matrix
             Matrix<float> H = CreateMatrix.Dense<float>(3, 3, 0.0f);
-            for (int i = 0; i < shards.Length; ++i)
+            foreach (var p in points)
             {
-                Vector<float> pa = GetNVectorFromVector(shards[i].Goal.Position - goalCentroid);
-                Vector<float> pb = GetNVectorFromVector(shards[i].transform.position - centroid);
+                Vector<float> pa = GetNVectorFromVector(p.Item1.Position - fromCentroid);
+                Vector<float> pb = GetNVectorFromVector(p.Item2.Position - toCentroid);
 
                 H += Vector<float>.OuterProduct(pa, pb);
             }
 
             var svdSolver = H.Svd();
             Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
+
+            // Handle reflection case
+            if (rotationMatrix.Determinant() < 0)
+            {
+                rotationMatrix.SetColumn(2, -rotationMatrix.Column(2));
+            }
+
             Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
 
-            center = new MixedRealityPose(centroid, rotation);
-            goalCenter = new MixedRealityPose(goalCentroid, Quaternion.identity);
+            result = new MixedRealityPose(toCentroid - fromCentroid, rotation);
             return true;
         }
 

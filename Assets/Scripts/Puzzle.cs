@@ -165,11 +165,14 @@ namespace Parsley
             Array.Copy(shardsA, 0, allShards, 0, shardsA.Length);
             Array.Copy(shardsB, 0, allShards, shardsA.Length, shardsB.Length);
 
-            PuzzleUtils.FindShardCenter(allShards, out MixedRealityPose center, out MixedRealityPose goalCenter);
+            PuzzleUtils.FindShardCenter(allShards, out MixedRealityPose goalOffset, out Vector3 goalCentroid);
 
             Transform parent = pa.transform.parent;
             string name = namePrefix + pa.name.Substring(namePrefix.Length) + "+" + pb.name.Substring(namePrefix.Length);
-            PuzzlePiece pn = CreatePiece(name, allShards.Select((shard) => shard.transform), parent, center, goalCenter);
+
+            var goal = new MixedRealityPose(goalCentroid, Quaternion.identity);
+            var pose = goalOffset.Multiply(goal);
+            PuzzlePiece pn = CreatePiece(name, allShards.Select((shard) => shard.transform), parent, pose, goal);
 
             neighborMap.MoveNeighbors(pa, pn);
             neighborMap.MoveNeighbors(pb, pn);

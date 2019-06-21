@@ -84,14 +84,14 @@ namespace Parsley
             {
                 // Local space goal is defined by difference between shard goal and piece goal
                 var localTarget = invGoal.Multiply(shard.Goal);
-                shard.StartEffect(new SnapEffect(puzzleGame.SnapAnimation, shard.transform, localTarget));
+                shard.StartEffect(shard.GetHashCode(), new SnapEffect(puzzleGame.SnapAnimation, shard.transform, localTarget));
 
                 // StartEffect(new GhostEffect(shard.gameObject, this.transform, localTarget, puzzleGame.HighlightAnimation, puzzleGame.GhostMaterial, puzzleGame.GhostColor));
             }
 
             if (puzzleGame.SnapAudioClip)
             {
-                StartEffect(new SoundEffect(snapAudioSource, puzzleGame.SnapAudioClip, puzzleGame.SnapAnimation.Duration()));
+                StartEffect(GetHashCode(), new SoundEffect(snapAudioSource, puzzleGame.SnapAudioClip, puzzleGame.SnapAnimation.Duration()));
             }
         }
     }

@@ -12,12 +12,20 @@ namespace Parsley
 {
     public class EffectManager : MonoBehaviour
     {
-        private readonly List<Effect> effects = new List<Effect>();
+        private readonly Dictionary<int, Effect> effects = new Dictionary<int, Effect>();
         private MaterialPropertyBlock materialProps = null;
+
+        private static int HashCombine(int a, int b)
+        {
+            int hash = 17;
+            hash = hash * 23 + a;
+            hash = hash * 23 + b;
+            return hash;
+        }
 
         void Update()
         {
-            if (SnapEffect.Evaluate(effects.OfType<SnapEffect>(), out MixedRealityPose snapPose))
+            if (SnapEffect.Evaluate(effects.Values.OfType<SnapEffect>(), out MixedRealityPose snapPose))
             {
                 transform.localPosition = snapPose.Position;
                 transform.localRotation = snapPose.Rotation;
@@ -31,7 +39,7 @@ namespace Parsley
                     materialProps = new MaterialPropertyBlock();
                 }
 
-                if (RimColorEffect.Evaluate(effects.OfType<RimColorEffect>(), out Color rimColor))
+                if (RimColorEffect.Evaluate(effects.Values.OfType<RimColorEffect>(), out Color rimColor))
                 {
                     materialProps.SetColor("_RimColor", rimColor);
                 }
@@ -43,26 +51,65 @@ namespace Parsley
                 RimColorRenderer.SetPropertyBlock(materialProps);
             }
 
-            if (GhostEffect.Evaluate(effects.OfType<GhostEffect>()))
+            if (GhostEffect.Evaluate(effects.Values.OfType<GhostEffect>()))
             {
                 // nothing further to do
             }
 
             // Remove ended effects
-            var endedEffects = effects.Where((e) => e.HasEnded()).ToList();
-            foreach (var effect in endedEffects)
+            var endedEffects = effects.Where((item) => item.Value.HasEnded()).ToList();
+            foreach (var item in endedEffects)
             {
-                effects.Remove(effect);
-                effect.Dispose();
+                item.Value.Dispose();
+                effects.Remove(item.Key);
             }
         }
 
-        public void StartEffect(Effect effect)
+        private int GetKey<T>(int id) where T : Effect
         {
-            effects.Add(effect);
+            return HashCombine(id, typeof(T).GetHashCode());
+        }
+
+        public bool TryGetEffect<T>(int id, out T effect) where T : Effect
+        {
+            int key = GetKey<T>(id);
+            if (effects.TryGetValue(key, out Effect result))
+            {
+                effect = result as T;
+                return effect != null;
+            }
+
+            effect = null;
+            return false;
+        }
+
+        public bool StartEffect<T>(int id, T effect) where T : Effect
+        {
+            int key = GetKey<T>(id);
+            if (effects.ContainsKey(key))
+            {
+                effect.Dispose();
+                return false;
+            }
+
+            effects.Add(key, effect);
             effect.Start();
 
             Update();
+
+            return true;
+        }
+
+        public bool StopEffect<T>(int id) where T : Effect
+        {
+            int key = GetKey<T>(id);
+            if (effects.TryGetValue(key, out Effect effect))
+            {
+                effect.Dispose();
+                effects.Remove(key);
+                return true;
+            }
+            return false;
         }
 
         public virtual Renderer RimColorRenderer { get; } = null;

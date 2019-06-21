@@ -50,6 +50,8 @@ namespace Parsley
         private Suspender suspender = null;
         public Suspender Suspender => suspender;
 
+        const int GhostEffectId = 83245;
+
         public enum GameState
         {
             Init = 0,
@@ -249,27 +251,55 @@ namespace Parsley
             if (IsLoaded)
             {
                 var neighbors = puzzle.GetInternalNeighbors(buildPieces).ToArray();
-                PuzzlePiece joinedPiece = null;
-                foreach (var neighborPiece in neighbors)
+
+                if (PuzzleUtils.FindMinErrorTransform(
+                    neighbors.Select((p) => Tuple.Create(p.Goal, new MixedRealityPose(p.transform.position, p.transform.rotation))),
+                    out MixedRealityPose goalOffset, out Vector3 goalCentroid))
                 {
-                    if (joinedPiece != null)
+                    foreach (var piece in neighbors)
                     {
-                        var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece);
-                        float distance = offset.Position.magnitude;
-                        float angle;
-                        Vector3 axis;
-                        offset.Rotation.ToAngleAxis(out angle, out axis);
-                        if (distance <= SnappingDistance && angle <= SnappingAngle)
+                        // var goal = new MixedRealityPose(goalCentroid, Quaternion.identity);
+                        // var pose = piece.Goal;
+                        // var pose = goalOffset.Multiply(piece.Goal);
+                        var pose = piece.Goal.Multiply(goalOffset);
+                        var localPose = piece.transform.parent.AsMixedRealityPose().Inverse().Multiply(pose);
+
+                        int effectId = GhostEffectId + piece.GetHashCode();
+                        if (!piece.TryGetEffect(effectId, out GhostEffect effect))
                         {
-                            buildPieces.Remove(neighborPiece);
-                            joinedPiece = puzzle.MergePieces(joinedPiece, neighborPiece, SnapAnimation);
+                            effect = new GhostEffect(piece.gameObject, piece.transform.parent, localPose, HighlightAnimation, GhostMaterial, GhostColor);
+                            piece.StartEffect(effectId, effect);
+                            effect.IsFinite = false;
+                        }
+                        else
+                        {
+                            effect.LocalGhostPose = pose;
                         }
                     }
-                    else
-                    {
-                        joinedPiece = neighborPiece;
-                    }
+                    // UnityEditor.EditorApplication.isPaused = true;
                 }
+
+                // PuzzlePiece joinedPiece = null;
+                // foreach (var neighborPiece in neighbors)
+                // {
+                //     if (joinedPiece != null)
+                //     {
+                //         var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece);
+                //         float distance = offset.Position.magnitude;
+                //         float angle;
+                //         Vector3 axis;
+                //         offset.Rotation.ToAngleAxis(out angle, out axis);
+                //         if (distance <= SnappingDistance && angle <= SnappingAngle)
+                //         {
+                //             buildPieces.Remove(neighborPiece);
+                //             joinedPiece = puzzle.MergePieces(joinedPiece, neighborPiece, SnapAnimation);
+                //         }
+                //     }
+                //     else
+                //     {
+                //         joinedPiece = neighborPiece;
+                //     }
+                // }
             }
         }
 
@@ -319,7 +349,7 @@ namespace Parsley
                 PuzzleShard[] shards = neighborPiece.gameObject.GetComponentsInChildren<PuzzleShard>();
                 foreach (var shard in shards)
                 {
-                    shard.StartEffect(effect);
+                    shard.StartEffect(shard.GetHashCode(), effect);
                 }
             }
         }
@@ -353,6 +383,9 @@ namespace Parsley
             {
                 return;
             }
+
+            int effectId = GhostEffectId + piece.GetHashCode();
+            piece.StopEffect<GhostEffect>(effectId);
 
             buildPieces.Remove(piece);
             suspender.Drop(piece.Body);
