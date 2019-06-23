@@ -147,7 +147,7 @@ namespace Parsley
             this.duration = duration;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
         }
 
@@ -329,7 +329,7 @@ namespace Parsley
             ghostObj.transform.SetParent(ghostParent, false);
         }
 
-        public new void Dispose()
+        public override void Dispose()
         {
             GameObject.Destroy(ghostObj);
         }
