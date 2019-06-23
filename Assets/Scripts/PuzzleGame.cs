@@ -42,7 +42,15 @@ namespace Parsley
 
         // Maximum number of pieces held in the build list
         const int numBuildSlots = 2;
-        private readonly List<PuzzlePiece> buildPieces = new List<PuzzlePiece>(numBuildSlots);
+        // Properties of pieces while building
+        private struct BuildSlot
+        {
+            public PuzzlePiece piece;
+            public int colorIndex;
+        }
+        private readonly List<BuildSlot> buildPieces = new List<BuildSlot>(numBuildSlots);
+        private Color[] slotColors;
+        private System.Random slotRng = new System.Random(68342);
 
         public bool IsLoaded => (puzzle != null);
         public bool IsMenuOpen => Menu.activeSelf;
@@ -210,6 +218,8 @@ namespace Parsley
 
             suspender = new Suspender();
 
+            slotColors = CreateColorPalette(GhostColor, numBuildSlots);
+
             // StartCoroutine(LoadPuzzleAsync());
 
             // TransitionTo(GameState.Intro);
@@ -250,7 +260,7 @@ namespace Parsley
         {
             if (IsLoaded)
             {
-                var neighbors = puzzle.GetInternalNeighbors(buildPieces).ToArray();
+                var neighbors = puzzle.GetInternalNeighbors(buildPieces.Select(s => s.piece)).ToArray();
 
                 if (PuzzleUtils.FindMinErrorTransform(
                     neighbors.Select((p) => Tuple.Create(p.Goal, new MixedRealityPose(p.transform.position, p.transform.rotation))),
@@ -267,7 +277,9 @@ namespace Parsley
                         int effectId = GhostEffectId + piece.GetHashCode();
                         if (!piece.TryGetEffect(effectId, out GhostEffect effect))
                         {
-                            effect = new GhostEffect(piece.gameObject, piece.transform.parent, localPose, HighlightAnimation, GhostMaterial, GhostColor);
+                            var slot = buildPieces.Find(s => s.piece == piece);
+                            var color = slotColors[slot.colorIndex];
+                            effect = new GhostEffect(piece.gameObject, piece.transform.parent, localPose, HighlightAnimation, GhostMaterial, color);
                             piece.StartEffect(effectId, effect);
                             effect.IsFinite = false;
                         }
@@ -344,7 +356,7 @@ namespace Parsley
 
             var effect = new RimColorEffect(HighlightAnimation, NeighborColor);
 
-            foreach (var neighborPiece in puzzle.GetNeighbors(buildPieces))
+            foreach (var neighborPiece in puzzle.GetNeighbors(buildPieces.Select(s => s.piece)))
             {
                 PuzzleShard[] shards = neighborPiece.gameObject.GetComponentsInChildren<PuzzleShard>();
                 foreach (var shard in shards)
@@ -362,18 +374,21 @@ namespace Parsley
             }
 
             // Remove older entries of the same piece, it gets pushed back on top
-            bool existedAlready = buildPieces.Remove(piece);
+            bool existedAlready = buildPieces.RemoveAll(s => s.piece == piece) > 0;
 
             // Make sure the list does not outgrow the allowed limit
             if (!existedAlready)
             {
                 while (buildPieces.Count >= numBuildSlots)
                 {
-                    StopBuilding(buildPieces[0]);
+                    StopBuilding(buildPieces[0].piece);
                 }
             }
 
-            buildPieces.Add(piece);
+            var slot = new BuildSlot();
+            slot.piece = piece;
+            slot.colorIndex =  GetRandomSlotColorIndex();
+            buildPieces.Add(slot);
             suspender.Suspend(piece.Body, false);
         }
 
@@ -387,8 +402,39 @@ namespace Parsley
             int effectId = GhostEffectId + piece.GetHashCode();
             piece.StopEffect<GhostEffect>(effectId);
 
-            buildPieces.Remove(piece);
+            buildPieces.RemoveAll(s => s.piece == piece);
             suspender.Drop(piece.Body);
+        }
+
+        private static Color[] CreateColorPalette(Color baseColor, int n, float hueShift = 1.0f/12.0f)
+        {
+            var palette = new Color[n];
+            Color.RGBToHSV(baseColor, out float H, out float S, out float V);
+            for (int i = 0; i < n; ++i)
+            {
+                float offset = 2.0f * (float)i / (float)(n-1) - 1.0f;
+                palette[i] = Color.HSVToRGB(H + hueShift * offset, S, V);
+            }
+            return palette;
+        }
+
+        // Select a random color for a build slot
+        private int GetRandomSlotColorIndex()
+        {
+            var availableColors = Enumerable.Range(0, slotColors.Length).ToList();
+            foreach (var s in buildPieces)
+            {
+                availableColors.RemoveAt(s.colorIndex);
+            }
+            if (availableColors.Count > 0)
+            {
+                int r = slotRng.Next() % availableColors.Count;
+                return availableColors[r];
+            }
+            else
+            {
+                return 0;
+            }
         }
     }
 }
