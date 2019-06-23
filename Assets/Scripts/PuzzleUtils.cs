@@ -100,8 +100,8 @@ namespace Parsley
                 var pointsArray = points.ToArray();
                 Vector3 vFrom = pointsArray[1].Item1.Position - pointsArray[0].Item1.Position;
                 Vector3 vTo = pointsArray[1].Item2.Position - pointsArray[0].Item2.Position;
-                // result = new MixedRealityPose(toCentroid - fromCentroid, Quaternion.FromToRotation(vFrom, vTo));
-                result = new MixedRealityPose(fromCentroid, Quaternion.identity).Inverse().Multiply(new MixedRealityPose(toCentroid, Quaternion.FromToRotation(vFrom, vTo)));
+                Quaternion rot = Quaternion.FromToRotation(vFrom, vTo);
+                result = new MixedRealityPose(toCentroid - rot * fromCentroid, rot);
                 return true;
             }
 

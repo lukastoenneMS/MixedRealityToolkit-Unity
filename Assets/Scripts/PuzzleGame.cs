@@ -268,10 +268,7 @@ namespace Parsley
                 {
                     foreach (var piece in neighbors)
                     {
-                        // var goal = new MixedRealityPose(goalCentroid, Quaternion.identity);
-                        // var pose = piece.Goal;
-                        // var pose = goalOffset.Multiply(piece.Goal);
-                        var pose = piece.Goal.Multiply(goalOffset);
+                        var pose = goalOffset.Multiply(piece.Goal);
                         var localPose = piece.transform.parent.AsMixedRealityPose().Inverse().Multiply(pose);
 
                         int effectId = GhostEffectId + piece.GetHashCode();
@@ -285,10 +282,9 @@ namespace Parsley
                         }
                         else
                         {
-                            effect.LocalGhostPose = pose;
+                            effect.LocalGhostPose = localPose;
                         }
                     }
-                    // UnityEditor.EditorApplication.isPaused = true;
                 }
 
                 // PuzzlePiece joinedPiece = null;
@@ -406,7 +402,7 @@ namespace Parsley
             suspender.Drop(piece.Body);
         }
 
-        private static Color[] CreateColorPalette(Color baseColor, int n, float hueShift = 1.0f/12.0f)
+        private static Color[] CreateColorPalette(Color baseColor, int n, float hueShift = 1.0f/24.0f)
         {
             var palette = new Color[n];
             Color.RGBToHSV(baseColor, out float H, out float S, out float V);
