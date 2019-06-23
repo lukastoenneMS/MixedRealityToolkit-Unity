@@ -296,7 +296,7 @@ namespace Parsley
             this.ghostObj.transform.localPosition = localPose.Position;
             this.ghostObj.transform.localRotation = localPose.Rotation;
 
-            var renderers = obj.GetComponentsInChildren<MeshRenderer>();
+            var renderers = obj.GetComponentsInChildren<MeshRenderer>().Where(r => r.enabled).ToArray();
             ghostRenderers = new MeshRenderer[renderers.Length];
             for (int i = 0; i < renderers.Length; ++i)
             {
