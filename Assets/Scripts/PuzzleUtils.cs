@@ -66,10 +66,128 @@ namespace Parsley
         public static bool FindShardCenter(IEnumerable<PuzzleShard> shards, out MixedRealityPose goalOffset, out Vector3 goalCentroid)
         {
             return FindMinErrorTransform(
-                shards.Select((s) => Tuple.Create(s.Goal, new MixedRealityPose(s.transform.position, s.transform.rotation))),
+                shards.Select((s) => Tuple.Create(s.Goal.Position, s.transform.position)),
                 out goalOffset, out goalCentroid);
         }
 
+        public static bool ComputeCentroid(IEnumerable<Vector3> points, out Vector3 result)
+        {
+            Vector3 centroid = Vector3.zero;
+            int count = 0;
+            foreach (var p in points)
+            {
+                centroid += p;
+                ++count;
+            }
+
+            result = (count > 1 ? centroid / count : centroid);
+            return count > 0;
+        }
+
+        public static bool FindMinErrorTransform(IEnumerable<Tuple<Vector3, Vector3>> points, out MixedRealityPose result, out Vector3 fromCentroid)
+        {
+            fromCentroid = Vector3.zero;
+            Vector3 toCentroid = Vector3.zero;
+            int count = 0;
+            foreach (var p in points)
+            {
+                fromCentroid += p.Item1;
+                toCentroid += p.Item2;
+                ++count;
+            }
+            if (count == 0)
+            {
+                result = MixedRealityPose.ZeroIdentity;
+                return false;
+            }
+            if (count == 1)
+            {
+                result = new MixedRealityPose(toCentroid - fromCentroid, Quaternion.identity);
+                return true;
+            }
+
+            fromCentroid /= count;
+            toCentroid /= count;
+
+            if (count == 2)
+            {
+                var pointsArray = points.ToArray();
+                Vector3 vFrom = pointsArray[1].Item1 - pointsArray[0].Item1;
+                Vector3 vTo = pointsArray[1].Item2 - pointsArray[0].Item2;
+                Quaternion rot = Quaternion.FromToRotation(vFrom, vTo);
+                result = new MixedRealityPose(toCentroid - rot * fromCentroid, rot);
+                return true;
+            }
+
+            // count >= 3, use Singular Value Decomposition to find least-squares solution
+
+            // Build covariance matrix
+            Matrix<float> H = CreateMatrix.Dense<float>(3, 3, 0.0f);
+            foreach (var p in points)
+            {
+                Vector<float> pa = GetNVectorFromVector(p.Item1 - fromCentroid);
+                Vector<float> pb = GetNVectorFromVector(p.Item2 - toCentroid);
+
+                H += Vector<float>.OuterProduct(pa, pb);
+            }
+
+            var svdSolver = H.Svd();
+            Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
+
+            // Handle reflection case
+            if (rotationMatrix.Determinant() < 0)
+            {
+                rotationMatrix.SetColumn(2, -rotationMatrix.Column(2));
+            }
+
+            Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
+
+            result = new MixedRealityPose(toCentroid - fromCentroid, rotation);
+            return true;
+        }
+
+        public static bool FindMinErrorRotation(IEnumerable<Tuple<Quaternion, Quaternion>> rotations, out Quaternion result)
+        {
+            int count = Enumerable.Count(rotations);
+            if (count == 0)
+            {
+                result = Quaternion.identity;
+                return false;
+            }
+            if (count == 1)
+            {
+                result = rotations.First().Item2 * Quaternion.Inverse(rotations.First().Item1);
+                return true;
+            }
+
+            // count >= 2, use Singular Value Decomposition to find least-squares solution
+
+            // Build covariance matrix
+            Matrix<float> H = CreateMatrix.Dense<float>(3, 3, 0.0f);
+            foreach (var r in rotations)
+            {
+                Vector<float> ra = GetNVectorFromQuaternion(r.Item1);
+                Vector<float> rb = GetNVectorFromQuaternion(r.Item2);
+
+                H += Vector<float>.OuterProduct(ra, rb);
+            }
+
+            var svdSolver = H.Svd();
+            Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
+
+            // Handle reflection case
+            if (rotationMatrix.Determinant() < 0)
+            {
+                rotationMatrix.SetColumn(2, -rotationMatrix.Column(2));
+            }
+
+            Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
+
+            result = rotation;
+            return true;
+        }
+
+#if false
         public static bool FindMinErrorTransform(IEnumerable<Tuple<MixedRealityPose, MixedRealityPose>> points, out MixedRealityPose result, out Vector3 fromCentroid)
         {
             fromCentroid = Vector3.zero;
@@ -131,6 +249,7 @@ namespace Parsley
             result = new MixedRealityPose(toCentroid - fromCentroid, rotation);
             return true;
         }
+#endif
 
         private static Vector<float> GetNVectorFromVector(Vector3 v)
         {
@@ -138,6 +257,15 @@ namespace Parsley
             result[0] = v.x;
             result[1] = v.y;
             result[2] = v.z;
+            return result;
+        }
+
+        private static Vector<float> GetNVectorFromQuaternion(Quaternion q)
+        {
+            Vector<float> result = CreateVector.Dense<float>(3);
+            result[0] = q.x;
+            result[1] = q.y;
+            result[2] = q.z;
             return result;
         }
 
