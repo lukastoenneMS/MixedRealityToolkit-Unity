@@ -12,12 +12,12 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 {
     internal static class GltfBuilderUtils
     {
-        public static void ExtendArray<T>(ref T[] data, T item)
+        public static int ExtendArray<T>(ref T[] data, T item)
         {
             if (data == null)
             {
                 data = new T[] { item };
-                return;
+                return 0;
             }
 
             var newData = new T[data.Length + 1];
@@ -28,6 +28,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             newData[data.Length] = item;
 
             data = newData;
+            return data.Length - 1;
         }
     }
 
@@ -36,33 +37,28 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
     /// </summary>
     public class GltfObjectBuilder : IDisposable
     {
-        /// Context to hold generated glTF data structs.
-        private class Context
-        {
-            public List<GltfScene> scenes = new List<GltfScene>();
-            public int defaultScene = 0;
-
-            public List<GltfNode> nodes = new List<GltfNode>();
-            public List<GltfCamera> cameras = new List<GltfCamera>();
-            public List<GltfAccessor> accessors = new List<GltfAccessor>();
-            public List<AnimationData> animations = new List<AnimationData>();
-
-            public int bufferSize = 0;
-        }
+        private GltfObject gltfObject;
+        private int bufferSize = 0;
+        private List<AnimationData> animationData = new List<AnimationData>();
 
         /// GltfAnimation with associated curves for deferred buffer filling
         private struct AnimationData
         {
-            public GltfAnimation animation;
             // Array of curves per animation sampler
             public List<AnimationCurve[]> samplerCurves;
         }
 
-        private Context context = new Context();
+        public GltfObjectBuilder(string copyright, string generator)
+        {
+            gltfObject = new GltfObject();
+
+            gltfObject.asset = CreateAssetInfo(copyright, generator);
+        }
 
         public void Dispose()
         {
-            context = null;
+            gltfObject = null;
+            animationData = null;
         }
 
         /// <summary>
@@ -70,23 +66,12 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
         /// </summary>
         public GltfObject Build()
         {
-            GltfObject exportedObject = new GltfObject();
-
-            exportedObject.asset = CreateAssetInfo("MIT", "MRTK");
-
-            exportedObject.scenes = context.scenes.ToArray();
-            exportedObject.scene = context.defaultScene;
-            exportedObject.nodes = context.nodes.ToArray();
-            exportedObject.cameras = context.cameras.ToArray();
-            exportedObject.accessors = context.accessors.ToArray();
-            exportedObject.animations = context.animations.Select(animData => animData.animation).ToArray();
-
             // Fill the binary buffer
-            exportedObject.buffers = new GltfBuffer[1];
-            exportedObject.bufferViews = new GltfBufferView[1];
-            FillBuffer(out exportedObject.buffers[0], out exportedObject.bufferViews[0]);
+            gltfObject.buffers = new GltfBuffer[1];
+            gltfObject.bufferViews = new GltfBufferView[1];
+            FillBuffer(out gltfObject.buffers[0], out gltfObject.bufferViews[0]);
 
-            return exportedObject;
+            return gltfObject;
         }
 
         private static GltfAssetInfo CreateAssetInfo(string copyright, string generator, string version = "2.0", string minVersion = "2.0")
@@ -104,12 +89,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             GltfScene scene = new GltfScene();
             scene.name = "Scene";
 
-            context.scenes.Add(scene);
-            int index = context.scenes.Count - 1;
+            int index = GltfBuilderUtils.ExtendArray(ref gltfObject.scenes, scene);
 
             if (setAsDefaultScene)
             {
-                context.defaultScene = index;
+                gltfObject.scene = index;
             }
 
             return index;
@@ -119,7 +103,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
         {
             int index = CreateNode(name, position, rotation, scale, camera);
 
-            GltfScene gltfScene = context.scenes[scene];
+            GltfScene gltfScene = gltfObject.scenes[scene];
             GltfBuilderUtils.ExtendArray(ref gltfScene.nodes, index);
 
             return index;
@@ -129,7 +113,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
         {
             int index = CreateNode(name, position, rotation, scale, camera);
 
-            GltfNode gltfParentNode = context.nodes[parent];
+            GltfNode gltfParentNode = gltfObject.nodes[parent];
             GltfBuilderUtils.ExtendArray(ref gltfParentNode.children, index);
 
             return index;
@@ -149,8 +133,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
             node.camera = camera;
 
-            context.nodes.Add(node);
-            return context.nodes.Count - 1;
+            return GltfBuilderUtils.ExtendArray(ref gltfObject.nodes, node);
         }
 
         /// Create a perspective camera and return its index.
@@ -170,8 +153,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
             camera.orthographic = null;
 
-            context.cameras.Add(camera);
-            return context.cameras.Count - 1;
+            return GltfBuilderUtils.ExtendArray(ref gltfObject.cameras, camera);
         }
 
         /// Create a orthographic camera and return its index.
@@ -191,34 +173,36 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
             camera.perspective = null;
 
-            context.cameras.Add(camera);
-            return context.cameras.Count - 1;
+            return GltfBuilderUtils.ExtendArray(ref gltfObject.cameras, camera);
         }
 
         internal int AddAnimationData(GltfAnimation animation, List<AnimationCurve[]> samplerCurves)
         {
             var animData = new AnimationData();
-            animData.animation = animation;
             animData.samplerCurves = samplerCurves;
-            context.animations.Add(animData);
-            return context.animations.Count - 1;
+            animationData.Add(animData);
+
+            return GltfBuilderUtils.ExtendArray(ref gltfObject.animations, animation);
         }
 
         private void FillBuffer(out GltfBuffer buffer, out GltfBufferView bufferView)
         {
-            byte[] bufferData = new byte[context.bufferSize];
+            byte[] bufferData = new byte[bufferSize];
 
-            foreach (var animData in context.animations)
+            Debug.Assert(gltfObject.animations.Length == animationData.Count);
+            for (int i = 0; i < gltfObject.animations.Length; ++i)
             {
-                Debug.Assert(animData.samplerCurves.Count == animData.animation.samplers.Length);
+                var animation = gltfObject.animations[i];
+                var animData = animationData[i];
 
-                for (int i = 0; i < animData.animation.samplers.Length; ++i)
+                Debug.Assert(animData.samplerCurves.Count == animation.samplers.Length);
+                for (int j = 0; j < animation.samplers.Length; ++j)
                 {
-                    var sampler = animData.animation.samplers[i];
-                    var input = context.accessors[sampler.input];
-                    var output = context.accessors[sampler.output];
+                    var sampler = animation.samplers[j];
+                    var input = gltfObject.accessors[sampler.input];
+                    var output = gltfObject.accessors[sampler.output];
 
-                    var curves = animData.samplerCurves[i];
+                    var curves = animData.samplerCurves[j];
 
                     WriteTimeBuffer(bufferData, input, curves);
                     WriteValueBuffer(bufferData, output, curves);
@@ -228,13 +212,13 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             buffer = new GltfBuffer();
             buffer.name = "AnimationData";
             buffer.uri = null; // Stored internally
-            buffer.byteLength = context.bufferSize;
+            buffer.byteLength = bufferSize;
             buffer.BufferData = bufferData;
 
             bufferView = new GltfBufferView();
             bufferView.name = "BufferView";
             bufferView.buffer = 0;
-            bufferView.byteLength = context.bufferSize;
+            bufferView.byteLength = bufferSize;
             bufferView.byteOffset = 0;
             bufferView.target = GltfBufferViewTarget.None;
         }
@@ -278,9 +262,9 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
         {
             int stride = GetNumComponents(accType) * GetComponentSize(compType);
             // Align to full element size
-            int byteOffset = context.bufferSize == 0 ? 0 : context.bufferSize + stride - (context.bufferSize % stride);
+            int byteOffset = bufferSize == 0 ? 0 : bufferSize + stride - (bufferSize % stride);
             int byteSize = stride * count;
-            context.bufferSize = byteOffset + byteSize;
+            bufferSize = byteOffset + byteSize;
 
             var acc = new GltfAccessor();
             acc.bufferView = 0;
@@ -290,8 +274,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             acc.normalized = false;
             acc.count = count;
 
-            context.accessors.Add(acc);
-            return context.accessors.Count - 1;
+            return GltfBuilderUtils.ExtendArray(ref gltfObject.accessors, acc);
         }
 
         private static void WriteTimeBuffer(byte[] bufferData, GltfAccessor accessor, AnimationCurve[] curves)

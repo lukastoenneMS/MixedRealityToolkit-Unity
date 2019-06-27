@@ -25,7 +25,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
         public static async void OnExportInputAnimation(InputAnimation input, string path)
         {
             GltfObject exportedObject;
-            using (var builder = new GltfObjectBuilder())
+            // TODO how to specify copyright and generator strings?
+            using (var builder = new GltfObjectBuilder("", "MRTK"))
             {
                 int scene = builder.CreateScene("Scene", true);
 
