@@ -10,11 +10,18 @@ using System;
 namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 {
     /// <summary>
+    /// Base class for all JSON attributes.
+    /// </summary>
+    public abstract class JsonAttribute : System.Attribute
+    {
+    }
+
+    /// <summary>
     /// Details of converting enums to JSON values.
     /// </summary>
     [System.Serializable]
     [AttributeUsage(AttributeTargets.All)]
-    public class JSONEnumAttribute : System.Attribute
+    public class JSONEnumAttribute : JsonAttribute
     {
         private bool useIntValue;
         /// <summary>
@@ -40,7 +47,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
     /// </summary>
     [System.Serializable]
     [AttributeUsage(AttributeTargets.Field)]
-    public class JSONIntegerAttribute : System.Attribute
+    public class JSONIntegerAttribute : JsonAttribute
     {
         private int minimum;
         /// <summary>
@@ -59,7 +66,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
     /// </summary>
     [System.Serializable]
     [AttributeUsage(AttributeTargets.Field)]
-    public class JSONArrayAttribute : System.Attribute
+    public class JSONArrayAttribute : JsonAttribute
     {
         private int minItems;
         /// <summary>
