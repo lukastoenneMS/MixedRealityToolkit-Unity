@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
-using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +10,14 @@ using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 {
+    internal static class GltfBuilderUtils
+    {
+        public static void ExtendArray<T>(ref T[] data, T item)
+        {
+            data = data != null ? data.Append(item).ToArray() : new T[] { item };
+        }
+    }
+
     /// <summary>
     /// Utility class for constructing a GltfObject.
     /// </summary>
@@ -25,22 +32,17 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             public List<GltfNode> nodes = new List<GltfNode>();
             public List<GltfCamera> cameras = new List<GltfCamera>();
             public List<GltfAccessor> accessors = new List<GltfAccessor>();
-            public List<GltfBuffer> buffers = new List<GltfBuffer>();
-            public List<GltfBufferView> bufferViews = new List<GltfBufferView>();
-
-            public List<AnimationContext> animations = new List<AnimationContext>();
+            public List<AnimationData> animations = new List<AnimationData>();
 
             public int bufferSize = 0;
         }
 
-        /// Context to hold generated glTF data structs for animation.
-        private class AnimationContext
+        /// GltfAnimation with associated curves for deferred buffer filling
+        private struct AnimationData
         {
-            public List<GltfAnimationChannel> animationChannels = new List<GltfAnimationChannel>();
-            // Animation curves for each channel
-            // for deferred writing of the buffer after all animation channels are created.
-            public List<AnimationCurve[]> animationCurves = new List<AnimationCurve[]>();
-            public List<GltfAnimationSampler> animationSamplers = new List<GltfAnimationSampler>();
+            public GltfAnimation animation;
+            // Array of curves per animation sampler
+            public List<AnimationCurve[]> samplerCurves;
         }
 
         private Context context = new Context();
@@ -59,23 +61,17 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
             exportedObject.asset = CreateAssetInfo("MIT", "MRTK");
 
-            // Fill the binary buffer
-            CreateBuffer();
-
             exportedObject.scenes = context.scenes.ToArray();
             exportedObject.scene = context.defaultScene;
             exportedObject.nodes = context.nodes.ToArray();
             exportedObject.cameras = context.cameras.ToArray();
             exportedObject.accessors = context.accessors.ToArray();
-            exportedObject.animations = context.animations.Select(animContext =>
-            {
-                GltfAnimation animation = new GltfAnimation();
-                animation.channels = animContext.animationChannels.ToArray();
-                animation.samplers = animContext.animationSamplers.ToArray();
-                return animation;
-            }).ToArray();
-            exportedObject.buffers = context.buffers.ToArray();
-            exportedObject.bufferViews = context.bufferViews.ToArray();
+            exportedObject.animations = context.animations.Select(animData => animData.animation).ToArray();
+
+            // Fill the binary buffer
+            exportedObject.buffers = new GltfBuffer[1];
+            exportedObject.bufferViews = new GltfBufferView[1];
+            FillBuffer(out exportedObject.buffers[0], out exportedObject.bufferViews[0]);
 
             return exportedObject;
         }
@@ -111,7 +107,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             int index = CreateNode(name, position, rotation, scale, camera);
 
             GltfScene gltfScene = context.scenes[scene];
-            gltfScene.nodes = gltfScene.nodes != null ? gltfScene.nodes.Append(index).ToArray() : new int[] { index };
+            GltfBuilderUtils.ExtendArray(ref gltfScene.nodes, index);
 
             return index;
         }
@@ -121,7 +117,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             int index = CreateNode(name, position, rotation, scale, camera);
 
             GltfNode gltfParentNode = context.nodes[parent];
-            gltfParentNode.children = gltfParentNode.children != null ? gltfParentNode.children.Append(index).ToArray() : new int[] { index };
+            GltfBuilderUtils.ExtendArray(ref gltfParentNode.children, index);
 
             return index;
         }
@@ -186,88 +182,54 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             return context.cameras.Count - 1;
         }
 
-        public int BeginAnimation()
+        internal int AddAnimationData(GltfAnimation animation, List<AnimationCurve[]> samplerCurves)
         {
-            var animContext = new AnimationContext();
-
-            context.animations.Add(animContext);
+            var animData = new AnimationData();
+            animData.animation = animation;
+            animData.samplerCurves = samplerCurves;
+            context.animations.Add(animData);
             return context.animations.Count - 1;
         }
 
-        public void CreateWeightsAnimation(AnimationCurve curve, GltfInterpolationType interpolation, int node)
+        private void FillBuffer(out GltfBuffer buffer, out GltfBufferView bufferView)
         {
-            var animContext = context.animations.Last();
+            byte[] bufferData = new byte[context.bufferSize];
 
-            int accTime = CreateAccessor("SCALAR", GltfComponentType.Float, curve.length);
-            int accValue = CreateAccessor("SCALAR", GltfComponentType.Float, curve.length);
-
-            var sampler = new GltfAnimationSampler();
-            sampler.input = accTime;
-            sampler.output = accValue;
-            sampler.interpolation = interpolation;
-            animContext.animationSamplers.Add(sampler);
-
-            var channel = new GltfAnimationChannel();
-            channel.sampler = animContext.animationSamplers.Count - 1;
-            channel.target = new GltfAnimationChannelTarget();
-            channel.target.node = node;
-            channel.target.path = GltfAnimationChannelPath.weights;
-            animContext.animationChannels.Add(channel);
-            animContext.animationCurves.Add(new AnimationCurve[] { curve });
-        }
-
-        public void CreateTranslationAnimation(AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
-        {
-            var animContext = context.animations.Last();
-
-            if (!Vec3CurvesMatch(curves))
+            foreach (var animData in context.animations)
             {
-                return;
+                Debug.Assert(animData.samplerCurves.Count == animData.animation.samplers.Length);
+
+                for (int i = 0; i < animData.animation.samplers.Length; ++i)
+                {
+                    var sampler = animData.animation.samplers[i];
+                    var input = context.accessors[sampler.input];
+                    var output = context.accessors[sampler.output];
+
+                    var curves = animData.samplerCurves[i];
+
+                    WriteTimeBuffer(bufferData, input, curves);
+                    WriteValueBuffer(bufferData, output, curves);
+                }
             }
 
-            int accTime = CreateAccessor("SCALAR", GltfComponentType.Float, curves[0].length);
-            int accValue = CreateAccessor("VEC3", GltfComponentType.Float, curves[0].length);
+            buffer = new GltfBuffer();
+            buffer.name = "AnimationData";
+            buffer.uri = null; // Stored internally
+            buffer.byteLength = context.bufferSize;
+            buffer.BufferData = bufferData;
 
-            var sampler = new GltfAnimationSampler();
-            sampler.input = accTime;
-            sampler.output = accValue;
-            sampler.interpolation = interpolation;
-            animContext.animationSamplers.Add(sampler);
-
-            var channel = new GltfAnimationChannel();
-            channel.sampler = animContext.animationSamplers.Count - 1;
-            channel.target = new GltfAnimationChannelTarget();
-            channel.target.node = node;
-            channel.target.path = GltfAnimationChannelPath.translation;
-            animContext.animationChannels.Add(channel);
-            animContext.animationCurves.Add(curves);
+            bufferView = new GltfBufferView();
+            bufferView.name = "BufferView";
+            bufferView.buffer = 0;
+            bufferView.byteLength = context.bufferSize;
+            bufferView.byteOffset = 0;
+            bufferView.target = GltfBufferViewTarget.None;
         }
 
-        public void CreateRotationAnimation(AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
+        private static int GetAccessorByteSize(GltfAccessor accessor)
         {
-            var animContext = context.animations.Last();
-
-            if (!Vec4CurvesMatch(curves))
-            {
-                return;
-            }
-
-            int accTime = CreateAccessor("SCALAR", GltfComponentType.Float, curves[0].length);
-            int accValue = CreateAccessor("VEC4", GltfComponentType.Float, curves[0].length);
-
-            var sampler = new GltfAnimationSampler();
-            sampler.input = accTime;
-            sampler.output = accValue;
-            sampler.interpolation = interpolation;
-            animContext.animationSamplers.Add(sampler);
-
-            var channel = new GltfAnimationChannel();
-            channel.sampler = animContext.animationSamplers.Count - 1;
-            channel.target = new GltfAnimationChannelTarget();
-            channel.target.node = node;
-            channel.target.path = GltfAnimationChannelPath.rotation;
-            animContext.animationChannels.Add(channel);
-            animContext.animationCurves.Add(curves);
+            int stride = GetNumComponents(accessor.type) * GetComponentSize(accessor.componentType);
+            return stride * accessor.count;
         }
 
         private static int GetNumComponents(string type)
@@ -317,50 +279,6 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
             context.accessors.Add(acc);
             return context.accessors.Count - 1;
-        }
-
-        private static int GetAccessorByteSize(GltfAccessor accessor)
-        {
-            int stride = GetNumComponents(accessor.type) * GetComponentSize(accessor.componentType);
-            return stride * accessor.count;
-        }
-
-        private void CreateBuffer()
-        {
-            byte[] bufferData = new byte[context.bufferSize];
-
-            foreach (var animContext in context.animations)
-            {
-                Debug.Assert(animContext.animationChannels.Count == animContext.animationCurves.Count);
-                for (int i = 0; i < animContext.animationChannels.Count; ++i)
-                {
-                    var channel = animContext.animationChannels[i];
-                    var sampler = animContext.animationSamplers[channel.sampler];
-                    var input = context.accessors[sampler.input];
-                    var output = context.accessors[sampler.output];
-
-                    var curves = animContext.animationCurves[i];
-
-                    WriteTimeBuffer(bufferData, input, curves);
-                    WriteValueBuffer(bufferData, output, curves);
-                }
-            }
-
-            var buffer = new GltfBuffer();
-            buffer.name = "AnimationData";
-            buffer.uri = null; // Stored internally
-            buffer.byteLength = context.bufferSize;
-            buffer.BufferData = bufferData;
-
-            var bufferView = new GltfBufferView();
-            bufferView.name = "BufferView";
-            bufferView.buffer = 0;
-            bufferView.byteLength = context.bufferSize;
-            bufferView.byteOffset = 0;
-            bufferView.target = GltfBufferViewTarget.None;
-
-            context.buffers.Add(buffer);
-            context.bufferViews.Add(bufferView);
         }
 
         private static void WriteTimeBuffer(byte[] bufferData, GltfAccessor accessor, AnimationCurve[] curves)
@@ -416,6 +334,106 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
                     accessor.max[c] = Math.Max(accessor.max[c], value);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Utility class for constructing a GltfAnimation.
+    /// </summary>
+    public class GltfAnimationBuilder : IDisposable
+    {
+        public int Index { get; private set; }
+
+        private GltfObjectBuilder objBuilder;
+        private GltfAnimation animation;
+        private List<AnimationCurve[]> samplerCurves;
+
+        public GltfAnimationBuilder(GltfObjectBuilder objBuilder, string name)
+        {
+            this.objBuilder = objBuilder;
+
+            animation = new GltfAnimation();
+            animation.name = name;
+            samplerCurves = new List<AnimationCurve[]>();
+
+            Index = objBuilder.AddAnimationData(animation, samplerCurves);
+        }
+
+        public void Dispose()
+        {
+            objBuilder = null;
+            animation = null;
+            samplerCurves = null;
+        }
+
+        public void CreateWeightsAnimation(AnimationCurve curve, GltfInterpolationType interpolation, int node)
+        {
+            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, curve.length);
+            int accValue = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, curve.length);
+
+            var sampler = new GltfAnimationSampler();
+            sampler.input = accTime;
+            sampler.output = accValue;
+            sampler.interpolation = interpolation;
+            GltfBuilderUtils.ExtendArray(ref animation.samplers, sampler);
+
+            var channel = new GltfAnimationChannel();
+            channel.sampler = animation.samplers.Length - 1;
+            channel.target = new GltfAnimationChannelTarget();
+            channel.target.node = node;
+            channel.target.path = GltfAnimationChannelPath.weights;
+            GltfBuilderUtils.ExtendArray(ref animation.channels, channel);
+            samplerCurves.Add(new AnimationCurve[] { curve });
+        }
+
+        public void CreateTranslationAnimation(AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
+        {
+            if (!Vec3CurvesMatch(curves))
+            {
+                return;
+            }
+
+            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, curves[0].length);
+            int accValue = objBuilder.CreateAccessor("VEC3", GltfComponentType.Float, curves[0].length);
+
+            var sampler = new GltfAnimationSampler();
+            sampler.input = accTime;
+            sampler.output = accValue;
+            sampler.interpolation = interpolation;
+            GltfBuilderUtils.ExtendArray(ref animation.samplers, sampler);
+
+            var channel = new GltfAnimationChannel();
+            channel.sampler = animation.samplers.Length - 1;
+            channel.target = new GltfAnimationChannelTarget();
+            channel.target.node = node;
+            channel.target.path = GltfAnimationChannelPath.translation;
+            GltfBuilderUtils.ExtendArray(ref animation.channels, channel);
+            samplerCurves.Add(curves);
+        }
+
+        public void CreateRotationAnimation(AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
+        {
+            if (!Vec4CurvesMatch(curves))
+            {
+                return;
+            }
+
+            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, curves[0].length);
+            int accValue = objBuilder.CreateAccessor("VEC4", GltfComponentType.Float, curves[0].length);
+
+            var sampler = new GltfAnimationSampler();
+            sampler.input = accTime;
+            sampler.output = accValue;
+            sampler.interpolation = interpolation;
+            GltfBuilderUtils.ExtendArray(ref animation.samplers, sampler);
+
+            var channel = new GltfAnimationChannel();
+            channel.sampler = animation.samplers.Length - 1;
+            channel.target = new GltfAnimationChannelTarget();
+            channel.target.node = node;
+            channel.target.path = GltfAnimationChannelPath.rotation;
+            GltfBuilderUtils.ExtendArray(ref animation.channels, channel);
+            samplerCurves.Add(curves);
         }
 
         private static bool Vec3CurvesMatch(AnimationCurve[] curves)

@@ -6,9 +6,6 @@ using Microsoft.MixedReality.Toolkit.Utilities.Gltf;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.Input
@@ -56,44 +53,45 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// Create an animation from input data and return its index.
         private static int CreateAnimation(GltfObjectBuilder builder, InputAnimation input, int camera)
         {
-            int index = builder.BeginAnimation();
-
-            int cameraNode = builder.CreateRootNode("Camera", Vector3.zero, Quaternion.identity, Vector3.one, 0, camera);
-            CreatePoseAnimation(builder, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
-
-            int leftHandNode = builder.CreateRootNode("Hand.Left", Vector3.zero, Quaternion.identity, Vector3.one, 0);
-            int rightHandNode = builder.CreateRootNode("Hand.Right", Vector3.zero, Quaternion.identity, Vector3.one, 0);
-
-            int leftPinchNode = builder.CreateChildNode("Pinch", Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-            int rightPinchNode = builder.CreateChildNode("Pinch", Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
-
-            // TODO: need morph targets to create weights animations - use fake position instead?
-            // CreateWeightsAnimation(context, input.HandTrackedCurveLeft, GltfInterpolationType.STEP, leftHandNode);
-            // CreateWeightsAnimation(context, input.HandTrackedCurveRight, GltfInterpolationType.STEP, rightHandNode);
-            // CreateWeightsAnimation(context, input.HandPinchCurveLeft, GltfInterpolationType.STEP, leftPinchNode);
-            // CreateWeightsAnimation(context, input.HandPinchCurveRight, GltfInterpolationType.STEP, rightPinchNode);
-
-            foreach (var joint in TrackedHandJointValues)
+            using (var animBuilder = new GltfAnimationBuilder(builder, "Animation"))
             {
-                string jointName = Enum.GetName(typeof(TrackedHandJoint), joint);
-                int leftJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-                int rightJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                int cameraNode = builder.CreateRootNode("Camera", Vector3.zero, Quaternion.identity, Vector3.one, 0, camera);
+                CreatePoseAnimation(animBuilder, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
 
-                InputAnimation.PoseCurves jointCurves;
-                if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+                int leftHandNode = builder.CreateRootNode("Hand.Left", Vector3.zero, Quaternion.identity, Vector3.one, 0);
+                int rightHandNode = builder.CreateRootNode("Hand.Right", Vector3.zero, Quaternion.identity, Vector3.one, 0);
+
+                int leftPinchNode = builder.CreateChildNode("Pinch", Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightPinchNode = builder.CreateChildNode("Pinch", Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+
+                // TODO: need morph targets to create weights animations - use fake position instead?
+                // CreateWeightsAnimation(context, input.HandTrackedCurveLeft, GltfInterpolationType.STEP, leftHandNode);
+                // CreateWeightsAnimation(context, input.HandTrackedCurveRight, GltfInterpolationType.STEP, rightHandNode);
+                // CreateWeightsAnimation(context, input.HandPinchCurveLeft, GltfInterpolationType.STEP, leftPinchNode);
+                // CreateWeightsAnimation(context, input.HandPinchCurveRight, GltfInterpolationType.STEP, rightPinchNode);
+
+                foreach (var joint in TrackedHandJointValues)
                 {
-                    CreatePoseAnimation(builder, jointCurves, GltfInterpolationType.LINEAR, leftJointNode);
+                    string jointName = Enum.GetName(typeof(TrackedHandJoint), joint);
+                    int leftJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                    int rightJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+
+                    InputAnimation.PoseCurves jointCurves;
+                    if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
+                    {
+                        CreatePoseAnimation(animBuilder, jointCurves, GltfInterpolationType.LINEAR, leftJointNode);
+                    }
+                    if (input.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
+                    {
+                        CreatePoseAnimation(animBuilder, jointCurves, GltfInterpolationType.LINEAR, rightJointNode);
+                    }
                 }
-                if (input.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
-                {
-                    CreatePoseAnimation(builder, jointCurves, GltfInterpolationType.LINEAR, rightJointNode);
-                }
+
+                return animBuilder.Index;
             }
-
-            return index;
         }
 
-        private static void CreatePoseAnimation(GltfObjectBuilder builder, InputAnimation.PoseCurves poseCurves, GltfInterpolationType interpolation, int node)
+        private static void CreatePoseAnimation(GltfAnimationBuilder builder, InputAnimation.PoseCurves poseCurves, GltfInterpolationType interpolation, int node)
         {
             var positionCurves = new AnimationCurve[] { poseCurves.PositionX, poseCurves.PositionY, poseCurves.PositionZ };
             var rotationCurves = new AnimationCurve[] { poseCurves.RotationX, poseCurves.RotationY, poseCurves.RotationZ, poseCurves.RotationW };
