@@ -14,7 +14,20 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
     {
         public static void ExtendArray<T>(ref T[] data, T item)
         {
-            data = data != null ? data.Append(item).ToArray() : new T[] { item };
+            if (data == null)
+            {
+                data = new T[] { item };
+                return;
+            }
+
+            var newData = new T[data.Length + 1];
+            for (int i = 0; i < data.Length; ++i)
+            {
+                newData[i] = data[i];
+            }
+            newData[data.Length] = item;
+
+            data = newData;
         }
     }
 
