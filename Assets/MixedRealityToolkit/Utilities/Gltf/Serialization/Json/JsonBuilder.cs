@@ -7,48 +7,27 @@ using System.Reflection;
 
 namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 {
+    /// <summary>
+    /// JSON serialization utility class for structured serialization.
+    /// </summary>
+    /// <remarks>
+    /// This class takes optional [JSON attributes](xref:Microsoft.MixedReality.Toolkit.Utilities.Json.JsonAttribute)
+    /// into account to produce valid JSON according to some schema.
+    /// The [Unity JsonUtility class](https://docs.unity3d.com/Manual/JSONSerialization.html) is not flexible enough to
+    /// follow all aspects of a schema, e.g. minimum values or how to serialize an enum.
+    /// </remarks>
     public class JsonBuilder
     {
+        /// <summary>
+        /// Serialize the given object to a JSON string.
+        /// </summary>
+        /// <returns>The serialized JSON string.</returns>
         public string Build(object obj)
         {
             return AppendObject(obj);
         }
 
-        private string AppendArray(Array array, MemberInfo member)
-        {
-            Type type = array.GetType();
-            var builder = new StringBuilder();
-
-            int count = 0;
-            builder.Append("[");
-            foreach (var item in array)
-            {
-                string result = AppendItem(item, null);
-                if (result.Length > 0)
-                {
-                    if (count > 0)
-                    {
-                        builder.Append(",");
-                    }
-
-                    builder.Append(result);
-
-                    ++count;
-                }
-            }
-            builder.Append("]");
-
-            var attr = member?.GetCustomAttribute<JSONArrayAttribute>();
-            if (attr != null)
-            {
-                if (count < attr.MinItems)
-                {
-                    return "";
-                }
-            }
-            return builder.ToString();
-        }
-
+        /// Append contents of the object to the JSON string.
         private string AppendObject(object obj)
         {
             Type type = obj.GetType();
@@ -86,6 +65,43 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             return builder.ToString();
         }
 
+        /// Append the contents of an array to the JSON string.
+        private string AppendArray(Array array, MemberInfo member)
+        {
+            Type type = array.GetType();
+            var builder = new StringBuilder();
+
+            int count = 0;
+            builder.Append("[");
+            foreach (var item in array)
+            {
+                string result = AppendItem(item, null);
+                if (result.Length > 0)
+                {
+                    if (count > 0)
+                    {
+                        builder.Append(",");
+                    }
+
+                    builder.Append(result);
+
+                    ++count;
+                }
+            }
+            builder.Append("]");
+
+            var attr = member?.GetCustomAttribute<JSONArrayAttribute>();
+            if (attr != null)
+            {
+                if (count < attr.MinItems)
+                {
+                    return "";
+                }
+            }
+            return builder.ToString();
+        }
+
+        /// Append the value of a field or array item.
         private string AppendItem(object obj, MemberInfo member)
         {
             if (obj == null)
@@ -152,11 +168,15 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
         }
 
+        /// Escape characters in a string so it can be used as a JSON literal.
         private static string SanitizeString(string s)
         {
             return s.Replace("\"", "\\\"");
         }
 
+        /// <summary>
+        /// Returns true if a type is an integer type.
+        /// </summary>
         public static bool IsInteger(Type type)
         {
             switch (Type.GetTypeCode(type))
@@ -175,6 +195,9 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
         }
 
+        /// <summary>
+        /// Returns true if a type is an floating point type.
+        /// </summary>
         public static bool IsFloat(Type type)
         {
             switch (Type.GetTypeCode(type))
@@ -188,6 +211,9 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
         }
 
+        /// <summary>
+        /// Returns true if a type is an string type.
+        /// </summary>
         public static bool IsString(Type type)
         {
             switch (Type.GetTypeCode(type))
@@ -199,6 +225,9 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
         }
 
+        /// <summary>
+        /// Returns true if a type is an boolean type.
+        /// </summary>
         public static bool IsBoolean(Type type)
         {
             switch (Type.GetTypeCode(type))
