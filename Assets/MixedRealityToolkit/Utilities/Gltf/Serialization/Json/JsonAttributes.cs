@@ -2,10 +2,10 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Reflection;
+
+// Attributes for serializing structs with the JsonBuilder utility.
+// Plain structs do not carry enough information to produce valid JSON depending on the schema.
+// These optional attributes can be used to guide the JsonBuilder tool.
 
 namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 {
@@ -17,9 +17,15 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
     public class JSONEnumAttribute : System.Attribute
     {
         private bool useIntValue;
+        /// <summary>
+        /// Serialize as the integer value of the enum rather than a string.
+        /// </summary>
         public bool UseIntValue => useIntValue;
 
         private object[] ignoreValues;
+        /// <summary>
+        /// Don't serialize the enum when it has one of the values in this list.
+        /// </summary>
         public object[] IgnoreValues => ignoreValues;
 
         public JSONEnumAttribute(bool useIntValue, object[] ignoreValues = null)
@@ -37,6 +43,9 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
     public class JSONIntegerAttribute : System.Attribute
     {
         private int minimum;
+        /// <summary>
+        /// Values below the minimum will not be serialized.
+        /// </summary>
         public int Minimum => minimum;
 
         public JSONIntegerAttribute(int minimum)
@@ -53,6 +62,9 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
     public class JSONArrayAttribute : System.Attribute
     {
         private int minItems;
+        /// <summary>
+        /// Arrays with fewer items than this will not be serialized.
+        /// </summary>
         public int MinItems => minItems;
 
         public JSONArrayAttribute(int minItems)
