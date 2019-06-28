@@ -8,8 +8,21 @@ using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
 using System;
 using UnityEngine;
 
+using Utils = Microsoft.MixedReality.Toolkit.Input.InputAnimationGltfUtilities;
+
 namespace Microsoft.MixedReality.Toolkit.Input
 {
+    public static class InputAnimationGltfUtilities
+    {
+        public const string SceneName = "Scene";
+        public const string CameraName = "Scene";
+        public const string HandLeftName = "Hand.Left";
+        public const string HandRightName = "Hand.Right";
+        public const string TrackingNodeName = "Tracking";
+        public const string PinchingNodeName = "Pinching";
+        public const string AnimationName = "InputAction";
+    }
+
     /// <summary>
     /// Utility class for exporting input animation data in glTF format.
     /// </summary>
@@ -28,17 +41,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
             // TODO how to specify copyright and generator strings?
             using (var builder = new GltfObjectBuilder("", "MRTK"))
             {
-                int scene = builder.CreateScene("Scene", true);
+                int scene = builder.CreateScene(Utils.SceneName, true);
 
                 int camera;
                 if (CameraCache.Main)
                 {
                     var cameraData = CameraCache.Main;
-                    camera = builder.CreateCameraPerspective("Camera", cameraData.aspect, cameraData.fieldOfView, cameraData.nearClipPlane, cameraData.farClipPlane);
+                    camera = builder.CreateCameraPerspective(Utils.CameraName, cameraData.aspect, cameraData.fieldOfView, cameraData.nearClipPlane, cameraData.farClipPlane);
                 }
                 else
                 {
-                    camera = builder.CreateCameraPerspective("Camera", 4.0/3.0, 55.0, 0.1, 100.0);
+                    camera = builder.CreateCameraPerspective(Utils.CameraName, 4.0/3.0, 55.0, 0.1, 100.0);
                 }
 
                 CreateAnimation(builder, input, camera);
@@ -54,22 +67,24 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// Create an animation from input data and return its index.
         private static int CreateAnimation(GltfObjectBuilder builder, InputAnimation input, int camera)
         {
-            using (var animBuilder = new GltfAnimationBuilder(builder, "Animation"))
+            using (var animBuilder = new GltfAnimationBuilder(builder, Utils.AnimationName))
             {
-                int cameraNode = builder.CreateRootNode("Camera", Vector3.zero, Quaternion.identity, Vector3.one, 0, camera);
+                int cameraNode = builder.CreateRootNode(Utils.CameraName, Vector3.zero, Quaternion.identity, Vector3.one, 0, camera);
                 CreatePoseAnimation(animBuilder, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
 
-                int leftHandNode = builder.CreateRootNode("Hand.Left", Vector3.zero, Quaternion.identity, Vector3.one, 0);
-                int rightHandNode = builder.CreateRootNode("Hand.Right", Vector3.zero, Quaternion.identity, Vector3.one, 0);
+                int leftHandNode = builder.CreateRootNode(Utils.HandLeftName, Vector3.zero, Quaternion.identity, Vector3.one, 0);
+                int rightHandNode = builder.CreateRootNode(Utils.HandRightName, Vector3.zero, Quaternion.identity, Vector3.one, 0);
 
-                int leftPinchNode = builder.CreateChildNode("Pinch", Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-                int rightPinchNode = builder.CreateChildNode("Pinch", Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                int leftTrackingNode = builder.CreateChildNode(Utils.TrackingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightTrackingNode = builder.CreateChildNode(Utils.TrackingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
 
-                // TODO: need morph targets to create weights animations - use fake position instead?
-                // CreateWeightsAnimation(context, input.HandTrackedCurveLeft, GltfInterpolationType.STEP, leftHandNode);
-                // CreateWeightsAnimation(context, input.HandTrackedCurveRight, GltfInterpolationType.STEP, rightHandNode);
-                // CreateWeightsAnimation(context, input.HandPinchCurveLeft, GltfInterpolationType.STEP, leftPinchNode);
-                // CreateWeightsAnimation(context, input.HandPinchCurveRight, GltfInterpolationType.STEP, rightPinchNode);
+                int leftPinchingNode = builder.CreateChildNode(Utils.PinchingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightPinchingNode = builder.CreateChildNode(Utils.PinchingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+
+                CreateBoolAnimation(animBuilder, input.HandTrackedCurveLeft, leftTrackingNode);
+                CreateBoolAnimation(animBuilder, input.HandTrackedCurveRight, rightTrackingNode);
+                CreateBoolAnimation(animBuilder, input.HandPinchCurveLeft, leftPinchingNode);
+                CreateBoolAnimation(animBuilder, input.HandPinchCurveRight, rightPinchingNode);
 
                 foreach (var joint in TrackedHandJointValues)
                 {
@@ -98,6 +113,14 @@ namespace Microsoft.MixedReality.Toolkit.Input
             var rotationCurves = new AnimationCurve[] { poseCurves.RotationX, poseCurves.RotationY, poseCurves.RotationZ, poseCurves.RotationW };
             builder.CreateTranslationAnimation(positionCurves, interpolation, node);
             builder.CreateRotationAnimation(rotationCurves, interpolation, node);
+        }
+
+        // Store a boolean animation as a translation curve.
+        // glTF 2.0 does not support custom animation targets other than translation/rotation/scale/weights.
+        private static void CreateBoolAnimation(GltfAnimationBuilder builder, AnimationCurve curve, int node)
+        {
+            var positionCurves = new AnimationCurve[] { curve, null, null };
+            builder.CreateTranslationAnimation(positionCurves, GltfInterpolationType.STEP, node);
         }
     }
 }

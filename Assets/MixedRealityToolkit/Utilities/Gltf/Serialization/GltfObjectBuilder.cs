@@ -279,20 +279,22 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
         private static void WriteTimeBuffer(byte[] bufferData, GltfAccessor accessor, AnimationCurve[] curves)
         {
+            var firstCurve = curves.First(curve => curve != null);
+
             int byteSize = GetAccessorByteSize(accessor);
             var stream = new MemoryStream(bufferData, accessor.byteOffset, byteSize, true);
             var writer = new BinaryWriter(stream);
 
-            Debug.Assert(curves[0].keys.Length == accessor.count);
+            Debug.Assert(firstCurve.keys.Length == accessor.count);
 
             accessor.min = new double[] { float.MaxValue };
             accessor.max = new double[] { float.MinValue };
             for (int i = 0; i < accessor.count; ++i)
             {
-                float time = curves[0].keys[i].time;
+                float time = firstCurve.keys[i].time;
 
                 // Slightly expensive ...
-                // Debug.Assert(curves.All((curve) => curve.keys[i].time == time));
+                // Debug.Assert(curves.All(curve => curve == null || curve.keys[i].time == time));
 
                 writer.Write(time);
 
@@ -309,7 +311,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
             int numComponents = GetNumComponents(accessor.type);
             Debug.Assert(curves.Length == numComponents);
-            Debug.Assert(curves.All((curve) => curve.keys.Length == accessor.count));
+            Debug.Assert(curves.All(curve => curve == null || curve.keys.Length == accessor.count));
 
             accessor.min = new double[numComponents];
             accessor.max = new double[numComponents];
@@ -322,7 +324,8 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             {
                 for (int c = 0; c < numComponents; ++c)
                 {
-                    float value = curves[c].keys[i].value;
+                    var curve = curves[c];
+                    float value = curve != null ? curve.keys[i].value : 0.0f;
 
                     writer.Write(value);
 
@@ -384,13 +387,15 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
         public void CreateTranslationAnimation(AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
         {
-            if (!Vec3CurvesMatch(curves))
+            Debug.Assert(curves.Length == 3);
+            if (!CurvesLengthMatch(curves, out AnimationCurve firstCurve))
             {
+                Debug.LogWarning("Translation curves must have same number of keyframes");
                 return;
             }
 
-            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, curves[0].length);
-            int accValue = objBuilder.CreateAccessor("VEC3", GltfComponentType.Float, curves[0].length);
+            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, firstCurve.length);
+            int accValue = objBuilder.CreateAccessor("VEC3", GltfComponentType.Float, firstCurve.length);
 
             var sampler = new GltfAnimationSampler();
             sampler.input = accTime;
@@ -409,13 +414,15 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
 
         public void CreateRotationAnimation(AnimationCurve[] curves, GltfInterpolationType interpolation, int node)
         {
-            if (!Vec4CurvesMatch(curves))
+            Debug.Assert(curves.Length == 4);
+            if (!CurvesLengthMatch(curves, out AnimationCurve firstCurve))
             {
+                Debug.LogWarning("Rotation curves must have same number of keyframes");
                 return;
             }
 
-            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, curves[0].length);
-            int accValue = objBuilder.CreateAccessor("VEC4", GltfComponentType.Float, curves[0].length);
+            int accTime = objBuilder.CreateAccessor("SCALAR", GltfComponentType.Float, firstCurve.length);
+            int accValue = objBuilder.CreateAccessor("VEC4", GltfComponentType.Float, firstCurve.length);
 
             var sampler = new GltfAnimationSampler();
             sampler.input = accTime;
@@ -432,16 +439,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf
             samplerCurves.Add(curves);
         }
 
-        private static bool Vec3CurvesMatch(AnimationCurve[] curves)
+        private static bool CurvesLengthMatch(AnimationCurve[] curves, out AnimationCurve firstCurveOut)
         {
-            Debug.Assert(curves.Length == 3);
-            return curves[0].length == curves[1].length && curves[1].length == curves[2].length;
-        }
-
-        private static bool Vec4CurvesMatch(AnimationCurve[] curves)
-        {
-            Debug.Assert(curves.Length == 4);
-            return curves[0].length == curves[1].length && curves[1].length == curves[2].length && curves[2].length == curves[3].length;
+            var firstCurve = curves.FirstOrDefault(c => c != null);
+            firstCurveOut = firstCurve;
+            return firstCurve != null && curves.All(c => c == null || c.length == firstCurve.length);
         }
     }
 }
