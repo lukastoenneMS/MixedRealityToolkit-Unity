@@ -1,5 +1,4 @@
 ﻿using Microsoft.MixedReality.Toolkit.Utilities;
-using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +8,8 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+
+using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 
 namespace Parsley
 {
@@ -262,13 +263,36 @@ namespace Parsley
             {
                 var neighbors = puzzle.GetInternalNeighbors(buildPieces.Select(s => s.piece)).ToArray();
 
-                if (PuzzleUtils.FindMinErrorTransform(
+                bool hasPosition = PuzzleUtils.FindMinErrorTransform(
                     neighbors.Select((p) => Tuple.Create(p.Goal.Position, p.transform.position)),
-                    out MixedRealityPose goalOffset, out Vector3 goalCentroid))
+                    out Pose piecesFromGoals, out Vector3 goalCentroid);
+                bool hasRotation = PuzzleUtils.FindMinErrorRotation(
+                    neighbors.Select((p) => Tuple.Create(p.Goal.Rotation, p.transform.rotation)),
+                    out Quaternion goalRotation);
+                if (hasPosition && hasRotation)
                 {
+                    // var goalCenterPose = new MixedRealityPose(goalOffset.Multiply(goalCentroid), goalRotation);
+
+                    Pose goalsFromPieces = piecesFromGoals.Inverse();
+                    Pose worldFromGoals = new Pose(goalCentroid, Quaternion.identity);
+                    Pose worldFromPieces = worldFromGoals.Multiply(goalsFromPieces);
+
                     foreach (var piece in neighbors)
                     {
-                        var pose = goalOffset.Multiply(piece.Goal);
+                        Pose pieceFromPieces = new Pose(piece.Goal.Position - goalCentroid, piece.Goal.Rotation);
+                        Pose piecesFromPiece = pieceFromPieces.Inverse();
+                        Pose worldFromPiece = worldFromPieces.Multiply(piecesFromPiece);
+
+                        // var centerPose = piece.Goal;
+                        // centerPose.Position -= goalCentroid;
+                        // centerPose = goalOffset.Multiply(centerPose);
+
+
+                        // var rotatedGoal = new MixedRealityPose(goalRotation * (piece.Goal.Position - goalCentroid) + goalCentroid, goalRotation * piece.Goal.Rotation);
+                        // var position = goalOffset.Multiply(rotatedGoal.Position);
+                        // var rotation = 
+                        // var pose = new MixedRealityPose(goalOffset.Multiply(rotatedGoal.Position), rotatedGoal.Rotation);
+                        var pose = worldFromPiece;
                         var localPose = piece.transform.parent.AsMixedRealityPose().Inverse().Multiply(pose);
 
                         int effectId = GhostEffectId + piece.GetHashCode();
