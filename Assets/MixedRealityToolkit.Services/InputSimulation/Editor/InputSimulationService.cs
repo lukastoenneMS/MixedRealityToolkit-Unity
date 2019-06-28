@@ -237,6 +237,10 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 }
                 return inputSimulationProfile;
             }
+            set
+            {
+                inputSimulationProfile = value;
+            }
         }
 
         /// <inheritdoc/>

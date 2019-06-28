@@ -60,7 +60,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private SerializedProperty handRotationSpeed;
 
         private SerializedProperty holdStartDuration;
-        private SerializedProperty manipulationStartThreshold;
+        private SerializedProperty navigationStartThreshold;
 
         private const string ProfileTitle = "Input Simulation Settings";
         private const string ProfileDescription = "Settings for simulating input devices in the editor.";
@@ -106,7 +106,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             handGestureAnimationSpeed = serializedObject.FindProperty("handGestureAnimationSpeed");
 
             holdStartDuration = serializedObject.FindProperty("holdStartDuration");
-            manipulationStartThreshold = serializedObject.FindProperty("manipulationStartThreshold");
+            navigationStartThreshold = serializedObject.FindProperty("navigationStartThreshold");
 
             defaultHandDistance = serializedObject.FindProperty("defaultHandDistance");
             handDepthMultiplier = serializedObject.FindProperty("handDepthMultiplier");
@@ -182,7 +182,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
                         EditorGUILayout.Space();
 
                         EditorGUILayout.PropertyField(holdStartDuration);
-                        EditorGUILayout.PropertyField(manipulationStartThreshold);
+                        EditorGUILayout.PropertyField(navigationStartThreshold);
                         EditorGUILayout.Space();
 
                         EditorGUILayout.PropertyField(defaultHandDistance);

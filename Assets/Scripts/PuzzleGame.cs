@@ -263,7 +263,7 @@ namespace Parsley
                 var neighbors = puzzle.GetInternalNeighbors(buildPieces.Select(s => s.piece)).ToArray();
 
                 if (PuzzleUtils.FindMinErrorTransform(
-                    neighbors.Select((p) => Tuple.Create(p.Goal, new MixedRealityPose(p.transform.position, p.transform.rotation))),
+                    neighbors.Select((p) => Tuple.Create(p.Goal.Position, p.transform.position)),
                     out MixedRealityPose goalOffset, out Vector3 goalCentroid))
                 {
                     foreach (var piece in neighbors)
