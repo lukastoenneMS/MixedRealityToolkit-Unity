@@ -410,6 +410,7 @@ namespace Parsley
             {
                 float offset = 2.0f * (float)i / (float)(n-1) - 1.0f;
                 palette[i] = Color.HSVToRGB(H + hueShift * offset, S, V);
+                palette[i].a = baseColor.a;
             }
             return palette;
         }
