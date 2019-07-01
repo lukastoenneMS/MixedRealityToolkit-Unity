@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 
@@ -36,24 +38,48 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 
             int count = 0;
             builder.Append("{");
-            foreach (var field in fields)
+            if (IsDictionary(type))
             {
-                if (field.IsStatic || field.IsNotSerialized || !field.FieldType.IsSerializable)
+                IDictionary dict = obj as IDictionary;
+                foreach (DictionaryEntry item in dict)
                 {
-                    continue;
-                }
 
-                var result = AppendItem(field.GetValue(obj), field);
-                if (result.Length > 0)
-                {
-                    if (count > 0)
+                    var result = AppendItem(item.Value, null);
+                    if (result.Length > 0)
                     {
-                        builder.Append(",");
+                        if (count > 0)
+                        {
+                            builder.Append(",");
+                        }
+
+                        builder.Append("\"" + SanitizeString(item.Key.ToString()) + "\":" + result);
+
+                        ++count;
                     }
 
-                    builder.Append("\"" + SanitizeString(field.Name) + "\":" + result);
+                }
+            }
+            else
+            {
+                foreach (var field in fields)
+                {
+                    if (field.IsStatic || field.IsNotSerialized || !field.FieldType.IsSerializable)
+                    {
+                        continue;
+                    }
 
-                    ++count;
+                    var result = AppendItem(field.GetValue(obj), field);
+                    if (result.Length > 0)
+                    {
+                        if (count > 0)
+                        {
+                            builder.Append(",");
+                        }
+
+                        builder.Append("\"" + SanitizeString(field.Name) + "\":" + result);
+
+                        ++count;
+                    }
                 }
             }
             builder.Append("}");
@@ -237,6 +263,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
                 default:
                     return false;
             }
+        }
+
+        public static bool IsDictionary(Type type)
+        {
+            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>);
         }
     }
 }
