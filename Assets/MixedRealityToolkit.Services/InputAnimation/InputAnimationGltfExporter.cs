@@ -20,6 +20,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         public const string HandRightName = "Hand.Right";
         public const string TrackingNodeName = "Tracking";
         public const string PinchingNodeName = "Pinching";
+        public const string JointsNodeName = "Joints";
         public const string AnimationName = "InputAction";
     }
 
@@ -77,20 +78,21 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
                 int leftTrackingNode = builder.CreateChildNode(Utils.TrackingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
                 int rightTrackingNode = builder.CreateChildNode(Utils.TrackingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                CreateBoolAnimation(animBuilder, input.HandTrackedCurveLeft, leftTrackingNode);
+                CreateBoolAnimation(animBuilder, input.HandTrackedCurveRight, rightTrackingNode);
 
                 int leftPinchingNode = builder.CreateChildNode(Utils.PinchingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
                 int rightPinchingNode = builder.CreateChildNode(Utils.PinchingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
-
-                CreateBoolAnimation(animBuilder, input.HandTrackedCurveLeft, leftTrackingNode);
-                CreateBoolAnimation(animBuilder, input.HandTrackedCurveRight, rightTrackingNode);
                 CreateBoolAnimation(animBuilder, input.HandPinchCurveLeft, leftPinchingNode);
                 CreateBoolAnimation(animBuilder, input.HandPinchCurveRight, rightPinchingNode);
 
+                int leftJointsNode = builder.CreateChildNode(Utils.JointsNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightJointsNode = builder.CreateChildNode(Utils.JointsNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
                 foreach (var joint in TrackedHandJointValues)
                 {
                     string jointName = Enum.GetName(typeof(TrackedHandJoint), joint);
-                    int leftJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-                    int rightJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                    int leftJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, leftJointsNode);
+                    int rightJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, rightJointsNode);
 
                     InputAnimation.PoseCurves jointCurves;
                     if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
