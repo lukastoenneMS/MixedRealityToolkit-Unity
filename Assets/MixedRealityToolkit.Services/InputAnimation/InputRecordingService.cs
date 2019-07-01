@@ -287,7 +287,6 @@ namespace Microsoft.MixedReality.Toolkit.Input
                         PruneBuffer();
                         recordingBuffer.ToStream(fileStream, StartTime);
                         Debug.Log($"Recorded input animation exported to {path}");
-
                     }
 
                     string glbPath = Path.ChangeExtension(path, "glb");
