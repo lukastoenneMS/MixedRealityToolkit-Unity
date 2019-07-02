@@ -263,24 +263,25 @@ namespace Parsley
             {
                 var neighbors = puzzle.GetInternalNeighbors(buildPieces.Select(s => s.piece)).ToArray();
 
-                bool hasPosition = PuzzleUtils.FindMinErrorTransform(
-                    neighbors.Select(p => Tuple.Create(p.Goal.Position, p.transform.position)),
-                    out Pose goalOffset, out Vector3 goalCentroid);
-                bool hasRotation = PuzzleUtils.FindAverageRotation(
+                bool hasCentroid = PuzzleUtils.ComputeCentroid(
+                    neighbors.Select(p => p.transform.position),
+                    out Vector3 centroid);
+                bool hasGoalCentroid = PuzzleUtils.ComputeCentroid(
+                    neighbors.Select(p => p.Goal.Position),
+                    out Vector3 goalCentroid);
+                bool hasAvgRotation = PuzzleUtils.ComputeAverageRotation(
                     neighbors.Select(p => p.transform.rotation),
-                    out Quaternion goalRotation);
-                if (hasPosition && hasRotation)
+                    out Quaternion avgRotation);
+                bool hasAvgGoalRotation = PuzzleUtils.ComputeAverageRotation(
+                    neighbors.Select(p => p.Goal.Rotation),
+                    out Quaternion avgGoalRotation);
+                if (hasCentroid && hasGoalCentroid && hasAvgRotation && hasAvgGoalRotation)
                 {
+                    Pose centerOffset = new Pose(centroid, avgRotation * Quaternion.Inverse(avgGoalRotation));
                     foreach (var piece in neighbors)
                     {
-                        Pose centeredGoal = new Pose(piece.Goal.Position - goalCentroid, piece.Goal.Rotation);
-                        Pose rotatedGoal = new Pose(Vector3.zero, goalRotation).Multiply(centeredGoal);
-                        rotatedGoal.Position += goalCentroid;
-
-                        // Pose pose = new Pose(rotatedGoal.Position + goalOffset.Position, rotatedGoal.Rotation);
-                        // Pose pose = new Pose(centeredGoal.Position + goalOffset.Position, centeredGoal.Rotation);
-                        Pose pose = goalOffset.Multiply(piece.Goal);
-
+                        Pose centered = new Pose(-goalCentroid, Quaternion.identity).Multiply(piece.Goal);
+                        Pose pose = centerOffset.Multiply(centered);
                         Pose localPose = piece.transform.parent.AsMixedRealityPose().Inverse().Multiply(pose);
 
                         int effectId = GhostEffectId + piece.GetHashCode();

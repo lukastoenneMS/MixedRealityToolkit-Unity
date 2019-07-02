@@ -84,6 +84,30 @@ namespace Parsley
             return count > 0;
         }
 
+        public static bool ComputeAverageRotation(IEnumerable<Quaternion> rotations, out Quaternion result)
+        {
+            Quaternion avg = new Quaternion(0, 0, 0, 0);
+            foreach (var q in rotations)
+            {
+                if (Quaternion.Dot(q, avg) > 0.0f)
+                {
+                    avg.x += q.x;
+                    avg.y += q.y;
+                    avg.z += q.z;
+                    avg.w += q.w;
+                }
+                else
+                {
+                    avg.x -= q.x;
+                    avg.y -= q.y;
+                    avg.z -= q.z;
+                    avg.w -= q.w;
+                }
+            }
+            result = avg.normalized;
+            return true;
+        }
+
         public static bool FindMinErrorTransform(IEnumerable<Tuple<Vector3, Vector3>> points, out MixedRealityPose result, out Vector3 fromCentroid)
         {
             fromCentroid = Vector3.zero;
@@ -143,30 +167,6 @@ namespace Parsley
             Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
 
             result = new MixedRealityPose(toCentroid - fromCentroid, rotation);
-            return true;
-        }
-
-        public static bool FindAverageRotation(IEnumerable<Quaternion> rotations, out Quaternion result)
-        {
-            Quaternion avg = new Quaternion(0, 0, 0, 0);
-            foreach (var q in rotations)
-            {
-                if (Quaternion.Dot(q, avg) > 0.0f)
-                {
-                    avg.x += q.x;
-                    avg.y += q.y;
-                    avg.z += q.z;
-                    avg.w += q.w;
-                }
-                else
-                {
-                    avg.x -= q.x;
-                    avg.y -= q.y;
-                    avg.z -= q.z;
-                    avg.w -= q.w;
-                }
-            }
-            result = avg.normalized;
             return true;
         }
 
