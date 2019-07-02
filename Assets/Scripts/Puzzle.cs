@@ -151,34 +151,28 @@ namespace Parsley
             }
         }
 
-        public PuzzlePiece MergePieces(PuzzlePiece pa, PuzzlePiece pb, AnimationCurve snapAnimation)
+        public PuzzlePiece MergePieces(IEnumerable<PuzzlePiece> pieces, AnimationCurve snapAnimation)
         {
-            if (pa == pb)
-            {
-                // Nothing to do, can't merge with itself
-                return pa;
-            }
+            Debug.Assert(pieces.Any());
 
-            PuzzleShard[] shardsA = pa.gameObject.GetComponentsInChildren<PuzzleShard>();
-            PuzzleShard[] shardsB = pb.gameObject.GetComponentsInChildren<PuzzleShard>();
-            PuzzleShard[] allShards = new PuzzleShard[shardsA.Length + shardsB.Length];
-            Array.Copy(shardsA, 0, allShards, 0, shardsA.Length);
-            Array.Copy(shardsB, 0, allShards, shardsA.Length, shardsB.Length);
-
+            IEnumerable<PuzzleShard> allShards = pieces.SelectMany(p => p.gameObject.GetComponentsInChildren<PuzzleShard>());
             PuzzleUtils.FindShardCenter(allShards, out MixedRealityPose goalOffset, out Vector3 goalCentroid);
 
-            Transform parent = pa.transform.parent;
-            string name = namePrefix + pa.name.Substring(namePrefix.Length) + "+" + pb.name.Substring(namePrefix.Length);
+            Transform parent = pieces.First().transform.parent;
+            string name = namePrefix + string.Join("+", pieces.Select(p => p.name.Substring(namePrefix.Length)));
 
             var goal = new MixedRealityPose(goalCentroid, Quaternion.identity);
             var pose = goalOffset.Multiply(goal);
             PuzzlePiece pn = CreatePiece(name, allShards.Select((shard) => shard.transform), parent, pose, goal);
 
-            neighborMap.MoveNeighbors(pa, pn);
-            neighborMap.MoveNeighbors(pb, pn);
-
-            RemovePiece(pa);
-            RemovePiece(pb);
+            foreach (var p in pieces)
+            {
+                neighborMap.MoveNeighbors(p, pn);
+            }
+            foreach (var p in pieces)
+            {
+                RemovePiece(p);
+            }
 
             pn.Snap();
 

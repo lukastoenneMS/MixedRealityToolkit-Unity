@@ -300,27 +300,27 @@ namespace Parsley
                     }
                 }
 
-                // PuzzlePiece joinedPiece = null;
-                // foreach (var neighborPiece in neighbors)
-                // {
-                //     if (joinedPiece != null)
-                //     {
-                //         var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece);
-                //         float distance = offset.Position.magnitude;
-                //         float angle;
-                //         Vector3 axis;
-                //         offset.Rotation.ToAngleAxis(out angle, out axis);
-                //         if (distance <= SnappingDistance && angle <= SnappingAngle)
-                //         {
-                //             buildPieces.Remove(neighborPiece);
-                //             joinedPiece = puzzle.MergePieces(joinedPiece, neighborPiece, SnapAnimation);
-                //         }
-                //     }
-                //     else
-                //     {
-                //         joinedPiece = neighborPiece;
-                //     }
-                // }
+                PuzzlePiece joinedPiece = null;
+                foreach (var neighborPiece in neighbors)
+                {
+                    if (joinedPiece != null)
+                    {
+                        var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece);
+                        float distance = offset.Position.magnitude;
+                        float angle;
+                        Vector3 axis;
+                        offset.Rotation.ToAngleAxis(out angle, out axis);
+                        if (distance <= SnappingDistance && angle <= SnappingAngle)
+                        {
+                            buildPieces.RemoveAll(s => s.piece == neighborPiece);
+                            joinedPiece = puzzle.MergePieces(new PuzzlePiece[] { joinedPiece, neighborPiece }, SnapAnimation);
+                        }
+                    }
+                    else
+                    {
+                        joinedPiece = neighborPiece;
+                    }
+                }
             }
         }
 
@@ -348,7 +348,7 @@ namespace Parsley
                 int a = rng.Next() % puzzle.pieceCount;
                 int b = rng.Next() % puzzle.pieceCount;
 
-                puzzle.MergePieces(puzzle.GetPiece(a), puzzle.GetPiece(b), SnapAnimation);
+                puzzle.MergePieces(new PuzzlePiece[] { puzzle.GetPiece(a), puzzle.GetPiece(b) }, SnapAnimation);
 
                 yield return new WaitForSeconds(mergeInterval);
             }
