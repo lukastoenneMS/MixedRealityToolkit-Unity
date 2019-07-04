@@ -166,7 +166,13 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
         /// <remarks>Returned <see cref="Schema.GltfObject"/> still needs to be initialized using <see cref="ConstructGltf.ConstructAsync"/>.</remarks>
         public static GltfObject GetGltfObjectFromJson(string jsonString)
         {
-            var gltfObject = JsonUtility.FromJson<GltfObject>(jsonString);
+            // var gltfObject = JsonUtility.FromJson<GltfObject>(jsonString);
+            var parser = new JsonParser();
+            if (!parser.Parse(jsonString, typeof(GltfObject), out object obj))
+            {
+                return null;
+            }
+            var gltfObject = obj as GltfObject;
 
             if (gltfObject.extensionsRequired?.Length > 0)
             {

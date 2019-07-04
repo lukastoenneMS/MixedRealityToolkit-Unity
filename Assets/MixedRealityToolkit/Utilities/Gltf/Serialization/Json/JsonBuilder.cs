@@ -10,7 +10,7 @@ using System.Reflection;
 namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 {
     /// <summary>
-    /// JSON serialization utility class for structured serialization.
+    /// JSON utility class for structured serialization.
     /// </summary>
     /// <remarks>
     /// This class takes optional [JSON attributes](xref:Microsoft.MixedReality.Toolkit.Utilities.Json.JsonAttribute)

@@ -54,7 +54,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         public static string GetPinchingNodeName(Handedness handedness)
         {
-            return $"Hand.{handedness}.Tracking";
+            return $"Hand.{handedness}.Pinching";
         }
 
         public static bool TryParsePinchingNodeName(string name, out Handedness handedness)
