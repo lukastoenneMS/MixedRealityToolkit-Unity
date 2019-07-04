@@ -4,6 +4,7 @@
 using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.Input
@@ -184,13 +185,13 @@ namespace Microsoft.MixedReality.Toolkit.Input
 #endif
 
         /// <inheritdoc />
-        public bool LoadInputAnimation(string filepath)
+        public async Task<bool> LoadInputAnimation(string filepath)
         {
             if (filepath.Length > 0)
             {
                 try
                 {
-                    animation = InputAnimationGltfImporter.OnImportInputAnimation(filepath).Result;
+                    animation = await InputAnimationGltfImporter.OnImportInputAnimation(filepath);
 
                     // using (FileStream fs = new FileStream(filepath, FileMode.Open))
                     // {

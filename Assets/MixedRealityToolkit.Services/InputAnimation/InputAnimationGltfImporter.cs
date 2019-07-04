@@ -74,6 +74,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             public bool TryParseGltfObject(GltfObject gltfObject)
             {
+                this.gltfObject = gltfObject;
                 if (!TryFindAnimation(gltfObject))
                 {
                     return false;

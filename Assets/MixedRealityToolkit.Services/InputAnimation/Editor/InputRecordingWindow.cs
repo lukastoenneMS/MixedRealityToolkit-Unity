@@ -328,9 +328,9 @@ namespace Microsoft.MixedReality.Toolkit.Input
             }
         }
 
-        private void LoadAnimation(string filepath)
+        private async void LoadAnimation(string filepath)
         {
-            if (PlaybackService.LoadInputAnimation(filepath))
+            if (await PlaybackService.LoadInputAnimation(filepath))
             {
                 loadedFilePath = filepath;
             }
