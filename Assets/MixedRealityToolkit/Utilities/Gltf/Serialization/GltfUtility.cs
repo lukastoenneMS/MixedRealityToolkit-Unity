@@ -31,7 +31,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
         /// Must be called from the main thread.
         /// If the <see href="https://docs.unity3d.com/ScriptReference/Application-isPlaying.html">Application.isPlaying</see> is false, then this method will run synchronously.
         /// </remarks>
-        public static async Task<GltfObject> ImportGltfObjectFromPathAsync(string uri)
+        public static async Task<GltfObject> ImportGltfObjectFromPathAsync(string uri, bool constructGameObject)
         {
             if (!SyncContextUtility.IsMainThread)
             {
@@ -142,15 +142,18 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
                 gltfObject.Name = DefaultObjectName;
             }
 
-            gltfObject.UseBackgroundThread = useBackgroundThread;
-            await gltfObject.ConstructAsync();
-
-            if (gltfObject.GameObjectReference == null)
+            if (constructGameObject)
             {
-                Debug.LogError("Failed to construct Gltf Object.");
-            }
+                gltfObject.UseBackgroundThread = useBackgroundThread;
+                await gltfObject.ConstructAsync();
 
-            if (useBackgroundThread) { await Update; }
+                if (gltfObject.GameObjectReference == null)
+                {
+                    Debug.LogError("Failed to construct Gltf Object.");
+                }
+
+                if (useBackgroundThread) { await Update; }
+            }
 
             return gltfObject;
         }

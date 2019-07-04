@@ -190,15 +190,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
             {
                 try
                 {
-                    using (FileStream fs = new FileStream(filepath, FileMode.Open))
-                    {
-                        animation = new InputAnimation();
-                        animation.FromStream(fs);
+                    animation = InputAnimationGltfImporter.OnImportInputAnimation(filepath).Result;
 
-                        Evaluate();
+                    // using (FileStream fs = new FileStream(filepath, FileMode.Open))
+                    // {
+                    //     animation = new InputAnimation();
+                    //     animation.FromStream(fs);
+                    // }
 
-                        return true;
-                    }
+                    Evaluate();
+
+                    return true;
                 }
                 catch (IOException ex)
                 {

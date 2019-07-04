@@ -6,6 +6,7 @@ using Microsoft.MixedReality.Toolkit.Utilities.Gltf;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -17,13 +18,83 @@ namespace Microsoft.MixedReality.Toolkit.Input
     {
         public const string SceneName = "Scene";
         public const string CameraName = "Scene";
-        public const string HandLeftName = "Hand.Left";
-        public const string HandRightName = "Hand.Right";
-        public const string TrackingNodeName = "Tracking";
-        public const string PinchingNodeName = "Pinching";
-        public const string JointsNodeName = "Joints";
         public const string AnimationName = "InputAction";
         public const string JointIdName = "JointID";
+
+        public static readonly string[] TrackedHandJointNames = Enum.GetNames(typeof(TrackedHandJoint));
+        public static readonly TrackedHandJoint[] TrackedHandJointValues = (TrackedHandJoint[])Enum.GetValues(typeof(TrackedHandJoint));
+        private static readonly Dictionary<string, TrackedHandJoint> TrackedHandJointMap = TrackedHandJointValues.ToDictionary(j => Enum.GetName(typeof(TrackedHandJoint), j));
+
+        public static readonly Handedness[] HandednessValues = (Handedness[])Enum.GetValues(typeof(Handedness));
+        private static readonly Dictionary<string, Handedness> HandednessMap = HandednessValues.ToDictionary(h => Enum.GetName(typeof(Handedness), h));
+
+        public static string GetHandNodeName(Handedness handedness)
+        {
+            return $"Hand.{handedness}";
+        }
+
+        public static string GetTrackingNodeName(Handedness handedness)
+        {
+            return $"Hand.{handedness}.Tracking";
+        }
+
+        public static bool TryParseTrackingNodeName(string name, out Handedness handedness)
+        {
+            string[] parts = name.Split('.');
+            if (parts.Length == 3 && parts[0] == "Hand" && parts[2] == "Tracking")
+            {
+                if (HandednessMap.TryGetValue(parts[1], out handedness))
+                {
+                    return true;
+                }
+            }
+            handedness = Handedness.None;
+            return false;
+        }
+
+        public static string GetPinchingNodeName(Handedness handedness)
+        {
+            return $"Hand.{handedness}.Tracking";
+        }
+
+        public static bool TryParsePinchingNodeName(string name, out Handedness handedness)
+        {
+            string[] parts = name.Split('.');
+            if (parts.Length == 3 && parts[0] == "Hand" && parts[2] == "Pinching")
+            {
+                if (HandednessMap.TryGetValue(parts[1], out handedness))
+                {
+                    return true;
+                }
+            }
+            handedness = Handedness.None;
+            return false;
+        }
+
+        public static string GetHandJointsNodeName(Handedness handedness)
+        {
+            return $"Hand.{handedness}.Joints";
+        }
+
+        public static string GetJointNodeName(Handedness handedness, TrackedHandJoint joint)
+        {
+            return $"Hand.{handedness}.Joint.{joint}";
+        }
+
+        public static bool TryParseJointNodeName(string name, out Handedness handedness, out TrackedHandJoint joint)
+        {
+            string[] parts = name.Split('.');
+            if (parts.Length == 4 && parts[0] == "Hand" && parts[2] == "Joint")
+            {
+                if (HandednessMap.TryGetValue(parts[1], out handedness) && TrackedHandJointMap.TryGetValue(parts[3], out joint))
+                {
+                    return true;
+                }
+            }
+            handedness = Handedness.None;
+            joint = TrackedHandJoint.None;
+            return false;
+        }
     }
 
     /// <summary>
@@ -71,8 +142,6 @@ namespace Microsoft.MixedReality.Toolkit.Input
             await GltfUtility.ExportGltfObjectToPathAsync(exportedObject, path);
         }
 
-        private static TrackedHandJoint[] TrackedHandJointValues = (TrackedHandJoint[])Enum.GetValues(typeof(TrackedHandJoint));
-
         /// Create an animation from input data and return its index.
         private static int CreateAnimation(GltfObjectBuilder builder, InputAnimation input, int camera, out Dictionary<int, string> nodeJointIds)
         {
@@ -83,24 +152,24 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 int cameraNode = builder.CreateRootNode(Utils.CameraName, Vector3.zero, Quaternion.identity, Vector3.one, 0, camera);
                 CreatePoseAnimation(animBuilder, input.CameraCurves, GltfInterpolationType.LINEAR, cameraNode);
 
-                int leftHandNode = builder.CreateRootNode(Utils.HandLeftName, Vector3.zero, Quaternion.identity, Vector3.one, 0);
-                int rightHandNode = builder.CreateRootNode(Utils.HandRightName, Vector3.zero, Quaternion.identity, Vector3.one, 0);
+                int leftHandNode = builder.CreateRootNode(Utils.GetHandNodeName(Handedness.Left), Vector3.zero, Quaternion.identity, Vector3.one, 0);
+                int rightHandNode = builder.CreateRootNode(Utils.GetHandNodeName(Handedness.Right), Vector3.zero, Quaternion.identity, Vector3.one, 0);
 
-                int leftTrackingNode = builder.CreateChildNode(Utils.TrackingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-                int rightTrackingNode = builder.CreateChildNode(Utils.TrackingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                int leftTrackingNode = builder.CreateChildNode(Utils.GetTrackingNodeName(Handedness.Left), Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightTrackingNode = builder.CreateChildNode(Utils.GetTrackingNodeName(Handedness.Right), Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
                 CreateBoolAnimation(animBuilder, input.HandTrackedCurveLeft, leftTrackingNode);
                 CreateBoolAnimation(animBuilder, input.HandTrackedCurveRight, rightTrackingNode);
 
-                int leftPinchingNode = builder.CreateChildNode(Utils.PinchingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-                int rightPinchingNode = builder.CreateChildNode(Utils.PinchingNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                int leftPinchingNode = builder.CreateChildNode(Utils.GetPinchingNodeName(Handedness.Left), Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightPinchingNode = builder.CreateChildNode(Utils.GetPinchingNodeName(Handedness.Right), Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
                 CreateBoolAnimation(animBuilder, input.HandPinchCurveLeft, leftPinchingNode);
                 CreateBoolAnimation(animBuilder, input.HandPinchCurveRight, rightPinchingNode);
 
-                int leftJointsNode = builder.CreateChildNode(Utils.JointsNodeName, Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
-                int rightJointsNode = builder.CreateChildNode(Utils.JointsNodeName, Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
-                foreach (var joint in TrackedHandJointValues)
+                int leftJointsNode = builder.CreateChildNode(Utils.GetHandJointsNodeName(Handedness.Left), Vector3.zero, Quaternion.identity, Vector3.one, leftHandNode);
+                int rightJointsNode = builder.CreateChildNode(Utils.GetHandJointsNodeName(Handedness.Right), Vector3.zero, Quaternion.identity, Vector3.one, rightHandNode);
+                foreach (var joint in Utils.TrackedHandJointValues)
                 {
-                    string jointName = Enum.GetName(typeof(TrackedHandJoint), joint);
+                    string jointName = Utils.TrackedHandJointNames[(int)joint];
     
                     InputAnimation.PoseCurves jointCurves;
                     if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
