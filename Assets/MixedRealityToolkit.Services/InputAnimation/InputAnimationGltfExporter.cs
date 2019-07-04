@@ -174,13 +174,13 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     InputAnimation.PoseCurves jointCurves;
                     if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
                     {
-                        int leftJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, leftJointsNode);
+                        int leftJointNode = builder.CreateChildNode(Utils.GetJointNodeName(Handedness.Left, joint), Vector3.zero, Quaternion.identity, Vector3.one, leftJointsNode);
                         nodeJointIds.Add(leftJointNode, $"Left.{jointName}");
                         CreatePoseAnimation(animBuilder, jointCurves, GltfInterpolationType.LINEAR, leftJointNode);
                     }
                     if (input.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
                     {
-                        int rightJointNode = builder.CreateChildNode(jointName, Vector3.zero, Quaternion.identity, Vector3.one, rightJointsNode);
+                        int rightJointNode = builder.CreateChildNode(Utils.GetJointNodeName(Handedness.Right, joint), Vector3.zero, Quaternion.identity, Vector3.one, rightJointsNode);
                         nodeJointIds.Add(rightJointNode, $"Right.{jointName}");
                         CreatePoseAnimation(animBuilder, jointCurves, GltfInterpolationType.LINEAR, rightJointNode);
                     }
