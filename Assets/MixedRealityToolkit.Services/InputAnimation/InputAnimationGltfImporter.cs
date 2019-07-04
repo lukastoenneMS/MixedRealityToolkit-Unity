@@ -222,6 +222,29 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             ImportPoseCurves(content, content.camera, anim.CameraCurves);
 
+            foreach (var handItem in content.handMap)
+            {
+                switch (handItem.Key)
+                {
+                    case Handedness.Left:
+                        ImportBoolCurve(content, handItem.Value.tracking, anim.HandTrackedCurveLeft);
+                        ImportBoolCurve(content, handItem.Value.pinching, anim.HandPinchCurveLeft);
+                        break;
+                    case Handedness.Right:
+                        ImportBoolCurve(content, handItem.Value.tracking, anim.HandTrackedCurveRight);
+                        ImportBoolCurve(content, handItem.Value.pinching, anim.HandPinchCurveRight);
+                        break;
+                }
+
+                foreach (var jointItem in handItem.Value.jointMap)
+                {
+                    var poseCurves = anim.CreateHandJointCurves(handItem.Key, jointItem.Key);
+                    ImportPoseCurves(content, jointItem.Value, poseCurves);
+                }
+            }
+
+            anim.ComputeDuration();
+
             return anim;
         }
 
@@ -236,6 +259,14 @@ namespace Microsoft.MixedReality.Toolkit.Input
             {
                 TryImportCurves(content, nodeInfo.RotationChannel,
                     new AnimationCurve[] { poseCurvesOut.RotationX, poseCurvesOut.RotationY, poseCurvesOut.RotationZ, poseCurvesOut.RotationW });
+            }
+        }
+
+        private static void ImportBoolCurve(InputAnimationGltfContent content, InputAnimationGltfContent.NodeInfo nodeInfo, AnimationCurve curveOut)
+        {
+            if (nodeInfo.PositionChannel != null)
+            {
+                TryImportCurves(content, nodeInfo.PositionChannel, new AnimationCurve[] { curveOut, null, null });
             }
         }
 
@@ -349,9 +380,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             for (int c = 0; c < numComponents; ++c)
             {
-                curves[c].keys = curveKeys[c];
-                curves[c].postWrapMode = WrapMode.Clamp;
-                curves[c].preWrapMode = WrapMode.Clamp;
+                if (curves[c] != null)
+                {
+                    curves[c].keys = curveKeys[c];
+                    curves[c].postWrapMode = WrapMode.Clamp;
+                    curves[c].preWrapMode = WrapMode.Clamp;
+                }
             }
 
             return true;

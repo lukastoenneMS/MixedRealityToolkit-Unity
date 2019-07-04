@@ -619,7 +619,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return lowIdx;
         }
 
-        private void ComputeDuration()
+        public void ComputeDuration()
         {
             duration = 0.0f;
             foreach (var curve in AnimationCurves)
