@@ -47,18 +47,10 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
         /// </summary>
         public InteractionSourceState LastSourceStateReading { get; protected set; }
 
-        private Vector3 currentSourcePosition = Vector3.zero;
-        private Quaternion currentSourceRotation = Quaternion.identity;
-        private MixedRealityPose lastSourcePose = MixedRealityPose.ZeroIdentity;
         private MixedRealityPose currentSourcePose = MixedRealityPose.ZeroIdentity;
-
-        private Vector3 currentPointerPosition = Vector3.zero;
-        private Quaternion currentPointerRotation = Quaternion.identity;
         private MixedRealityPose currentPointerPose = MixedRealityPose.ZeroIdentity;
-
-        private Vector3 currentGripPosition = Vector3.zero;
-        private Quaternion currentGripRotation = Quaternion.identity;
         private MixedRealityPose currentGripPose = MixedRealityPose.ZeroIdentity;
+        private MixedRealityPose lastSourcePose = MixedRealityPose.ZeroIdentity;
 
         #region Update data functions
 
@@ -118,10 +110,10 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
             {
                 // The source is either a hand or a controller that supports pointing.
                 // We can now check for position and rotation.
-                IsPositionAvailable = interactionSourceState.sourcePose.TryGetPosition(out currentSourcePosition);
-
+                IsPositionAvailable = interactionSourceState.sourcePose.TryGetPosition(out Vector3 position);
                 if (IsPositionAvailable)
                 {
+                    currentSourcePose.Position = position;
                     IsPositionApproximate = (interactionSourceState.sourcePose.positionAccuracy == InteractionSourcePositionAccuracy.Approximate);
                 }
                 else
@@ -129,7 +121,11 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                     IsPositionApproximate = false;
                 }
 
-                IsRotationAvailable = interactionSourceState.sourcePose.TryGetRotation(out currentSourceRotation);
+                IsRotationAvailable = interactionSourceState.sourcePose.TryGetRotation(out Quaternion rotation);
+                if (IsRotationAvailable)
+                {
+                    currentSourcePose.Rotation = rotation;
+                }
 
                 // Devices are considered tracked if we receive position OR rotation data from the sensors.
                 TrackingState = (IsPositionAvailable || IsRotationAvailable) ? TrackingState.Tracked : TrackingState.NotTracked;
@@ -140,8 +136,8 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                 TrackingState = TrackingState.NotApplicable;
             }
 
-            currentSourcePose.Position = currentSourcePosition;
-            currentSourcePose.Rotation = currentSourceRotation;
+            currentSourcePose.Position = currentSourcePose.Position;
+            currentSourcePose.Rotation = currentSourcePose.Rotation;
 
             // Raise input system events if it is enabled.
             if (lastState != TrackingState)
@@ -157,11 +153,11 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                 }
                 else if (IsPositionAvailable && !IsRotationAvailable)
                 {
-                    InputSystem?.RaiseSourcePositionChanged(InputSource, this, currentSourcePosition);
+                    InputSystem?.RaiseSourcePositionChanged(InputSource, this, currentSourcePose.Position);
                 }
                 else if (!IsPositionAvailable && IsRotationAvailable)
                 {
-                    InputSystem?.RaiseSourceRotationChanged(InputSource, this, currentSourceRotation);
+                    InputSystem?.RaiseSourceRotationChanged(InputSource, this, currentSourcePose.Rotation);
                 }
             }
         }
@@ -175,13 +171,16 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
         {
             if (interactionSourceState.source.supportsPointing)
             {
-                interactionSourceState.sourcePose.TryGetPosition(out currentPointerPosition, InteractionSourceNode.Pointer);
-                interactionSourceState.sourcePose.TryGetRotation(out currentPointerRotation, InteractionSourceNode.Pointer);
-
                 // We want the source to follow the Playspace, so fold in the playspace transform here to 
                 // put the source pose into world space.
-                currentPointerPose.Position = MixedRealityPlayspace.TransformPoint(currentPointerPosition);
-                currentPointerPose.Rotation = MixedRealityPlayspace.Rotation * currentPointerRotation;
+                if (interactionSourceState.sourcePose.TryGetPosition(out Vector3 position, InteractionSourceNode.Pointer))
+                {
+                    currentPointerPose.Position = MixedRealityPlayspace.TransformPoint(position);
+                }
+                if (interactionSourceState.sourcePose.TryGetRotation(out Quaternion rotation, InteractionSourceNode.Pointer))
+                {
+                    currentPointerPose.Rotation = MixedRealityPlayspace.Rotation * rotation;
+                }
             }
 
             // Update the interaction data source
@@ -206,11 +205,16 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
             {
                 case AxisType.SixDof:
                 {
-                    interactionSourceState.sourcePose.TryGetPosition(out currentGripPosition, InteractionSourceNode.Grip);
-                    interactionSourceState.sourcePose.TryGetRotation(out currentGripRotation, InteractionSourceNode.Grip);
-
-                    currentGripPose.Position = MixedRealityPlayspace.TransformPoint(currentGripPosition);
-                    currentGripPose.Rotation = Quaternion.Euler(MixedRealityPlayspace.TransformDirection(currentGripRotation.eulerAngles));
+                    // We want the source to follow the Playspace, so fold in the playspace transform here to 
+                    // put the source pose into world space.
+                    if (interactionSourceState.sourcePose.TryGetPosition(out Vector3 position, InteractionSourceNode.Grip))
+                    {
+                        currentGripPose.Position = MixedRealityPlayspace.TransformPoint(position);
+                    }
+                    if (interactionSourceState.sourcePose.TryGetRotation(out Quaternion rotation, InteractionSourceNode.Grip))
+                    {
+                        currentGripPose.Rotation = MixedRealityPlayspace.Rotation * rotation;
+                    }
 
                     // Update the interaction data source
                     interactionMapping.PoseData = currentGripPose;
