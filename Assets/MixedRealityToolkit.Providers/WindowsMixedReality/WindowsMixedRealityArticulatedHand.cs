@@ -104,8 +104,6 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
 #if UNITY_WSA
         private MixedRealityPose currentIndexPose = MixedRealityPose.ZeroIdentity;
 
-        private readonly HandRay handRay = new HandRay();
-
 #if WINDOWS_UWP
         private SpatialInteractionManager spatialInteractionManager = null;
         private HandMeshObserver handMeshObserver = null;
