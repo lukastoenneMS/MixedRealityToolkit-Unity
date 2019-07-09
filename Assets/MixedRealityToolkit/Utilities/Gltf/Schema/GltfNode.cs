@@ -33,19 +33,19 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <summary>
         /// The index of the camera referenced by this node.
         /// </summary>
-        [JSONInteger(0)]
+        [JSONInteger(minimum:0)]
         public int camera = -1;
 
         /// <summary>
         /// The indices of this node's children.
         /// </summary>
-        [JSONArray(1)]
+        [JSONArray(minItems:1)]
         public int[] children;
 
         /// <summary>
         /// The index of the skin referenced by this node.
         /// </summary>
-        [JSONInteger(0)]
+        [JSONInteger(minimum:0)]
         public int skin = -1;
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <summary>
         /// The index of the mesh in this node.
         /// </summary>
-        [JSONInteger(0)]
+        [JSONInteger(minimum:0)]
         public int mesh = -1;
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// The weights of the instantiated Morph Target.
         /// Number of elements must match number of Morph Targets of used mesh.
         /// </summary>
-        [JSONArray(1)]
+        [JSONArray(minItems:1)]
         public double[] weights;
     }
 }

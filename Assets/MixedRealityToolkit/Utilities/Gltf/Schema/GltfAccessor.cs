@@ -16,14 +16,14 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// The index of the bufferView.
         /// If this is undefined, look in the sparse object for the index and value buffer views.
         /// </summary>
-        [JSONInteger(0)]
+        [JSONInteger(minimum:0)]
         public int bufferView = -1;
 
         /// <summary>
         /// The offset relative to the start of the bufferView in bytes.
         /// This must be a multiple of the size of the component datatype.
         /// </summary>
-        [JSONInteger(0)]
+        [JSONInteger(minimum:0)]
         public int byteOffset = -1;
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// 5125 (UNSIGNED_INT) is only allowed when the accessor contains indices
         /// i.e., the accessor is only referenced by `primitive.indices`.
         /// </summary>
-        [JSONEnum(true)]
+        [JSONEnum(useIntValue:true)]
         public GltfComponentType componentType;
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <minItems>1</minItems>
         /// <maxItems>16</maxItems>
         /// </summary>
-        [JSONArray(1)]
+        [JSONArray(minItems:1)]
         public double[] max;
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <minItems>1</minItems>
         /// <maxItems>16</maxItems>
         /// </summary>
-        [JSONArray(1)]
+        [JSONArray(minItems:1)]
         public double[] min;
 
         /// <summary>

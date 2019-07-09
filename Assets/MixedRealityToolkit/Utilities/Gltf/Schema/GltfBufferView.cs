@@ -36,7 +36,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// <minimum>0</minimum>
         /// <maximum>255</maximum>
         /// </summary>
-        [JSONInteger(4)]
+        [JSONInteger(minimum:4)]
         public int byteStride = 0;
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema
         /// All valid values correspond to WebGL enums.
         /// When this is not provided, the bufferView contains animation or skin data.
         /// </summary>
-        [JSONEnum(true, new object[] {GltfBufferViewTarget.None})]
+        [JSONEnum(useIntValue : true, ignoreValues : new object[] {GltfBufferViewTarget.None})]
         public GltfBufferViewTarget target = GltfBufferViewTarget.None;
 
         /// <summary>
