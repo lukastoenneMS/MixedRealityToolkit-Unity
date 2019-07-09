@@ -3,6 +3,7 @@
 
 using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime;
@@ -22,10 +23,14 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private ManualCameraControl cameraControl = null;
         private SimulatedHandDataProvider handDataProvider = null;
 
-        private readonly SimulatedHandData handDataLeft = new SimulatedHandData();
-        private readonly SimulatedHandData handDataRight = new SimulatedHandData();
-        public SimulatedHandData HandDataLeft => handDataLeft;
-        public SimulatedHandData HandDataRight => handDataRight;
+        /// <summary>
+        /// Pose data for the left hand.
+        /// </summary>
+        public SimulatedHandData HandDataLeft { get; } = new SimulatedHandData();
+        /// <summary>
+        /// Pose data for the right hand.
+        /// </summary>
+        public SimulatedHandData HandDataRight { get; } = new SimulatedHandData();
 
         public bool IsSimulatingHandLeft => (handDataProvider != null ? handDataProvider.IsSimulatingLeft : false);
         public bool IsSimulatingHandRight => (handDataProvider != null ? handDataProvider.IsSimulatingRight : false);
@@ -62,7 +67,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// <summary>
         /// If true then keyboard and mouse input are used to simulate hands.
         /// </summary>
-        public bool UserInputEnabled = true;
+        public bool UserInputEnabled { get; set; } = true;
 
         /// <summary>
         /// Dictionary to capture all active hands detected
@@ -188,7 +193,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
                     if (UserInputEnabled)
                     {
-                        handDataProvider.UpdateHandData(handDataLeft, handDataRight);
+                        handDataProvider.UpdateHandData(HandDataLeft, HandDataRight);
                     }
                     break;
             }
@@ -208,13 +213,13 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 // TODO implement custom hand device update frequency here, use 1000/fps instead of 0
                 if (msSinceLastHandUpdate > 0)
                 {
-                    if (handDataLeft.Timestamp > lastHandUpdateTimestamp)
+                    if (HandDataLeft.Timestamp > lastHandUpdateTimestamp)
                     {
-                        UpdateHandInputSource(Handedness.Left, handDataLeft);
+                        UpdateHandInputSource(Handedness.Left, HandDataLeft);
                     }
-                    if (handDataRight.Timestamp > lastHandUpdateTimestamp)
+                    if (HandDataRight.Timestamp > lastHandUpdateTimestamp)
                     {
-                        UpdateHandInputSource(Handedness.Right, handDataRight);
+                        UpdateHandInputSource(Handedness.Right, HandDataRight);
                     }
 
                     lastHandUpdateTimestamp = currentTime.Ticks;

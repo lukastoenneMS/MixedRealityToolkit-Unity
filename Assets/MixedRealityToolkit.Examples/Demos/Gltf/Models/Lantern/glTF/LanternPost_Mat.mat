@@ -71,7 +71,6 @@ Material:
     - _FadeBeginDistance: 0.85
     - _FadeCompleteDistance: 0.5
     - _FadeMinValue: 0
-    - _FluentLightIntensity: 1
     - _HoverLight: 1
     - _InnerGlow: 0
     - _InnerGlowPower: 4

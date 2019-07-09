@@ -11,7 +11,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Solvers
     /// <summary>
     /// Provides a solver that follows the TrackedObject/TargetTransform in an orbital motion.
     /// </summary>
-    public class AirTapHandler : InputSystemGlobalListener, IMixedRealityInputHandler
+    public class AirTapHandler : InputSystemGlobalHandlerListener, IMixedRealityInputHandler
     {
         [InspectorField(Type = InspectorField.FieldTypes.Event, Label = "On Ait Tap", Tooltip = "The air has been tapped")]
         public UnityEvent OnAirTap = new UnityEvent();
@@ -31,6 +31,24 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Solvers
             {
                 OnAirTap.Invoke();
             }
+        }
+
+        /// <summary>
+        /// Overload this method to specify, which global events component wants to listen to.
+        /// Use RegisterHandler API of InputSystem
+        /// </summary>
+        protected override void RegisterHandlers()
+        {
+            InputSystem?.RegisterHandler<IMixedRealityInputHandler>(this);
+        }
+
+        /// <summary>
+        /// Overload this method to specify, which global events component should stop listening to.
+        /// Use UnregisterHandler API of InputSystem
+        /// </summary>
+        protected override void UnregisterHandlers()
+        {
+            InputSystem?.UnregisterHandler<IMixedRealityInputHandler>(this);
         }
     }
 }
