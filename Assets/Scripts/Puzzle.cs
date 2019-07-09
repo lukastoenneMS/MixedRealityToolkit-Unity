@@ -158,13 +158,12 @@ namespace Parsley
             Debug.Assert(pieces.Any());
 
             IEnumerable<PuzzleShard> allShards = pieces.SelectMany(p => p.gameObject.GetComponentsInChildren<PuzzleShard>());
-            PuzzleUtils.FindShardCenter(allShards, out MixedRealityPose goalOffset, out Vector3 goalCentroid);
 
             Transform parent = pieces.First().transform.parent;
             string name = namePrefix + string.Join("+", pieces.Select(p => p.name.Substring(namePrefix.Length)));
 
-            var goal = new MixedRealityPose(goalCentroid, Quaternion.identity);
-            var pose = goalOffset.Multiply(goal);
+            PuzzleUtils.ComputeAveragePose(allShards.Select(s => s.transform.AsMixedRealityPose()), out Pose pose);
+            PuzzleUtils.ComputeAveragePose(allShards.Select(s => s.Goal), out Pose goal);
             PuzzlePiece pn = CreatePiece(name, allShards.Select((shard) => shard.transform), parent, pose, goal);
 
             foreach (var p in pieces)

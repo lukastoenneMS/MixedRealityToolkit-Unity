@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
+
 namespace Parsley
 {
     public static class PuzzleUtils
@@ -63,7 +65,7 @@ namespace Parsley
         }
 
         /// Find a pose P such that distance of each shard from its transformed goal is minimal.
-        public static bool FindShardCenter(IEnumerable<PuzzleShard> shards, out MixedRealityPose goalOffset, out Vector3 goalCentroid)
+        public static bool FindShardCenter(IEnumerable<PuzzleShard> shards, out Pose goalOffset, out Vector3 goalCentroid)
         {
             return FindMinErrorTransform(
                 shards.Select((s) => Tuple.Create(s.Goal.Position, s.transform.position)),
@@ -108,7 +110,24 @@ namespace Parsley
             return true;
         }
 
-        public static bool FindMinErrorTransform(IEnumerable<Tuple<Vector3, Vector3>> points, out MixedRealityPose result, out Vector3 fromCentroid)
+        public static bool ComputeAveragePose(IEnumerable<Pose> poses, out Pose result)
+        {
+            bool hasCentroid = ComputeCentroid(
+                poses.Select(p => p.Position),
+                out Vector3 centroid);
+            bool hasAvgRotation = PuzzleUtils.ComputeAverageRotation(
+                poses.Select(p => p.Rotation),
+                out Quaternion avgRotation);
+            if (hasCentroid && hasAvgRotation)
+            {
+                result = new Pose(centroid, avgRotation);
+                return true;
+            }
+            result = Pose.ZeroIdentity;
+            return false;
+        }
+
+        public static bool FindMinErrorTransform(IEnumerable<Tuple<Vector3, Vector3>> points, out Pose result, out Vector3 fromCentroid)
         {
             fromCentroid = Vector3.zero;
             Vector3 toCentroid = Vector3.zero;
@@ -121,12 +140,12 @@ namespace Parsley
             }
             if (count == 0)
             {
-                result = MixedRealityPose.ZeroIdentity;
+                result = Pose.ZeroIdentity;
                 return false;
             }
             if (count == 1)
             {
-                result = new MixedRealityPose(toCentroid - fromCentroid, Quaternion.identity);
+                result = new Pose(toCentroid - fromCentroid, Quaternion.identity);
                 return true;
             }
 
@@ -139,7 +158,7 @@ namespace Parsley
                 Vector3 vFrom = pointsArray[1].Item1 - pointsArray[0].Item1;
                 Vector3 vTo = pointsArray[1].Item2 - pointsArray[0].Item2;
                 Quaternion rot = Quaternion.FromToRotation(vFrom, vTo);
-                result = new MixedRealityPose(toCentroid - rot * fromCentroid, rot);
+                result = new Pose(toCentroid - rot * fromCentroid, rot);
                 return true;
             }
 
@@ -166,7 +185,7 @@ namespace Parsley
 
             Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
 
-            result = new MixedRealityPose(toCentroid - fromCentroid, rotation);
+            result = new Pose(toCentroid - fromCentroid, rotation);
             return true;
         }
 
