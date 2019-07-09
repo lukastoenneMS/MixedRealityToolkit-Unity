@@ -280,34 +280,27 @@ namespace Microsoft.MixedReality.Toolkit.Input
             {
                 string path = Path.Combine(directory ?? Application.persistentDataPath, filename);
 
-                try
+                string extension = Path.GetExtension(path);
+                if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionGlb))
                 {
-                    string extension = Path.GetExtension(path);
-                    if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionGlb))
+                    InputAnimationGltfExporter.OnExportInputAnimation(recordingBuffer, path);
+                }
+                else if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionBinary))
+                {
+                    using (Stream fileStream = File.Open(path, FileMode.Create))
                     {
-                        InputAnimationGltfExporter.OnExportInputAnimation(recordingBuffer, path);
+                        PruneBuffer();
+                        recordingBuffer.ToStream(fileStream, StartTime);
+                        Debug.Log($"Recorded input animation exported to {path}");
                     }
-                    else if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionBinary))
-                    {
-                        using (Stream fileStream = File.Open(path, FileMode.Create))
-                        {
-                            PruneBuffer();
-                            recordingBuffer.ToStream(fileStream, StartTime);
-                            Debug.Log($"Recorded input animation exported to {path}");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError($"Unknown file extension {extension}, cannot save input animation");
-                        return "";
-                    }
+                }
+                else
+                {
+                    Debug.LogError($"Unknown file extension {extension}, cannot save input animation");
+                    return "";
+                }
 
-                    return path;
-                }
-                catch (IOException ex)
-                {
-                    Debug.LogWarning(ex.Message);
-                }
+                return path;
             }
             return "";
         }

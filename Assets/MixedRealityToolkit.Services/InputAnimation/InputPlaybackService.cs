@@ -189,37 +189,29 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             if (filepath.Length > 0)
             {
-                try
+                string extension = Path.GetExtension(filepath);
+                if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionBinary))
                 {
-                    string extension = Path.GetExtension(filepath);
-                    if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionBinary))
+                    using (FileStream fs = new FileStream(filepath, FileMode.Open))
                     {
-                        using (FileStream fs = new FileStream(filepath, FileMode.Open))
-                        {
-                            var result = new InputAnimation();
-                            await Task.Run(() => result.FromStream(fs));
-                            animation = result;
-                        }
+                        var result = new InputAnimation();
+                        await Task.Run(() => result.FromStream(fs));
+                        animation = result;
                     }
-                    else if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionGlb))
-                    {
-                        animation = await InputAnimationGltfImporter.OnImportInputAnimation(filepath);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Unknown file extension {extension}, cannot load input animation");
-                        return false;
-                    }
-
-                    Evaluate();
-
-                    return true;
                 }
-                catch (IOException ex)
+                else if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionGlb))
                 {
-                    Debug.LogError(ex.Message);
-                    animation = null;
+                    animation = await InputAnimationGltfImporter.OnImportInputAnimation(filepath);
                 }
+                else
+                {
+                    Debug.LogError($"Unknown file extension {extension}, cannot load input animation");
+                    return false;
+                }
+
+                Evaluate();
+
+                return true;
             }
             return false;
         }

@@ -216,7 +216,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
                         "",
                         FileTypeFilters);
 
-                    LoadAnimation(filepath);
+                    TryLoadAnimation(filepath);
                 }
             }
 
@@ -319,21 +319,31 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
                 if (loadAfterExport)
                 {
-                    LoadAnimation(result);
+                    TryLoadAnimation(result);
                 }
             }
         }
 
-        private async void LoadAnimation(string filepath)
+        private async void TryLoadAnimation(string filepath, int attempts = 3, int waitMs = 1000)
         {
-            if (await PlaybackService.LoadInputAnimation(filepath))
+            for (int i = 0; i < attempts; ++i)
             {
-                loadedFilePath = filepath;
+                try
+                {
+                    if (await PlaybackService.LoadInputAnimation(filepath))
+                    {
+                        loadedFilePath = filepath;
+                        return;
+                    }
+                }
+                catch (IOException ex)
+                {
+                    Debug.LogWarning($"Loading input animation failed ({attempts - 1 - i} attempts remaining): {ex}");
+                    System.Threading.Thread.Sleep(waitMs);
+                }
             }
-            else
-            {
-                loadedFilePath = "";
-            }
+
+            loadedFilePath = "";
         }
 
         private void LoadIcons()
