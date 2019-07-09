@@ -1,15 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Utilities.Editor;
 using UnityEngine;
-using UnityEngine.Playables;
-using UnityEngine.SceneManagement;
 using UnityEditor;
 using System;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace Microsoft.MixedReality.Toolkit.Input
 {

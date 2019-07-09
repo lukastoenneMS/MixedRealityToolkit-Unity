@@ -2,13 +2,9 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using Microsoft.MixedReality.Toolkit.Utilities;
-using Microsoft.MixedReality.Toolkit.Utilities.Gltf;
-using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
-using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.Input
 {

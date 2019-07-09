@@ -5,9 +5,6 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Schema;
 using Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization;
-using System;
-using System.Linq;
-using System.Collections.Generic;
 using UnityEngine;
 
 using Utils = Microsoft.MixedReality.Toolkit.Input.InputAnimationGltfUtils;
