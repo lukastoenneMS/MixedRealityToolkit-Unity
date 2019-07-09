@@ -182,19 +182,14 @@ namespace Parsley
 
         public MixedRealityPose GetGoalDistance(PuzzlePiece a, PuzzlePiece b, out float linearDistance, out float angularDistance)
         {
-            MixedRealityPose poseA = new MixedRealityPose(a.transform.position, a.transform.rotation);
-            MixedRealityPose poseB = new MixedRealityPose(b.transform.position, b.transform.rotation);
-            // Pose FromPieceAToGoalA = a.Goal.Inverse().Multiply(poseA);
-            // Pose FromGoalBToPieceB = poseB.Inverse().Multiply(b.Goal);
-            // Pose FromPieceAToPieceB = FromGoalBToPieceB.Multiply(FromPieceAToGoalA);
-            Pose FromPieceAToPieceB = b.Goal.Inverse().Multiply(a.Goal.Multiply(poseB.Inverse().Multiply(poseA)));
+            MixedRealityPose poseA = a.transform.AsMixedRealityPose();
+            MixedRealityPose poseB = b.transform.AsMixedRealityPose();
+
+            Pose FromPieceAToPieceB = poseB.Inverse().Multiply(b.Goal.Multiply(a.Goal.Inverse().Multiply(poseA)));
 
             linearDistance = FromPieceAToPieceB.Position.magnitude;
             FromPieceAToPieceB.Rotation.ToAngleAxis(out float angle, out Vector3 axis);
             angularDistance = Mathf.Abs((angle + 180.0f) % 360.0f - 180.0f);
-
-            // Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
-            // Debug.Log($"Distance: d={linearDistance}, a={angularDistance}");
 
             return FromPieceAToPieceB;
         }
