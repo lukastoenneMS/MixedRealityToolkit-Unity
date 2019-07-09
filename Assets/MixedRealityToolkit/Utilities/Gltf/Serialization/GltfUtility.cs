@@ -404,7 +404,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
         /// <summary>
         /// Exports a glTF object to the provided uri.
         /// </summary>
-        /// <param name="gltfObject"><see cref="Schema.GltfObject"/> to export to uri.</returns>
+        /// <param name="gltfObject"><see cref="Schema.GltfObject"/> to export to uri.</param>
         /// <param name="uri">the path to the file to save</param>
         /// <remarks>
         /// Must be called from the main thread.
