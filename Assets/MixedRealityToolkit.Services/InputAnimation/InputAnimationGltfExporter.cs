@@ -27,7 +27,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             GltfObject exportedObject;
             // TODO how to specify copyright and generator strings?
-            using (var builder = new GltfObjectBuilder("", "MRTK"))
+            using (var builder = new GltfObjectBuilder("", Utils.GeneratorString))
             {
                 int scene = builder.CreateScene(Utils.SceneName, true);
 

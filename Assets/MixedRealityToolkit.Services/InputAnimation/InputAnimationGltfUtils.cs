@@ -12,6 +12,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
     {
         public const string Extension = "glb";
 
+        public const string GeneratorString = "Microsoft.MixedReality.Toolkit.InputAnimation-1.0";
+
         public const string SceneName = "Scene";
         public const string CameraName = "Camera";
         public const string AnimationName = "InputAction";
