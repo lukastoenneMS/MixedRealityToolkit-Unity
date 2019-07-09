@@ -41,25 +41,10 @@ namespace Parsley
         private Puzzle puzzle = null;
         public Puzzle Puzzle => puzzle;
 
-        // Maximum number of pieces held in the build list
-        const int numBuildSlots = 2;
-        // Properties of pieces while building
-        private struct BuildSlot
-        {
-            public PuzzlePiece piece;
-            public int colorIndex;
-        }
-        private readonly List<BuildSlot> buildPieces = new List<BuildSlot>(numBuildSlots);
-        private Color[] slotColors;
-        private System.Random slotRng = new System.Random(68342);
-
         public bool IsLoaded => (puzzle != null);
         public bool IsMenuOpen => Menu.activeSelf;
 
-        private Suspender suspender = null;
-        public Suspender Suspender => suspender;
-
-        const int GhostEffectId = 83245;
+        private BuildManager buildManager = null;
 
         public enum GameState
         {
@@ -217,9 +202,7 @@ namespace Parsley
                 return;
             }
 
-            suspender = new Suspender();
-
-            slotColors = CreateColorPalette(GhostColor, numBuildSlots);
+            buildManager = new BuildManager(GhostColor);
 
             // StartCoroutine(LoadPuzzleAsync());
 
@@ -241,7 +224,7 @@ namespace Parsley
             newPuzzle.ScatterPieces();
 
             puzzle = newPuzzle;
-            Debug.Assert(buildPieces.Count == 0);
+            Debug.Assert(buildManager.IsEmpty);
 
             TransitionTo(GameState.Build);
         }
@@ -250,7 +233,7 @@ namespace Parsley
         {
             if (puzzle)
             {
-                buildPieces.Clear();
+                buildManager.Clear();
                 Destroy(puzzle.gameObject);
                 puzzle = null;
             }
@@ -261,7 +244,7 @@ namespace Parsley
         {
             if (IsLoaded)
             {
-                var neighbors = puzzle.GetInternalNeighbors(buildPieces.Select(s => s.piece)).ToArray();
+                var neighbors = puzzle.GetInternalNeighbors(buildManager.BuildPieces).ToArray();
 
                 #if false
                 bool hasCentroid = PuzzleUtils.ComputeCentroid(
@@ -310,8 +293,7 @@ namespace Parsley
                         var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece, out float linearDistance, out float angularDistance);
                         if (linearDistance <= SnappingDistance && angularDistance <= SnappingAngle)
                         {
-                            buildPieces.RemoveAll(s => s.piece == neighborPiece);
-                            joinedPiece = puzzle.MergePieces(new PuzzlePiece[] { joinedPiece, neighborPiece }, SnapAnimation);
+                            MergePieces(joinedPiece, neighborPiece);
                         }
                     }
                     else
@@ -320,6 +302,12 @@ namespace Parsley
                     }
                 }
             }
+        }
+
+        private PuzzlePiece MergePieces(PuzzlePiece a, PuzzlePiece b)
+        {
+            buildManager.RemoveAll(p => p == a || p == b);
+            return puzzle.MergePieces(new PuzzlePiece[] { a, b }, SnapAnimation);
         }
 
         public void AutoFinish(float duration)
@@ -363,7 +351,7 @@ namespace Parsley
 
             var effect = new RimColorEffect(HighlightAnimation, NeighborColor);
 
-            foreach (var neighborPiece in puzzle.GetNeighbors(buildPieces.Select(s => s.piece)))
+            foreach (var neighborPiece in puzzle.GetNeighbors(buildManager.BuildPieces))
             {
                 PuzzleShard[] shards = neighborPiece.gameObject.GetComponentsInChildren<PuzzleShard>();
                 foreach (var shard in shards)
@@ -380,23 +368,7 @@ namespace Parsley
                 return;
             }
 
-            // Remove older entries of the same piece, it gets pushed back on top
-            bool existedAlready = buildPieces.RemoveAll(s => s.piece == piece) > 0;
-
-            // Make sure the list does not outgrow the allowed limit
-            if (!existedAlready)
-            {
-                while (buildPieces.Count >= numBuildSlots)
-                {
-                    StopBuilding(buildPieces[0].piece);
-                }
-            }
-
-            var slot = new BuildSlot();
-            slot.piece = piece;
-            slot.colorIndex =  GetRandomSlotColorIndex();
-            buildPieces.Add(slot);
-            suspender.Suspend(piece.Body, false);
+            buildManager.Add(piece);
         }
 
         public void StopBuilding(PuzzlePiece piece)
@@ -406,43 +378,7 @@ namespace Parsley
                 return;
             }
 
-            int effectId = GhostEffectId + piece.GetHashCode();
-            piece.StopEffect<GhostEffect>(effectId);
-
-            buildPieces.RemoveAll(s => s.piece == piece);
-            suspender.Drop(piece.Body);
-        }
-
-        private static Color[] CreateColorPalette(Color baseColor, int n, float hueShift = 1.0f/24.0f)
-        {
-            var palette = new Color[n];
-            Color.RGBToHSV(baseColor, out float H, out float S, out float V);
-            for (int i = 0; i < n; ++i)
-            {
-                float offset = 2.0f * (float)i / (float)(n-1) - 1.0f;
-                palette[i] = Color.HSVToRGB(H + hueShift * offset, S, V);
-                palette[i].a = baseColor.a;
-            }
-            return palette;
-        }
-
-        // Select a random color for a build slot
-        private int GetRandomSlotColorIndex()
-        {
-            var availableColors = Enumerable.Range(0, slotColors.Length).ToList();
-            foreach (var s in buildPieces)
-            {
-                availableColors.RemoveAt(s.colorIndex);
-            }
-            if (availableColors.Count > 0)
-            {
-                int r = slotRng.Next() % availableColors.Count;
-                return availableColors[r];
-            }
-            else
-            {
-                return 0;
-            }
+            buildManager.Remove(piece);
         }
     }
 }
