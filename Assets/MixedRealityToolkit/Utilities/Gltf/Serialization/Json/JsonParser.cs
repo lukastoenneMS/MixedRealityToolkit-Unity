@@ -251,12 +251,6 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
             }
 
             json = orig;
-            if (TryParseString(ref json, out item))
-            {
-                return true;
-            }
-
-            json = orig;
             if (TryParseEnumByValue(ref json, type, out item))
             {
                 return true;
@@ -264,6 +258,12 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Json
 
             json = orig;
             if (TryParseEnumByName(ref json, type, out item))
+            {
+                return true;
+            }
+
+            json = orig;
+            if (TryParseString(ref json, out item))
             {
                 return true;
             }
