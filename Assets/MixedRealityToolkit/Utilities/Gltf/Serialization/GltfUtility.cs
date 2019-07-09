@@ -468,7 +468,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.Gltf.Serialization
                     UnityEngine.Windows.File.WriteAllBytes(uri, glbData);
                 }
 #else
-                using (FileStream stream = File.Open(uri, FileMode.Create))
+                using (FileStream stream = File.Create(uri))
                 {
                     if (useBackgroundThread)
                     {

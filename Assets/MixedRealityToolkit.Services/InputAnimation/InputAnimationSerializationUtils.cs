@@ -16,7 +16,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
     {
         private static readonly int jointCount = Enum.GetNames(typeof(TrackedHandJoint)).Length;
 
-        public const string Extension = "bin";
+        public const string ExtensionGlb = "glb";
+        public const string ExtensionBinary = "bin";
 
         const long Magic = 0x6a8faf6e0f9e42c6;
 
@@ -26,12 +27,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// <summary>
         /// Generate a file name for export.
         /// </summary>
-        public static string GetOutputFilename(string baseName="InputAnimation", bool appendTimestamp=true)
+        public static string GetOutputFilename(string baseName="InputAnimation", bool appendTimestamp=true, string extension=InputAnimationSerializationUtils.ExtensionGlb)
         {
             string filename;
             if (appendTimestamp)
             {
-                filename = String.Format("{0}-{1}.{2}", baseName, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"), InputAnimationSerializationUtils.Extension);
+                filename = String.Format("{0}-{1}.{2}", baseName, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"), extension);
             }
             else
             {

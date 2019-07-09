@@ -41,7 +41,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         void Pause();
 
         /// <summary>
-        /// Try to load input animation data from the given file.
+        /// Try to load input animation data from a given file.
         /// </summary>
         /// <returns>
         /// True if loading input animation from the file succeeded.

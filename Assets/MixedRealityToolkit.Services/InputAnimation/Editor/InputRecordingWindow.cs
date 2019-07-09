@@ -190,6 +190,13 @@ namespace Microsoft.MixedReality.Toolkit.Input
             DrawAnimationInfo();
         }
 
+        static readonly string[] FileTypeFilters = new string[]
+            {
+                "glTF Binary File", InputAnimationSerializationUtils.ExtensionGlb,
+                "Input Animation Binary File", InputAnimationSerializationUtils.ExtensionBinary,
+                "All files", "*"
+            };
+
         private void DrawPlaybackGUI()
         {
             if (!Application.isPlaying)
@@ -204,10 +211,10 @@ namespace Microsoft.MixedReality.Toolkit.Input
             {
                 if (GUILayout.Button("Load ..."))
                 {
-                    string filepath = EditorUtility.OpenFilePanel(
+                    string filepath = EditorUtility.OpenFilePanelWithFilters(
                         "Select input animation file",
                         "",
-                        InputAnimationSerializationUtils.Extension);
+                        FileTypeFilters);
 
                     LoadAnimation(filepath);
                 }
@@ -295,23 +302,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private void SaveAnimation(bool loadAfterExport)
         {
             string outputPath;
-            if (loadedFilePath.Length > 0)
-            {
-                string loadedDirectory = Path.GetDirectoryName(loadedFilePath);
-                outputPath = EditorUtility.SaveFilePanel(
-                    "Select output path",
-                    loadedDirectory,
-                    InputAnimationSerializationUtils.GetOutputFilename(),
-                    InputAnimationSerializationUtils.Extension);
-            }
-            else
-            {
-                outputPath = EditorUtility.SaveFilePanelInProject(
-                    "Select output path",
-                    InputAnimationSerializationUtils.GetOutputFilename(),
-                    InputAnimationSerializationUtils.Extension,
-                    "Enter filename for exporting input animation");
-            }
+            string initialDirectory = (loadedFilePath.Length > 0 ? Path.GetDirectoryName(loadedFilePath) : Application.dataPath);
+            outputPath = EditorUtility.SaveFilePanel(
+                "Select output path",
+                initialDirectory,
+                InputAnimationSerializationUtils.GetOutputFilename(),
+                InputAnimationSerializationUtils.ExtensionGlb);
 
             if (outputPath.Length > 0)
             {

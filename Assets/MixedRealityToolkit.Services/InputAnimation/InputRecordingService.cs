@@ -282,15 +282,25 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
                 try
                 {
-                    using (Stream fileStream = File.Open(path, FileMode.Create))
+                    string extension = Path.GetExtension(path);
+                    if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionGlb))
                     {
-                        PruneBuffer();
-                        recordingBuffer.ToStream(fileStream, StartTime);
-                        Debug.Log($"Recorded input animation exported to {path}");
+                        InputAnimationGltfExporter.OnExportInputAnimation(recordingBuffer, path);
                     }
-
-                    string glbPath = Path.ChangeExtension(path, "glb");
-                    InputAnimationGltfExporter.OnExportInputAnimation(recordingBuffer, glbPath);
+                    else if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionBinary))
+                    {
+                        using (Stream fileStream = File.Open(path, FileMode.Create))
+                        {
+                            PruneBuffer();
+                            recordingBuffer.ToStream(fileStream, StartTime);
+                            Debug.Log($"Recorded input animation exported to {path}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError($"Unknown file extension {extension}, cannot save input animation");
+                        return "";
+                    }
 
                     return path;
                 }
