@@ -263,6 +263,7 @@ namespace Parsley
             {
                 var neighbors = puzzle.GetInternalNeighbors(buildPieces.Select(s => s.piece)).ToArray();
 
+                #if false
                 bool hasCentroid = PuzzleUtils.ComputeCentroid(
                     neighbors.Select(p => p.transform.position),
                     out Vector3 centroid);
@@ -299,18 +300,15 @@ namespace Parsley
                         }
                     }
                 }
+                #endif
 
                 PuzzlePiece joinedPiece = null;
                 foreach (var neighborPiece in neighbors)
                 {
                     if (joinedPiece != null)
                     {
-                        var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece);
-                        float distance = offset.Position.magnitude;
-                        float angle;
-                        Vector3 axis;
-                        offset.Rotation.ToAngleAxis(out angle, out axis);
-                        if (distance <= SnappingDistance && angle <= SnappingAngle)
+                        var offset = puzzle.GetGoalDistance(joinedPiece, neighborPiece, out float linearDistance, out float angularDistance);
+                        if (linearDistance <= SnappingDistance && angularDistance <= SnappingAngle)
                         {
                             buildPieces.RemoveAll(s => s.piece == neighborPiece);
                             joinedPiece = puzzle.MergePieces(new PuzzlePiece[] { joinedPiece, neighborPiece }, SnapAnimation);
