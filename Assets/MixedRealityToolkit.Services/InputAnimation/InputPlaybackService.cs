@@ -190,7 +190,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
             if (filepath.Length > 0)
             {
                 string extension = Path.GetExtension(filepath);
-                if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionBinary))
+                if (extension.EndsWith(InputAnimationBinaryUtils.Extension))
                 {
                     using (FileStream fs = new FileStream(filepath, FileMode.Open))
                     {
@@ -199,7 +199,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
                         animation = result;
                     }
                 }
-                else if (extension.EndsWith(InputAnimationSerializationUtils.ExtensionGlb))
+                else if (extension.EndsWith(InputAnimationGltfUtils.Extension))
                 {
                     animation = await InputAnimationGltfImporter.OnImportInputAnimation(filepath);
                 }

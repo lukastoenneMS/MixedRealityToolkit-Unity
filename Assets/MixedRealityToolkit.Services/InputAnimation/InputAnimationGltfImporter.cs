@@ -10,7 +10,7 @@ using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
 
-using Utils = Microsoft.MixedReality.Toolkit.Input.InputAnimationGltfUtilities;
+using Utils = Microsoft.MixedReality.Toolkit.Input.InputAnimationGltfUtils;
 
 namespace Microsoft.MixedReality.Toolkit.Input
 {

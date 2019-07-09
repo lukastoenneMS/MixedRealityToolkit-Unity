@@ -12,12 +12,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
     /// <summary>
     /// Functions for serializing input animation data to and from binary files.
     /// </summary>
-    public static class InputAnimationSerializationUtils
+    public static class InputAnimationBinaryUtils
     {
         private static readonly int jointCount = Enum.GetNames(typeof(TrackedHandJoint)).Length;
 
-        public const string ExtensionGlb = "glb";
-        public const string ExtensionBinary = "bin";
+        public const string Extension = "bin";
 
         const long Magic = 0x6a8faf6e0f9e42c6;
 
@@ -27,12 +26,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// <summary>
         /// Generate a file name for export.
         /// </summary>
-        public static string GetOutputFilename(string baseName="InputAnimation", bool appendTimestamp=true, string extension=InputAnimationSerializationUtils.ExtensionGlb)
+        public static string GetOutputFilename(string baseName="InputAnimation", bool appendTimestamp=true)
         {
             string filename;
             if (appendTimestamp)
             {
-                filename = String.Format("{0}-{1}.{2}", baseName, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"), extension);
+                filename = String.Format("{0}-{1}.{2}", baseName, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"), Extension);
             }
             else
             {
@@ -162,7 +161,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             foreach (AnimationCurve curve in curves)
             {
-                InputAnimationSerializationUtils.WriteFloatCurve(writer, curve, startTime);
+                InputAnimationBinaryUtils.WriteFloatCurve(writer, curve, startTime);
             }
         }
 
@@ -173,7 +172,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             foreach (AnimationCurve curve in curves)
             {
-                InputAnimationSerializationUtils.ReadFloatCurve(reader, curve);
+                InputAnimationBinaryUtils.ReadFloatCurve(reader, curve);
             }
         }
 
@@ -184,7 +183,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             foreach (AnimationCurve curve in curves)
             {
-                InputAnimationSerializationUtils.WriteBoolCurve(writer, curve, startTime);
+                InputAnimationBinaryUtils.WriteBoolCurve(writer, curve, startTime);
             }
         }
 
@@ -195,7 +194,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             foreach (AnimationCurve curve in curves)
             {
-                InputAnimationSerializationUtils.ReadBoolCurve(reader, curve);
+                InputAnimationBinaryUtils.ReadBoolCurve(reader, curve);
             }
         }
 

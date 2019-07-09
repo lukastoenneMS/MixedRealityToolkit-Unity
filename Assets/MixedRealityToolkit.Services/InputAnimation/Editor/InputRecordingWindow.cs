@@ -192,8 +192,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
         static readonly string[] FileTypeFilters = new string[]
             {
-                "glTF Binary File", InputAnimationSerializationUtils.ExtensionGlb,
-                "Input Animation Binary File", InputAnimationSerializationUtils.ExtensionBinary,
+                "glTF Binary File", InputAnimationGltfUtils.Extension,
+                "Input Animation Binary File", InputAnimationBinaryUtils.Extension,
                 "All files", "*"
             };
 
@@ -306,8 +306,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
             outputPath = EditorUtility.SaveFilePanel(
                 "Select output path",
                 initialDirectory,
-                InputAnimationSerializationUtils.GetOutputFilename(),
-                InputAnimationSerializationUtils.ExtensionGlb);
+                InputAnimationGltfUtils.GetOutputFilename(),
+                InputAnimationGltfUtils.Extension);
 
             if (outputPath.Length > 0)
             {
