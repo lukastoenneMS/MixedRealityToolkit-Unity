@@ -23,11 +23,10 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// <summary>
         /// Serialize the given input animation and save it at the given path.
         /// </summary>
-        public static async void OnExportInputAnimation(InputAnimation input, string path)
+        public static async void OnExportInputAnimation(InputAnimation input, string path, MixedRealityInputRecordingProfile profile)
         {
             GltfObject exportedObject;
-            // TODO how to specify copyright and generator strings?
-            using (var builder = new GltfObjectBuilder("", Utils.GeneratorString))
+            using (var builder = new GltfObjectBuilder(profile?.LicenseString, Utils.GeneratorString))
             {
                 int scene = builder.CreateScene(Utils.SceneName, true);
 

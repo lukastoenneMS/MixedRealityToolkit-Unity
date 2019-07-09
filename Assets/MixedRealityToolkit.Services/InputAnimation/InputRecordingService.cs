@@ -283,7 +283,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 string extension = Path.GetExtension(path);
                 if (extension.EndsWith(InputAnimationGltfUtils.Extension))
                 {
-                    InputAnimationGltfExporter.OnExportInputAnimation(recordingBuffer, path);
+                    InputAnimationGltfExporter.OnExportInputAnimation(recordingBuffer, path, InputRecordingProfile);
                 }
                 else if (extension.EndsWith(InputAnimationBinaryUtils.Extension))
                 {
