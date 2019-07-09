@@ -17,7 +17,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
     public static class InputAnimationGltfUtilities
     {
         public const string SceneName = "Scene";
-        public const string CameraName = "Scene";
+        public const string CameraName = "Camera";
         public const string AnimationName = "InputAction";
 
         public static readonly string[] TrackedHandJointNames = Enum.GetNames(typeof(TrackedHandJoint));
