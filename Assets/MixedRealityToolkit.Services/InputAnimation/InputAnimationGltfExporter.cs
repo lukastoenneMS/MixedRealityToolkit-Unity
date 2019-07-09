@@ -19,7 +19,6 @@ namespace Microsoft.MixedReality.Toolkit.Input
         public const string SceneName = "Scene";
         public const string CameraName = "Scene";
         public const string AnimationName = "InputAction";
-        public const string JointIdName = "JointID";
 
         public static readonly string[] TrackedHandJointNames = Enum.GetNames(typeof(TrackedHandJoint));
         public static readonly TrackedHandJoint[] TrackedHandJointValues = (TrackedHandJoint[])Enum.GetValues(typeof(TrackedHandJoint));
@@ -128,25 +127,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     camera = builder.CreateCameraPerspective(Utils.CameraName, 4.0/3.0, 55.0, 0.1, 100.0);
                 }
 
-                CreateAnimation(builder, input, camera, out var nodeJointIds);
+                CreateAnimation(builder, input, camera);
 
                 exportedObject = builder.Build();
-
-                // Add joint IDs as extras to nodes for identifying them
-                foreach (var item in nodeJointIds)
-                {
-                    exportedObject.nodes[item.Key].extras.Add(Utils.JointIdName, item.Value);
-                }
             }
 
             await GltfUtility.ExportGltfObjectToPathAsync(exportedObject, path);
         }
 
         /// Create an animation from input data and return its index.
-        private static int CreateAnimation(GltfObjectBuilder builder, InputAnimation input, int camera, out Dictionary<int, string> nodeJointIds)
+        private static int CreateAnimation(GltfObjectBuilder builder, InputAnimation input, int camera)
         {
-            nodeJointIds = new Dictionary<int, string>();
-
             using (var animBuilder = new GltfAnimationBuilder(builder, Utils.AnimationName))
             {
                 int cameraNode = builder.CreateRootNode(Utils.CameraName, Vector3.zero, Quaternion.identity, Vector3.one, 0, camera);
@@ -175,13 +166,11 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     if (input.TryGetHandJointCurves(Handedness.Left, joint, out jointCurves))
                     {
                         int leftJointNode = builder.CreateChildNode(Utils.GetJointNodeName(Handedness.Left, joint), Vector3.zero, Quaternion.identity, Vector3.one, leftJointsNode);
-                        nodeJointIds.Add(leftJointNode, $"Left.{jointName}");
                         CreatePoseAnimation(animBuilder, jointCurves, GltfInterpolationType.LINEAR, leftJointNode);
                     }
                     if (input.TryGetHandJointCurves(Handedness.Right, joint, out jointCurves))
                     {
                         int rightJointNode = builder.CreateChildNode(Utils.GetJointNodeName(Handedness.Right, joint), Vector3.zero, Quaternion.identity, Vector3.one, rightJointsNode);
-                        nodeJointIds.Add(rightJointNode, $"Right.{jointName}");
                         CreatePoseAnimation(animBuilder, jointCurves, GltfInterpolationType.LINEAR, rightJointNode);
                     }
                 }
