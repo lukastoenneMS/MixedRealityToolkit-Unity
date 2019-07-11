@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83d9acc7968244a8886f3af591305bcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeProfile: {fileID: 11400000, guid: 7e7c962b9eb9dfa44993d5b2f2576752, type: 2}
+  activeProfile: {fileID: 11400000, guid: 2a22be9ff673f994884ee1a3cca4b27d, type: 2}
 --- !u!4 &1194526096
 Transform:
   m_ObjectHideFlags: 0
@@ -499,6 +499,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2049634637}
   - component: {fileID: 2049634638}
+  - component: {fileID: 2049634639}
   m_Layer: 0
   m_Name: PoseRecorder
   m_TagString: Untagged
@@ -534,3 +535,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   JointIndicatorPrefab: {fileID: 680074930}
+--- !u!114 &2049634639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049634636}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45b3eff181cc4244a8a14234096e62fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isFocusRequired: 1
+  keywords:
+  - keyword: 
+    response:
+      m_PersistentCalls:
+        m_Calls: []
+      m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine.CoreModule, Version=0.0.0.0,
+        Culture=neutral, PublicKeyToken=null
+  persistentKeywords: 0
