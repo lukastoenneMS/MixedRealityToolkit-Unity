@@ -54,6 +54,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private readonly List<IMixedRealityHand> trackedHands = new List<IMixedRealityHand>();
 
+        public void InitPoseConfig()
+        {
+            var hand = trackedHands.Last();
+            if (hand != null)
+            {
+                PoseHandedness = hand.ControllerHandedness;
+
+                PoseConfig = new PoseConfiguration();
+                PoseConfig.Init(PollHandPose(hand).Select(item => item.Value.Position));
+            }
+        }
+
+        public void DiscardPoseConfig()
+        {
+            PoseConfig = null;
+            PoseHandedness = Handedness.None;
+        }
+
         void Awake()
         {
             if (JointIndicatorPrefab)
@@ -87,7 +105,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public void OnHandJointsUpdated(InputEventData<IDictionary<TrackedHandJoint, Pose>> eventData)
         {
-            // UpdateHandPose(eventData.InputData);
+            UpdateHandMatch(eventData.Handedness, eventData.InputData);
         }
 
         public new void OnDisable()
@@ -103,7 +121,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 trackedHands.Add(hand);
 
                 var handPose = PollHandPose(hand);
-                UpdateHandPose(handPose);
+                UpdateHandMatch(hand.ControllerHandedness, handPose);
             }
         }
 
@@ -111,39 +129,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             trackedHands.Clear();
 
-            ClearHandPose();
+            ClearHandMatch();
         }
 
         private void StopTracking(IMixedRealityHand hand)
         {
             trackedHands.RemoveAll(h => h == hand);
 
-            ClearHandPose();
+            ClearHandMatch();
         }
 
         private void StopTrackingAll(Predicate<IMixedRealityHand> pred)
         {
             trackedHands.RemoveAll(pred);
 
-            ClearHandPose();
-        }
-
-        private void InitPoseConfig()
-        {
-            var hand = trackedHands.Last();
-            if (hand != null)
-            {
-                PoseHandedness = hand.ControllerHandedness;
-
-                PoseConfig = new PoseConfiguration();
-                PoseConfig.Init(PollHandPose(hand).Select(item => item.Value.Position));
-            }
-        }
-
-        private void DiscardPoseConfig()
-        {
-            PoseConfig = null;
-            PoseHandedness = Handedness.None;
+            ClearHandMatch();
         }
 
         private static IDictionary<TrackedHandJoint, Pose> PollHandPose(IMixedRealityHand hand)
@@ -159,17 +159,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return joints;
         }
 
-        private void UpdateHandPose(IDictionary<TrackedHandJoint, Pose> joints)
+        private void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)
         {
-            if (PoseConfig != null)
+            if (PoseConfig == null)
             {
-                foreach (var item in joints)
+                ClearHandMatch();
+                return;
+            }
+
+            if (handedness == PoseHandedness)
+            {
+                foreach (var item in jointIndicators)
                 {
-                    if (jointIndicators.TryGetValue(item.Key, out GameObject jointOb))
+                    var jointOb = item.Value;
+                    if (joints.TryGetValue(item.Key, out Pose pose))
                     {
                         jointOb.SetActive(true);
-                        jointOb.transform.position = item.Value.Position;
-                        jointOb.transform.rotation = item.Value.Rotation;
+                        jointOb.transform.position = pose.Position;
+                        jointOb.transform.rotation = pose.Rotation;
                     }
                     else
                     {
@@ -177,13 +184,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     }
                 }
             }
-            else
-            {
-                ClearHandPose();
-            }
         }
 
-        private void ClearHandPose()
+        private void ClearHandMatch()
         {
             foreach (var item in jointIndicators)
             {
