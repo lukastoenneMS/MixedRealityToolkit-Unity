@@ -19,40 +19,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public PoseConfiguration PoseConfig { get; private set; }
         public Handedness PoseHandedness { get; private set; }
 
-        private readonly Dictionary<TrackedHandJoint, GameObject> jointIndicators = new Dictionary<TrackedHandJoint, GameObject>();
-
-        private static readonly TrackedHandJoint[] jointValues = new TrackedHandJoint[]
-        {
-            // TrackedHandJoint.None,
-            // TrackedHandJoint.Wrist,
-            // TrackedHandJoint.Palm,
-            TrackedHandJoint.ThumbMetacarpalJoint,
-            TrackedHandJoint.ThumbProximalJoint,
-            TrackedHandJoint.ThumbDistalJoint,
-            TrackedHandJoint.ThumbTip,
-            TrackedHandJoint.IndexMetacarpal,
-            TrackedHandJoint.IndexKnuckle,
-            TrackedHandJoint.IndexMiddleJoint,
-            TrackedHandJoint.IndexDistalJoint,
-            TrackedHandJoint.IndexTip,
-            TrackedHandJoint.MiddleMetacarpal,
-            TrackedHandJoint.MiddleKnuckle,
-            TrackedHandJoint.MiddleMiddleJoint,
-            TrackedHandJoint.MiddleDistalJoint,
-            TrackedHandJoint.MiddleTip,
-            TrackedHandJoint.RingMetacarpal,
-            TrackedHandJoint.RingKnuckle,
-            TrackedHandJoint.RingMiddleJoint,
-            TrackedHandJoint.RingDistalJoint,
-            TrackedHandJoint.RingTip,
-            TrackedHandJoint.PinkyMetacarpal,
-            TrackedHandJoint.PinkyKnuckle,
-            TrackedHandJoint.PinkyMiddleJoint,
-            TrackedHandJoint.PinkyDistalJoint,
-            TrackedHandJoint.PinkyTip,
-        };
-
         private readonly List<IMixedRealityHand> trackedHands = new List<IMixedRealityHand>();
+
+        private readonly PoseEvaluator evaluator = new PoseEvaluator();
+        private readonly Dictionary<TrackedHandJoint, GameObject> jointIndicators = new Dictionary<TrackedHandJoint, GameObject>();
+        private GameObject matchIndicator;
+        private MaterialPropertyBlock materialProps;
 
         public void InitPoseConfig()
         {
@@ -61,8 +33,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 PoseHandedness = hand.ControllerHandedness;
 
+                var points = GetPointsFromJoints(PollHandPose(hand));
                 PoseConfig = new PoseConfiguration();
-                PoseConfig.Init(PollHandPose(hand).Select(item => item.Value.Position));
+                PoseConfig.Init(points);
             }
         }
 
@@ -76,13 +49,18 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             if (JointIndicatorPrefab)
             {
-                foreach (TrackedHandJoint joint in jointValues)
+                matchIndicator = new GameObject("PoseMatchIndicator");
+                matchIndicator.transform.SetParent(transform);
+
+                foreach (TrackedHandJoint joint in UsedJointValues)
                 {
-                    var jointOb = GameObject.Instantiate(JointIndicatorPrefab, transform);
+                    var jointOb = GameObject.Instantiate(JointIndicatorPrefab, matchIndicator.transform);
                     jointIndicators.Add(joint, jointOb);
                     jointOb.SetActive(false);
                 }
             }
+
+            materialProps = new MaterialPropertyBlock();
         }
 
         public void OnSourceDetected(SourceStateEventData eventData)
@@ -149,7 +127,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private static IDictionary<TrackedHandJoint, Pose> PollHandPose(IMixedRealityHand hand)
         {
             var joints = new Dictionary<TrackedHandJoint, Pose>();
-            foreach (TrackedHandJoint joint in jointValues)
+            foreach (TrackedHandJoint joint in UsedJointValues)
             {
                 if (hand.TryGetJoint(joint, out Pose pose))
                 {
@@ -169,18 +147,25 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             if (handedness == PoseHandedness)
             {
-                foreach (var item in jointIndicators)
+                Vector3[] points = GetPointsFromJoints(joints);
+                PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
+
+                matchIndicator.transform.SetPositionAndRotation(match.Pose.Position, match.Pose.Rotation);
+
+                for (int i = 0; i < UsedJointValues.Length; ++i)
                 {
-                    var jointOb = item.Value;
-                    if (joints.TryGetValue(item.Key, out Pose pose))
+                    TrackedHandJoint joint = UsedJointValues[i];
+                    if (jointIndicators.TryGetValue(joint, out GameObject jointOb))
                     {
                         jointOb.SetActive(true);
-                        jointOb.transform.position = pose.Position;
-                        jointOb.transform.rotation = pose.Rotation;
-                    }
-                    else
-                    {
-                        jointOb.SetActive(false);
+                        jointOb.transform.localPosition = PoseConfig.Targets[i];
+                        jointOb.transform.localScale = Vector3.one * PoseConfig.Weights[i];
+
+                        float mix = GetMixFactor(match.Residuals[i], match.MeanSquaredError);
+                        Color color = Color.green * mix + Color.red * (1.0f - mix);
+                        // Debug.Log($"{i}: R={match.Residuals[i]}, M={match.MeanSquaredError}, mix={mix}");
+                        materialProps.SetColor("_Color", color);
+                        jointOb.GetComponentInChildren<Renderer>().SetPropertyBlock(materialProps);
                     }
                 }
             }
@@ -195,6 +180,26 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
+        private static Vector3[] GetPointsFromJoints(IDictionary<TrackedHandJoint, Pose> joints)
+        {
+            Vector3[] points = new Vector3[UsedJointValues.Length];
+            for (int i = 0; i < UsedJointValues.Length; ++i)
+            {
+                if (joints.TryGetValue(UsedJointValues[i], out Pose pose))
+                {
+                    points[i] = pose.Position;
+                }
+            }
+            return points;
+        }
+
+        private const float mixFactorMSE = 0.15f;
+        private static float mixFactorExp = -Mathf.Log(mixFactorMSE);
+        private static float GetMixFactor(float residual, float MSE)
+        {
+            return MSE > 0.0f ? Mathf.Exp(-residual / MSE * mixFactorExp) : 0.0f;
+        }
+
         protected override void RegisterHandlers()
         {
             InputSystem?.RegisterHandler<IMixedRealitySourceStateHandler>(this);
@@ -206,5 +211,36 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             InputSystem?.UnregisterHandler<IMixedRealitySourceStateHandler>(this);
             InputSystem?.UnregisterHandler<IMixedRealityHandJointHandler>(this);
         }
+
+        private static readonly TrackedHandJoint[] UsedJointValues = new TrackedHandJoint[]
+        {
+            // TrackedHandJoint.None,
+            // TrackedHandJoint.Wrist,
+            // TrackedHandJoint.Palm,
+            TrackedHandJoint.ThumbMetacarpalJoint,
+            TrackedHandJoint.ThumbProximalJoint,
+            TrackedHandJoint.ThumbDistalJoint,
+            TrackedHandJoint.ThumbTip,
+            TrackedHandJoint.IndexMetacarpal,
+            TrackedHandJoint.IndexKnuckle,
+            TrackedHandJoint.IndexMiddleJoint,
+            TrackedHandJoint.IndexDistalJoint,
+            TrackedHandJoint.IndexTip,
+            TrackedHandJoint.MiddleMetacarpal,
+            TrackedHandJoint.MiddleKnuckle,
+            TrackedHandJoint.MiddleMiddleJoint,
+            TrackedHandJoint.MiddleDistalJoint,
+            TrackedHandJoint.MiddleTip,
+            TrackedHandJoint.RingMetacarpal,
+            TrackedHandJoint.RingKnuckle,
+            TrackedHandJoint.RingMiddleJoint,
+            TrackedHandJoint.RingDistalJoint,
+            TrackedHandJoint.RingTip,
+            TrackedHandJoint.PinkyMetacarpal,
+            TrackedHandJoint.PinkyKnuckle,
+            TrackedHandJoint.PinkyMiddleJoint,
+            TrackedHandJoint.PinkyDistalJoint,
+            TrackedHandJoint.PinkyTip,
+        };
     }
 }

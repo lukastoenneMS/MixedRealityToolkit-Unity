@@ -12,6 +12,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public Vector3[] Targets { get; private set; }
         public float[] Weights { get; private set; }
 
+        public int Length => Targets.Length;
+
         public void Init(IEnumerable<Vector3> targets)
         {
             Targets = targets.ToArray();
