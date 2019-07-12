@@ -6,6 +6,7 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
@@ -15,6 +16,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     public class PoseRecorder : InputSystemGlobalHandlerListener, IMixedRealitySourceStateHandler, IMixedRealityHandJointHandler
     {
         public GameObject JointIndicatorPrefab;
+        public TextMeshPro infoText;
 
         public PoseConfiguration PoseConfig { get; private set; }
         public Handedness PoseHandedness { get; private set; }
@@ -60,6 +62,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     jointIndicators.Add(joint, jointOb);
                     jointOb.SetActive(false);
                 }
+            }
+
+            if (infoText)
+            {
+                infoText.text = "...";
             }
 
             materialProps = new MaterialPropertyBlock();
@@ -155,7 +162,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
 
                 evaluator.ComputeResiduals(points, PoseConfig, match, out float[] residuals, out float MSE);
-                string summary = $"{Time.time}: condition={match.ConditionNumber} MSE={MSE}";
+                // string summary = $"{Time.time}: condition={match.ConditionNumber} MSE={MSE}";
 
                 matchIndicator.transform.SetPositionAndRotation(match.Offset.Position, match.Offset.Rotation);
 
@@ -170,17 +177,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                         float mix = GetMixFactor(residuals[i]);
                         Color color = Color.green * mix + Color.red * (1.0f - mix);
-                        summary += $"\n   {i}: R={residuals[i]}, mix={mix} | DELTA={(jointOb.transform.position - points[i]).magnitude}";
+                        // summary += $"\n   {i}: R={residuals[i]}, mix={mix} | DELTA={(jointOb.transform.position - points[i]).magnitude}";
                         materialProps.SetColor("_Color", color);
                         jointOb.GetComponentInChildren<Renderer>().SetPropertyBlock(materialProps);
                     }
                 }
 
-                if (debugStopwatch.Elapsed.TotalSeconds > 3.0f)
+                if (infoText)
                 {
-                    debugStopwatch.Restart();
-                    Debug.Log(summary);
+                    infoText.text =
+                        $"Condition Number = {match.ConditionNumber:F5}\n" +
+                        $"MSE = {MSE:F5}\n";
                 }
+
+                // if (debugStopwatch.Elapsed.TotalSeconds > 3.0f)
+                // {
+                //     debugStopwatch.Restart();
+                //     Debug.Log(summary);
+                // }
             }
         }
 

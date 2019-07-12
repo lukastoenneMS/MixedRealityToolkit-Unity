@@ -81,6 +81,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             // Handle reflection case
             if (rotationMatrix.Determinant() < 0)
             {
+                rotationMatrix.SetColumn(0, -rotationMatrix.Column(0));
+                rotationMatrix.SetColumn(1, -rotationMatrix.Column(1));
                 rotationMatrix.SetColumn(2, -rotationMatrix.Column(2));
             }
 
