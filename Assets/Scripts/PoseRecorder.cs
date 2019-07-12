@@ -30,7 +30,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public void InitPoseConfig()
         {
-            var hand = trackedHands.Last();
+            var hand = trackedHands.LastOrDefault();
             if (hand != null)
             {
                 PoseHandedness = hand.ControllerHandedness;
