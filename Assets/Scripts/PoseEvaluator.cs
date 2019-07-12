@@ -14,12 +14,17 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         public PoseMatch EvaluatePose(Vector3[] input, PoseConfiguration config)
         {
+            return EvaluatePose(input, config, out bool reflectionCase);
+        }
+
+        public PoseMatch EvaluatePose(Vector3[] input, PoseConfiguration config, out bool reflectionCase)
+        {
             if (input.Length != config.Length)
             {
                 throw new ArgumentException($"Input size {input.Length} does not match configuration size {config.Length}");
             }
 
-            FindMinErrorTransform(input, config, out PoseMatch result);
+            FindMinErrorTransform(input, config, out PoseMatch result, out reflectionCase);
 
             return result;
         }
@@ -39,7 +44,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             MSE = sse / Mathf.Max(1, config.Length);
         }
 
-        private bool FindMinErrorTransform(Vector3[] input, PoseConfiguration config, out PoseMatch match)
+        private bool FindMinErrorTransform(Vector3[] input, PoseConfiguration config, out PoseMatch match, out bool reflectionCase)
         {
             Pose pose;
 
@@ -47,6 +52,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 pose = new Pose(input[0] - config.Targets[0], Quaternion.identity);
                 match = new PoseMatch(pose, 0.0f);
+                reflectionCase = false;
                 return true;
             }
 
@@ -60,6 +66,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Quaternion rot = Quaternion.FromToRotation(vFrom, vTo);
                 pose = new Pose(toCentroid - rot * fromCentroid, rot);
                 match = new PoseMatch(pose, 0.0f);
+                reflectionCase = false;
                 return true;
             }
 
@@ -79,11 +86,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
             // Handle reflection case
-            if (rotationMatrix.Determinant() < 0)
+            reflectionCase = (rotationMatrix.Determinant() < 0);
+            if (reflectionCase)
             {
-                rotationMatrix.SetColumn(0, -rotationMatrix.Column(0));
-                rotationMatrix.SetColumn(1, -rotationMatrix.Column(1));
-                rotationMatrix.SetColumn(2, -rotationMatrix.Column(2));
+                svdSolver.VT.SetRow(2, -svdSolver.VT.Row(2));
+                rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
             }
 
             Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);

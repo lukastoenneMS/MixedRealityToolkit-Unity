@@ -16,7 +16,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     public class PoseRecorder : InputSystemGlobalHandlerListener, IMixedRealitySourceStateHandler, IMixedRealityHandJointHandler
     {
         public GameObject JointIndicatorPrefab;
-        public TextMeshPro infoText;
+        public TextMeshPro InfoText;
+        public AudioSource Claxon;
 
         public PoseConfiguration PoseConfig { get; private set; }
         public Handedness PoseHandedness { get; private set; }
@@ -64,9 +65,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 }
             }
 
-            if (infoText)
+            if (InfoText)
             {
-                infoText.text = "...";
+                InfoText.text = "...";
             }
 
             materialProps = new MaterialPropertyBlock();
@@ -183,9 +184,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     }
                 }
 
-                if (infoText)
+                if (InfoText)
                 {
-                    infoText.text =
+                    InfoText.text =
                         $"Condition Number = {match.ConditionNumber:F5}\n" +
                         $"MSE = {MSE:F5}\n";
                 }
