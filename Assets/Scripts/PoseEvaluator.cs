@@ -76,7 +76,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Matrix<float> H = CreateMatrix.Dense<float>(3, 3, 0.0f);
             for (int i = 0; i < config.Length; ++i)
             {
-                Vector<float> pa = GetNVectorFromVector(config.Targets[i] - fromCentroid);
+                Vector<float> pa = GetNVectorFromVector((config.Targets[i] - fromCentroid) * config.Weights[i]);
                 Vector<float> pb = GetNVectorFromVector(input[i] - toCentroid);
 
                 H += Vector<float>.OuterProduct(pa, pb);
