@@ -24,21 +24,29 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return result;
         }
 
+        public void ComputeResiduals(Vector3[] input, PoseConfiguration config, PoseMatch match, out float[] residuals, out float MSE)
+        {
+            residuals = new float[config.Length];
+
+            float sse = 0.0f;
+            for (int i = 0; i < config.Length; ++i)
+            {
+                Vector3 p = match.Offset.Multiply(config.Targets[i]);
+                residuals[i] = (p - input[i]).sqrMagnitude;
+                sse += residuals[i];
+            }
+
+            MSE = sse / Mathf.Max(1, config.Length);
+        }
+
         private bool FindMinErrorTransform(Vector3[] input, PoseConfiguration config, out PoseMatch match)
         {
-            float[] residuals = new float[config.Length];
-            float MSE;
             Pose pose;
 
             if (config.Length == 1)
             {
-                for (int i = 0; i < config.Length; ++i)
-                {
-                    residuals[i] = 0.0f;
-                }
-                MSE = 0.0f;
                 pose = new Pose(input[0] - config.Targets[0], Quaternion.identity);
-                match = new PoseMatch(residuals, MSE, pose);
+                match = new PoseMatch(pose, 0.0f);
                 return true;
             }
 
@@ -50,11 +58,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Vector3 vFrom = config.Targets[1] - config.Targets[0];
                 Vector3 vTo = input[1] - input[0];
                 Quaternion rot = Quaternion.FromToRotation(vFrom, vTo);
-                residuals[0] = (vTo - vFrom).sqrMagnitude * 0.25f;
-                residuals[1] = residuals[0];
-                MSE = GetMean(residuals);
                 pose = new Pose(toCentroid - rot * fromCentroid, rot);
-                match = new PoseMatch(residuals, MSE, pose);
+                match = new PoseMatch(pose, 0.0f);
                 return true;
             }
 
@@ -71,8 +76,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
 
             var svdSolver = H.Svd();
-            Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
 
+            Matrix<float> rotationMatrix = (svdSolver.U * svdSolver.VT).Transpose();
             // Handle reflection case
             if (rotationMatrix.Determinant() < 0)
             {
@@ -81,13 +86,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             Quaternion rotation = GetQuaternionFromNMatrix(rotationMatrix);
 
-            pose = new Pose(toCentroid - fromCentroid, rotation);
-            for (int i = 0; i < config.Length; ++i)
-            {
-                residuals[i] = (pose.Multiply(config.Targets[i]) - input[i]).sqrMagnitude;
-            }
-            MSE = GetMean(residuals);
-            match = new PoseMatch(residuals, MSE, pose);
+            pose = new Pose(toCentroid - rotation * fromCentroid, rotation);
+            match = new PoseMatch(pose, svdSolver.ConditionNumber);
             return true;
         }
 

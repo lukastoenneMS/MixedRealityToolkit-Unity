@@ -26,6 +26,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private GameObject matchIndicator;
         private MaterialPropertyBlock materialProps;
 
+        private System.Diagnostics.Stopwatch debugStopwatch = new System.Diagnostics.Stopwatch();
+
         public void InitPoseConfig()
         {
             var hand = trackedHands.Last();
@@ -61,6 +63,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
 
             materialProps = new MaterialPropertyBlock();
+
+            debugStopwatch.Start();
         }
 
         public void OnSourceDetected(SourceStateEventData eventData)
@@ -150,7 +154,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Vector3[] points = GetPointsFromJoints(joints);
                 PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
 
-                matchIndicator.transform.SetPositionAndRotation(match.Pose.Position, match.Pose.Rotation);
+                evaluator.ComputeResiduals(points, PoseConfig, match, out float[] residuals, out float MSE);
+                string summary = $"{Time.time}: condition={match.ConditionNumber} MSE={MSE}";
+
+                matchIndicator.transform.SetPositionAndRotation(match.Offset.Position, match.Offset.Rotation);
 
                 for (int i = 0; i < UsedJointValues.Length; ++i)
                 {
@@ -161,12 +168,18 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                         jointOb.transform.localPosition = PoseConfig.Targets[i];
                         jointOb.transform.localScale = Vector3.one * PoseConfig.Weights[i];
 
-                        float mix = GetMixFactor(match.Residuals[i], match.MeanSquaredError);
+                        float mix = GetMixFactor(residuals[i]);
                         Color color = Color.green * mix + Color.red * (1.0f - mix);
-                        // Debug.Log($"{i}: R={match.Residuals[i]}, M={match.MeanSquaredError}, mix={mix}");
+                        summary += $"\n   {i}: R={residuals[i]}, mix={mix} | DELTA={(jointOb.transform.position - points[i]).magnitude}";
                         materialProps.SetColor("_Color", color);
                         jointOb.GetComponentInChildren<Renderer>().SetPropertyBlock(materialProps);
                     }
+                }
+
+                if (debugStopwatch.Elapsed.TotalSeconds > 3.0f)
+                {
+                    debugStopwatch.Restart();
+                    Debug.Log(summary);
                 }
             }
         }
@@ -193,11 +206,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return points;
         }
 
-        private const float mixFactorMSE = 0.15f;
-        private static float mixFactorExp = -Mathf.Log(mixFactorMSE);
-        private static float GetMixFactor(float residual, float MSE)
+        public float ExpectedMaximumError = 0.05f;
+        private const float mixFactorExpected = 0.15f;
+        private static float mixFactorExp = -Mathf.Log(mixFactorExpected);
+        private float GetMixFactor(float residual)
         {
-            return MSE > 0.0f ? Mathf.Exp(-residual / MSE * mixFactorExp) : 0.0f;
+            float invSqrExpectedMaximumError = ExpectedMaximumError > 0.0f ? 1.0f / (ExpectedMaximumError * ExpectedMaximumError) : float.MaxValue;
+            return ExpectedMaximumError > 0.0f ? Mathf.Exp(-residual * invSqrExpectedMaximumError * mixFactorExp) : 0.0f;
         }
 
         protected override void RegisterHandlers()

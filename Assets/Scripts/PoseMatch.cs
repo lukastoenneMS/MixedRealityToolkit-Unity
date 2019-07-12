@@ -9,17 +9,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class PoseMatch
     {
-        public float[] Residuals;
-        public float MeanSquaredError;
+        public Pose Offset;
+        public float ConditionNumber;
 
-        public Pose Pose;
-
-        public PoseMatch(float[] residuals, float MSE, Pose pose)
+        public PoseMatch(Pose offset, float conditionNumber)
         {
-            this.Residuals = residuals;
-            this.MeanSquaredError = MSE;
-
-            this.Pose = pose;
+            this.Offset = offset;
+            this.ConditionNumber = conditionNumber;
         }
     }
 }
