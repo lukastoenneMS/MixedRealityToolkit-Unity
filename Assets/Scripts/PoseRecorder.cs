@@ -203,8 +203,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 if (InfoText)
                 {
                     InfoText.text =
-                        $"Condition Number = {match.ConditionNumber:F5}\n" +
-                        $"MSE = {MSE:F5}\n";
+                        $"Mean Error = {Mathf.Sqrt(MSE):F5}m\n" +
+                        $"Condition = {match.ConditionNumber:F5}\n";
                 }
 
                 // if (debugStopwatch.Elapsed.TotalSeconds > 3.0f)
