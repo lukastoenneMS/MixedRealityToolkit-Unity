@@ -14,10 +14,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public int Length => Targets.Length;
 
-        public void Init(IEnumerable<Vector3> targets)
+        public PoseConfiguration(Vector3[] targets, float[] weights)
         {
-            Targets = targets.ToArray();
-            Weights = Enumerable.Repeat(1.0f, Targets.Length).ToArray();
+            Debug.Assert(weights.Length == targets.Length);
+            this.Targets = targets;
+            this.Weights = weights;
+        }
+
+        public PoseConfiguration(Vector3[] targets)
+        {
+            this.Targets = targets;
+            this.Weights = new float[targets.Length];
+            for (int i = 0; i < targets.Length; ++i)
+            {
+                Weights[i] = 1.0f;
+            }
         }
     }
 }

@@ -29,19 +29,55 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return result;
         }
 
-        public void ComputeResiduals(Vector3[] input, PoseConfiguration config, PoseMatch match, out float[] residuals, out float MSE)
+        /// <summary>
+        /// Scale weight on each point such that the maximum error for the given input is not exceeded.
+        /// </summary>
+        /// <returns>A new pose configuration with adjusted weights</returns>
+        public PoseConfiguration GetErrorLimitedConfig(Vector3[] input, PoseConfiguration config, PoseMatch match, float maxError)
         {
-            residuals = new float[config.Length];
+            float sqrMaxError = maxError * maxError;
 
-            float sse = 0.0f;
+            float[] newWeights = new float[config.Length];
             for (int i = 0; i < config.Length; ++i)
             {
                 Vector3 p = match.Offset.Multiply(config.Targets[i]);
-                residuals[i] = (p - input[i]).sqrMagnitude;
-                sse += residuals[i];
+                float sqrResidual = (p - input[i]).sqrMagnitude;
+                if (sqrResidual > 0.0f && sqrResidual * config.Weights[i] > sqrMaxError)
+                {
+                    newWeights[i] = sqrMaxError / sqrResidual;
+                }
+                else
+                {
+                    newWeights[i] = config.Weights[i];
+                }
             }
 
-            MSE = sse / Mathf.Max(1, config.Length);
+            return new PoseConfiguration(config.Targets, newWeights);
+        }
+
+        public void ComputeResiduals(Vector3[] input, PoseConfiguration config, PoseMatch match, bool useWeights, out float[] residuals, out float MSE)
+        {
+            residuals = new float[config.Length];
+
+            float SSE = 0.0f;
+            // float totWeight = 0.0f;
+            for (int i = 0; i < config.Length; ++i)
+            {
+                Vector3 p = match.Offset.Multiply(config.Targets[i]);
+                float sqrResidual = (p - input[i]).sqrMagnitude;
+                if (useWeights)
+                {
+                    sqrResidual *= config.Weights[i];
+                }
+
+                SSE += sqrResidual;
+                // totWeight += config.Weights[i];
+
+                residuals[i] = Mathf.Sqrt(sqrResidual);
+            }
+
+            MSE = SSE / Mathf.Max(1, config.Length);
+            // weightedMSE = totWeight > 0.0f ? weightedSSE / totWeight : 0.0f;
         }
 
         private bool FindMinErrorTransform(Vector3[] input, PoseConfiguration config, out PoseMatch match, out bool reflectionCase)
