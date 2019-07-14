@@ -15,6 +15,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class PoseRecorder : InputSystemGlobalHandlerListener, IMixedRealitySourceStateHandler, IMixedRealityHandJointHandler
     {
+        public const float MinimumError = 0.0001f;
+        public float GoodMatchError = 0.01f;
+        public float SloppyMatchError = 0.05f;
+
         public GameObject JointIndicatorPrefab;
         public TextMeshPro InfoText;
         public AudioSource Claxon;
@@ -48,6 +52,18 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             PoseConfig = null;
             PoseHandedness = Handedness.None;
+        }
+
+        void OnValidate()
+        {
+            if (GoodMatchError <= MinimumError)
+            {
+                GoodMatchError = MinimumError;
+            }
+            if (SloppyMatchError <= MinimumError)
+            {
+                SloppyMatchError = MinimumError;
+            }
         }
 
         void Awake()
@@ -221,13 +237,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return points;
         }
 
-        public float ExpectedMaximumError = 0.05f;
         private const float mixFactorExpected = 0.15f;
         private static float mixFactorExp = -Mathf.Log(mixFactorExpected);
         private float GetMixFactor(float residual)
         {
-            float invSqrExpectedMaximumError = ExpectedMaximumError > 0.0f ? 1.0f / (ExpectedMaximumError * ExpectedMaximumError) : float.MaxValue;
-            return ExpectedMaximumError > 0.0f ? Mathf.Exp(-residual * invSqrExpectedMaximumError * mixFactorExp) : 0.0f;
+            return Mathf.Exp(-residual / (SloppyMatchError * SloppyMatchError) * mixFactorExp);
         }
 
         protected override void RegisterHandlers()
