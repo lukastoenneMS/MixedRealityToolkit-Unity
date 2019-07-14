@@ -70,7 +70,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 return true;
             }
 
-            // count >= 3, use Singular Value Decomposition to find least-squares solution
+            // count >= 3, use Singular Value Decomposition to find least-squares solution based on:
+            // “Least-Squares Fitting of Two 3-D Point Sets”, Arun, K. S. and Huang, T. S. and Blostein, S. D,
+            // IEEE Transactions on Pattern Analysis and Machine Intelligence, Volume 9 Issue 5, May 1987
 
             // Build covariance matrix
             Matrix<float> H = CreateMatrix.Dense<float>(3, 3, 0.0f);
