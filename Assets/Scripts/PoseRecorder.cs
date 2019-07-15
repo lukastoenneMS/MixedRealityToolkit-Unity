@@ -5,6 +5,7 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -83,6 +84,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             if (PoseConfig != null)
             {
                 PoseConfig = new PoseConfiguration(PoseConfig.Targets);
+            }
+        }
+
+        public void SavePoseConfiguration()
+        {
+            if (PoseConfig != null)
+            {
+                string baseName = "PoseConfig";
+                string filename = String.Format("{0}-{1}.{2}", baseName, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"), ".json");
+                string filepath = Path.Combine(Application.persistentDataPath, filename);
+
+                string[] allNames = Enum.GetNames(typeof(TrackedHandJoint));
+                string[] identifiers = UsedJointValues.Select(joint => allNames[(int)joint]).ToArray();
+
+                PoseSerializationUtils.Serialize(filepath, PoseConfig, identifiers);
             }
         }
 

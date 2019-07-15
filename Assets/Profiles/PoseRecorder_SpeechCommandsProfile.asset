@@ -65,3 +65,10 @@ MonoBehaviour:
       id: 0
       description: Toggle Profiler
       axisConstraint: 0
+  - localizationKey: 
+    keyword: Save Pose
+    keyCode: 112
+    action:
+      id: 0
+      description: Toggle Profiler
+      axisConstraint: 0
