@@ -55,6 +55,29 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return new PoseConfiguration(config.Targets, newWeights);
         }
 
+        public float ComputeMeanError(Vector3[] input, PoseConfiguration config, PoseMatch match, bool useWeights)
+        {
+            float SSE = 0.0f;
+            // float totWeight = 0.0f;
+            for (int i = 0; i < config.Length; ++i)
+            {
+                Vector3 p = match.Offset.Multiply(config.Targets[i]);
+                float sqrResidual = (p - input[i]).sqrMagnitude;
+                if (useWeights)
+                {
+                    sqrResidual *= config.Weights[i];
+                }
+
+                SSE += sqrResidual;
+                // totWeight += config.Weights[i];
+            }
+
+            float MSE = SSE / Mathf.Max(1, config.Length);
+            // weightedMSE = totWeight > 0.0f ? weightedSSE / totWeight : 0.0f;
+
+            return MSE;
+        }
+
         public void ComputeResiduals(Vector3[] input, PoseConfiguration config, PoseMatch match, bool useWeights, out float[] residuals, out float MSE)
         {
             residuals = new float[config.Length];
