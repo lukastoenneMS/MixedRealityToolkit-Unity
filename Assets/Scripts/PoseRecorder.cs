@@ -15,6 +15,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class PoseRecorder : InputSystemGlobalHandlerListener, IMixedRealitySourceStateHandler, IMixedRealityHandJointHandler
     {
+        public const float MinimumError = 0.0001f;
+        public float GoodMatchError = 0.01f;
+        public float SloppyMatchError = 0.05f;
+
         public GameObject JointIndicatorPrefab;
         public TextMeshPro InfoText;
         public AudioSource Claxon;
@@ -39,8 +43,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 PoseHandedness = hand.ControllerHandedness;
 
                 var points = GetPointsFromJoints(PollHandPose(hand));
-                PoseConfig = new PoseConfiguration();
-                PoseConfig.Init(points);
+                PoseConfig = new PoseConfiguration(points);
             }
         }
 
@@ -48,6 +51,51 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             PoseConfig = null;
             PoseHandedness = Handedness.None;
+        }
+
+        public void LimitWeightsToGoodMatch()
+        {
+            LimitWeights(GoodMatchError);
+        }
+
+        public void LimitWeightsToSloppyMatch()
+        {
+            LimitWeights(SloppyMatchError);
+        }
+
+        public void LimitWeights(float maxError)
+        {
+            if (PoseConfig != null)
+            {
+                var hand = trackedHands.LastOrDefault();
+                if (hand != null)
+                {
+                    var joints = PollHandPose(hand);
+                    Vector3[] points = GetPointsFromJoints(joints);
+                    PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
+                    PoseConfig = evaluator.GetErrorLimitedConfig(points, PoseConfig, match, maxError);
+                }
+            }
+        }
+
+        public void ResetWeights()
+        {
+            if (PoseConfig != null)
+            {
+                PoseConfig = new PoseConfiguration(PoseConfig.Targets);
+            }
+        }
+
+        void OnValidate()
+        {
+            if (GoodMatchError <= MinimumError)
+            {
+                GoodMatchError = MinimumError;
+            }
+            if (SloppyMatchError <= MinimumError)
+            {
+                SloppyMatchError = MinimumError;
+            }
         }
 
         void Awake()
@@ -162,7 +210,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Vector3[] points = GetPointsFromJoints(joints);
                 PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
 
-                evaluator.ComputeResiduals(points, PoseConfig, match, out float[] residuals, out float MSE);
+                evaluator.ComputeResiduals(points, PoseConfig, match, true, out float[] residuals, out float MSE);
                 // string summary = $"{Time.time}: condition={match.ConditionNumber} MSE={MSE}";
 
                 matchIndicator.transform.SetPositionAndRotation(match.Offset.Position, match.Offset.Rotation);
@@ -174,7 +222,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     {
                         jointOb.SetActive(true);
                         jointOb.transform.localPosition = PoseConfig.Targets[i];
-                        jointOb.transform.localScale = Vector3.one * PoseConfig.Weights[i];
+                        // jointOb.transform.localScale = Vector3.one * PoseConfig.Weights[i];
+                        // Use volume instead of radius for visualizing weight (keeps small weights visible too)
+                        jointOb.transform.localScale = Vector3.one * Mathf.Pow(PoseConfig.Weights[i], 0.33333f);
 
                         float mix = GetMixFactor(residuals[i]);
                         Color color = Color.green * mix + Color.red * (1.0f - mix);
@@ -187,8 +237,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 if (InfoText)
                 {
                     InfoText.text =
-                        $"Condition Number = {match.ConditionNumber:F5}\n" +
-                        $"MSE = {MSE:F5}\n";
+                        $"Mean Error = {Mathf.Sqrt(MSE):F5}m\n" +
+                        $"Condition = {match.ConditionNumber:F5}\n";
                 }
 
                 // if (debugStopwatch.Elapsed.TotalSeconds > 3.0f)
@@ -221,13 +271,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return points;
         }
 
-        public float ExpectedMaximumError = 0.05f;
         private const float mixFactorExpected = 0.15f;
         private static float mixFactorExp = -Mathf.Log(mixFactorExpected);
         private float GetMixFactor(float residual)
         {
-            float invSqrExpectedMaximumError = ExpectedMaximumError > 0.0f ? 1.0f / (ExpectedMaximumError * ExpectedMaximumError) : float.MaxValue;
-            return ExpectedMaximumError > 0.0f ? Mathf.Exp(-residual * invSqrExpectedMaximumError * mixFactorExp) : 0.0f;
+            return Mathf.Exp(-residual / SloppyMatchError * mixFactorExp);
         }
 
         protected override void RegisterHandlers()
