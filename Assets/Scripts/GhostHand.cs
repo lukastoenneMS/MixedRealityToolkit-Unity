@@ -19,11 +19,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         private GameObject root;
         private GameObject arm;
-        private Dictionary<Joint, GameObject> fingers;
-        private Dictionary<Joint, Vector3> fingerDeltas;
+        private List<Tuple<Joint, GameObject>> fingers;
 
-        const float ArmLength = 0.4f;
-        const float ArmRadius = 0.035f;
+        const float ArmLength = 0.30f;
+        const float WristLength = 0.05f;
+        const float ArmRadius = 0.022f;
         const float FingerRadius = 0.007f;
 
         public void SetArmDirection(Vector3 dir)
@@ -33,37 +33,28 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public void SetPose(IDictionary<Joint, Vector3> joints)
         {
-            if (fingerDeltas == null)
+            Vector3 offset = Vector3.zero;
+            offset -= joints[Joint.ThumbMetacarpalJoint];
+            offset -= joints[Joint.IndexMetacarpal];
+            offset -= joints[Joint.MiddleMetacarpal];
+            offset -= joints[Joint.RingMetacarpal];
+            offset -= joints[Joint.PinkyMetacarpal];
+            offset /= 5;
+            offset += Vector3.forward * (ArmLength + WristLength);
+
+            foreach (var item in fingers)
             {
-                fingerDeltas = new Dictionary<Joint, Vector3>();
-            }
+                Joint joint = item.Item1;
+                GameObject obj = item.Item2;
 
-            fingerDeltas[Joint.ThumbMetacarpalJoint]   = joints[Joint.ThumbProximalJoint] - joints[Joint.ThumbMetacarpalJoint];
-            fingerDeltas[Joint.IndexMetacarpal]        = joints[Joint.IndexKnuckle]       - joints[Joint.IndexMetacarpal];
-            fingerDeltas[Joint.MiddleMetacarpal]       = joints[Joint.MiddleKnuckle]      - joints[Joint.MiddleMetacarpal];
-            fingerDeltas[Joint.RingMetacarpal]         = joints[Joint.RingKnuckle]        - joints[Joint.RingMetacarpal];
-            fingerDeltas[Joint.PinkyMetacarpal]        = joints[Joint.PinkyKnuckle]       - joints[Joint.PinkyMetacarpal];
+                Vector3 fingerPos = joints[joint];
+                Vector3 fingerDir = joints[FingerEnd[joint]] - joints[joint];
+                fingerPos = arm.transform.TransformPoint(fingerPos + offset);
+                fingerDir = arm.transform.TransformVector(fingerDir);
 
-            fingerDeltas[Joint.ThumbProximalJoint]     = joints[Joint.ThumbDistalJoint]   - joints[Joint.ThumbProximalJoint];
-            fingerDeltas[Joint.IndexKnuckle]           = joints[Joint.IndexMiddleJoint]   - joints[Joint.IndexKnuckle];
-            fingerDeltas[Joint.MiddleKnuckle]          = joints[Joint.MiddleMiddleJoint]  - joints[Joint.MiddleKnuckle];
-            fingerDeltas[Joint.RingKnuckle]            = joints[Joint.RingMiddleJoint]    - joints[Joint.RingKnuckle];
-            fingerDeltas[Joint.PinkyKnuckle]           = joints[Joint.PinkyMiddleJoint]   - joints[Joint.PinkyKnuckle];
-
-            fingerDeltas[Joint.IndexMiddleJoint]       = joints[Joint.IndexDistalJoint]   - joints[Joint.IndexMiddleJoint];
-            fingerDeltas[Joint.MiddleMiddleJoint]      = joints[Joint.MiddleDistalJoint]  - joints[Joint.MiddleMiddleJoint];
-            fingerDeltas[Joint.RingMiddleJoint]        = joints[Joint.RingDistalJoint]    - joints[Joint.RingMiddleJoint];
-            fingerDeltas[Joint.PinkyMiddleJoint]       = joints[Joint.PinkyDistalJoint]   - joints[Joint.PinkyMiddleJoint];
-
-            fingerDeltas[Joint.ThumbDistalJoint]       = joints[Joint.ThumbTip]           - joints[Joint.ThumbDistalJoint];
-            fingerDeltas[Joint.IndexDistalJoint]       = joints[Joint.IndexTip]           - joints[Joint.IndexDistalJoint];
-            fingerDeltas[Joint.MiddleDistalJoint]      = joints[Joint.MiddleTip]          - joints[Joint.MiddleDistalJoint];
-            fingerDeltas[Joint.RingDistalJoint]        = joints[Joint.RingTip]            - joints[Joint.RingDistalJoint];
-            fingerDeltas[Joint.PinkyDistalJoint]       = joints[Joint.PinkyTip]           - joints[Joint.PinkyDistalJoint];
-
-            foreach (var item in fingerDeltas)
-            {
-                SetLimbLength(fingers[item.Key], item.Value.magnitude);
+                SetLimbLength(obj, fingerDir.magnitude);
+                SetLimbPosition(obj, fingerPos);
+                SetLimbDirection(obj, fingerDir);
             }
         }
 
@@ -71,51 +62,65 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             root = new GameObject("GhostHand");
 
-            arm = CreateLimb(root, "Arm", ArmRadius, ArmLength);
+            arm = CreateLimbObject(root, "Arm", ArmRadius, ArmLength);
 
-            fingers = new Dictionary<Joint, GameObject>();
-            fingers.Add(Joint.ThumbMetacarpalJoint,     CreateLimb(arm,                         "ThumbMetacarpalJoint", FingerRadius, 1));
-            fingers.Add(Joint.IndexMetacarpal,          CreateLimb(arm,                         "IndexMetacarpal",      FingerRadius, 1));
-            fingers.Add(Joint.MiddleMetacarpal,         CreateLimb(arm,                         "MiddleMetacarpal",     FingerRadius, 1));
-            fingers.Add(Joint.RingMetacarpal,           CreateLimb(arm,                         "RingMetacarpal",       FingerRadius, 1));
-            fingers.Add(Joint.PinkyMetacarpal,          CreateLimb(arm,                         "PinkyMetacarpal",      FingerRadius, 1));
+            fingers = new List<Tuple<Joint, GameObject>>();
+            CreateFinger(Joint.ThumbMetacarpalJoint,      "ThumbMetacarpalJoint", FingerRadius, 1);
+            CreateFinger(Joint.IndexMetacarpal,           "IndexMetacarpal",      FingerRadius, 1);
+            CreateFinger(Joint.MiddleMetacarpal,          "MiddleMetacarpal",     FingerRadius, 1);
+            CreateFinger(Joint.RingMetacarpal,            "RingMetacarpal",       FingerRadius, 1);
+            CreateFinger(Joint.PinkyMetacarpal,           "PinkyMetacarpal",      FingerRadius, 1);
 
-            fingers.Add(Joint.ThumbProximalJoint,       CreateLimb(Joint.ThumbMetacarpalJoint,  "ThumbProximalJoint",   FingerRadius, 1));
-            fingers.Add(Joint.IndexKnuckle,             CreateLimb(Joint.IndexMetacarpal,       "IndexKnuckle",         FingerRadius, 1));
-            fingers.Add(Joint.MiddleKnuckle,            CreateLimb(Joint.MiddleMetacarpal,      "MiddleKnuckle",        FingerRadius, 1));
-            fingers.Add(Joint.RingKnuckle,              CreateLimb(Joint.RingMetacarpal,        "RingKnuckle",          FingerRadius, 1));
-            fingers.Add(Joint.PinkyKnuckle,             CreateLimb(Joint.PinkyMetacarpal,       "PinkyKnuckle",         FingerRadius, 1));
+            CreateFinger(Joint.ThumbProximalJoint,        "ThumbProximalJoint",   FingerRadius, 1);
+            CreateFinger(Joint.IndexKnuckle,              "IndexKnuckle",         FingerRadius, 1);
+            CreateFinger(Joint.MiddleKnuckle,             "MiddleKnuckle",        FingerRadius, 1);
+            CreateFinger(Joint.RingKnuckle,               "RingKnuckle",          FingerRadius, 1);
+            CreateFinger(Joint.PinkyKnuckle,              "PinkyKnuckle",         FingerRadius, 1);
 
-            fingers.Add(Joint.IndexMiddleJoint,         CreateLimb(Joint.IndexKnuckle,          "IndexMiddleJoint",     FingerRadius, 1));
-            fingers.Add(Joint.MiddleMiddleJoint,        CreateLimb(Joint.MiddleKnuckle,         "MiddleMiddleJoint",    FingerRadius, 1));
-            fingers.Add(Joint.RingMiddleJoint,          CreateLimb(Joint.RingKnuckle,           "RingMiddleJoint",      FingerRadius, 1));
-            fingers.Add(Joint.PinkyMiddleJoint,         CreateLimb(Joint.PinkyKnuckle,          "PinkyMiddleJoint",     FingerRadius, 1));
+            CreateFinger(Joint.IndexMiddleJoint,          "IndexMiddleJoint",     FingerRadius, 1);
+            CreateFinger(Joint.MiddleMiddleJoint,         "MiddleMiddleJoint",    FingerRadius, 1);
+            CreateFinger(Joint.RingMiddleJoint,           "RingMiddleJoint",      FingerRadius, 1);
+            CreateFinger(Joint.PinkyMiddleJoint,          "PinkyMiddleJoint",     FingerRadius, 1);
 
-            fingers.Add(Joint.ThumbDistalJoint,         CreateLimb(Joint.ThumbProximalJoint,    "ThumbDistalJoint",     FingerRadius, 1));
-            fingers.Add(Joint.IndexDistalJoint,         CreateLimb(Joint.IndexMiddleJoint,      "IndexDistalJoint",     FingerRadius, 1));
-            fingers.Add(Joint.MiddleDistalJoint,        CreateLimb(Joint.MiddleMiddleJoint,     "MiddleDistalJoint",    FingerRadius, 1));
-            fingers.Add(Joint.RingDistalJoint,          CreateLimb(Joint.RingMiddleJoint,       "RingDistalJoint",      FingerRadius, 1));
-            fingers.Add(Joint.PinkyDistalJoint,         CreateLimb(Joint.PinkyMiddleJoint,      "PinkyDistalJoint",     FingerRadius, 1));
+            CreateFinger(Joint.ThumbDistalJoint,          "ThumbDistalJoint",     FingerRadius, 1);
+            CreateFinger(Joint.IndexDistalJoint,          "IndexDistalJoint",     FingerRadius, 1);
+            CreateFinger(Joint.MiddleDistalJoint,         "MiddleDistalJoint",    FingerRadius, 1);
+            CreateFinger(Joint.RingDistalJoint,           "RingDistalJoint",      FingerRadius, 1);
+            CreateFinger(Joint.PinkyDistalJoint,          "PinkyDistalJoint",     FingerRadius, 1);
         }
 
-        private static GameObject CreateLimb(GameObject parent, string name, float radius, float length)
+        private GameObject CreateFinger(Joint joint, string name, float radius, float length)
         {
-            var obj = new GameObject(name);
-            obj.transform.SetParent(parent.transform, false);
+            GameObject parentObj;
+            if (FingerParent.TryGetValue(joint, out Joint parentJoint))
+            {
+                parentObj = fingers.Find(f => f.Item1 == parentJoint).Item2;
+            }
+            else
+            {
+                parentObj = arm;
+            }
 
-            var meshObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(meshObj.GetComponent<Collider>());
-            meshObj.transform.localScale = new Vector3(radius * 2.0f, ArmLength * 0.5f, radius * 2.0f);
-            meshObj.transform.localPosition = new Vector3(0, 0, length * 0.5f);
-            meshObj.transform.localRotation = Quaternion.Euler(90.0f, 0, 0);
-            meshObj.transform.SetParent(obj.transform, false);
+            GameObject obj = CreateLimbObject(parentObj, name, radius, length);
+
+            fingers.Add(Tuple.Create(joint, obj));
 
             return obj;
         }
 
-        private GameObject CreateLimb(Joint fingerParent, string name, float radius, float length)
+        private static GameObject CreateLimbObject(GameObject parentObj, string name, float radius, float length)
         {
-            return CreateLimb(fingers[fingerParent], name, radius, length);
+            var obj = new GameObject(name);
+            obj.transform.SetParent(parentObj.transform, false);
+
+            var meshObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Destroy(meshObj.GetComponent<Collider>());
+            meshObj.transform.localScale = new Vector3(radius * 2.0f, ArmLength * 0.5f, radius * 2.0f);
+            meshObj.transform.localPosition = Vector3.forward * length * 0.5f;
+            meshObj.transform.localRotation = Quaternion.FromToRotation(new Vector3(0, 1, 0), Vector3.forward);
+            meshObj.transform.SetParent(obj.transform, false);
+
+            return obj;
         }
 
         private static void SetLimbLength(GameObject obj, float length)
@@ -125,12 +130,70 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 Vector3 curScale = meshObj.transform.localScale;
                 meshObj.transform.localScale = new Vector3(curScale.x, length * 0.5f, curScale.z);
+                meshObj.transform.localPosition = Vector3.forward * length * 0.5f;
             }
+        }
+
+        private static void SetLimbPosition(GameObject obj, Vector3 pos)
+        {
+            obj.transform.position = pos;
         }
 
         private static void SetLimbDirection(GameObject obj, Vector3 dir)
         {
             obj.transform.rotation = Quaternion.LookRotation(dir);
         }
+
+        private static Dictionary<Joint, Joint> FingerEnd = new Dictionary<Joint, Joint>()
+        {
+            { Joint.ThumbMetacarpalJoint,   Joint.ThumbProximalJoint },
+            { Joint.IndexMetacarpal,        Joint.IndexKnuckle },
+            { Joint.MiddleMetacarpal,       Joint.MiddleKnuckle },
+            { Joint.RingMetacarpal,         Joint.RingKnuckle },
+            { Joint.PinkyMetacarpal,        Joint.PinkyKnuckle },
+
+            { Joint.ThumbProximalJoint,     Joint.ThumbDistalJoint },
+            { Joint.IndexKnuckle,           Joint.IndexMiddleJoint },
+            { Joint.MiddleKnuckle,          Joint.MiddleMiddleJoint },
+            { Joint.RingKnuckle,            Joint.RingMiddleJoint },
+            { Joint.PinkyKnuckle,           Joint.PinkyMiddleJoint },
+
+            { Joint.IndexMiddleJoint,       Joint.IndexDistalJoint },
+            { Joint.MiddleMiddleJoint,      Joint.MiddleDistalJoint },
+            { Joint.RingMiddleJoint,        Joint.RingDistalJoint },
+            { Joint.PinkyMiddleJoint,       Joint.PinkyDistalJoint },
+
+            { Joint.ThumbDistalJoint,       Joint.ThumbTip },
+            { Joint.IndexDistalJoint,       Joint.IndexTip },
+            { Joint.MiddleDistalJoint,      Joint.MiddleTip },
+            { Joint.RingDistalJoint,        Joint.RingTip },
+            { Joint.PinkyDistalJoint,       Joint.PinkyTip },
+        };
+
+        private static Dictionary<Joint, Joint> FingerParent = new Dictionary<Joint, Joint>()
+        {
+            { Joint.ThumbProximalJoint,     Joint.ThumbMetacarpalJoint },
+            { Joint.IndexKnuckle,           Joint.IndexMetacarpal },
+            { Joint.MiddleKnuckle,          Joint.MiddleMetacarpal },
+            { Joint.RingKnuckle,            Joint.RingMetacarpal },
+            { Joint.PinkyKnuckle,           Joint.PinkyMetacarpal },
+
+            { Joint.IndexMiddleJoint,       Joint.IndexKnuckle },
+            { Joint.MiddleMiddleJoint,      Joint.MiddleKnuckle },
+            { Joint.RingMiddleJoint,        Joint.RingKnuckle },
+            { Joint.PinkyMiddleJoint,       Joint.PinkyKnuckle },
+
+            { Joint.ThumbDistalJoint,       Joint.ThumbProximalJoint },
+            { Joint.IndexDistalJoint,       Joint.IndexMiddleJoint },
+            { Joint.MiddleDistalJoint,      Joint.MiddleMiddleJoint },
+            { Joint.RingDistalJoint,        Joint.RingMiddleJoint },
+            { Joint.PinkyDistalJoint,       Joint.PinkyMiddleJoint },
+
+            { Joint.ThumbTip,               Joint.ThumbDistalJoint },
+            { Joint.IndexTip,               Joint.IndexDistalJoint },
+            { Joint.MiddleTip,              Joint.MiddleDistalJoint },
+            { Joint.RingTip,                Joint.RingDistalJoint },
+            { Joint.PinkyTip,               Joint.PinkyDistalJoint },
+        };
     }
 }
