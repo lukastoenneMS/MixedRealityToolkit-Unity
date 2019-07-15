@@ -6,9 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/PoseRecording.unity
-    guid: ec4894606b3760e438490ed8a51b210c
-  - enabled: 1
     path: Assets/Scenes/RockPaperScissors.unity
     guid: 11e3e3570d296bf4c96aed8ae0b5ee2b
+  - enabled: 1
+    path: Assets/Scenes/PoseRecording.unity
+    guid: ec4894606b3760e438490ed8a51b210c
   m_configObjects: {}
