@@ -36,12 +36,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public void InitPoseConfig()
         {
-            var hand = trackedHands.LastOrDefault();
-            if (hand != null)
+            if (IsTracking)
             {
-                PoseHandedness = hand.ControllerHandedness;
+                PoseHandedness = TrackedHand.ControllerHandedness;
 
-                var points = GetPointsFromJoints(PollHandPose(hand));
+                var points = GetPointsFromJoints(PollHandPose(TrackedHand));
                 PoseConfig = new PoseConfiguration(points);
             }
         }
@@ -66,10 +65,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             if (PoseConfig != null)
             {
-                var hand = trackedHands.LastOrDefault();
-                if (hand != null)
+                if (IsTracking)
                 {
-                    var joints = PollHandPose(hand);
+                    var joints = PollHandPose(TrackedHand);
                     Vector3[] points = GetPointsFromJoints(joints);
                     PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
                     PoseConfig = evaluator.GetErrorLimitedConfig(points, PoseConfig, match, maxError);

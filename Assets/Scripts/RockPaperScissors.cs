@@ -26,6 +26,31 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public GameObject IndicatorPrefab;
 
+        public enum GameState
+        {
+            Idle,
+            Start,
+            Counting,
+            Comparing,
+            Timeout,
+            Announce,
+            Final,
+        }
+
+        public GameState State { get; private set; } = GameState.Idle;
+
+        public int NumberOfRounds = 3;
+        public int Round { get; private set; } = 1;
+
+        public float WaitTime = 2.0f;
+        public float CountTime = 3.0f;
+        public float CompareTime = 0.8f;
+        public float TimeoutTime = 2.5f;
+        public float AnnounceTime = 6.0f;
+        public float FinalTime = 8.0f;
+
+        public float StateTime { get; private set; } = 0.0f;
+
         [Serializable]
         public class PoseAction
         {
@@ -96,6 +121,104 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     ghostHand.SetPose(GetJointsFromPose(poseActions[0].poseConfig));
                 }
             }
+        }
+
+        void Update()
+        {
+            StateTime += Time.deltaTime;
+
+            if (!IsTracking)
+            {
+                TransitionTo(GameState.Idle);
+                return;
+            }
+
+            switch (State)
+            {
+                case GameState.Idle:
+                    if (IsTracking)
+                    {
+                        TransitionTo(GameState.Start);
+                    }
+                    break;
+
+                case GameState.Start:
+                    if (StateTime > WaitTime)
+                    {
+                        TransitionTo(GameState.Counting);
+                    }
+                    break;
+
+                case GameState.Counting:
+                    if (StateTime > CountTime)
+                    {
+                        TransitionTo(GameState.Comparing);
+                    }
+                    break;
+
+                case GameState.Comparing:
+                    if (StateTime > CompareTime)
+                    {
+                        TransitionTo(GameState.Timeout);
+                    }
+                    break;
+
+                case GameState.Timeout:
+                    if (StateTime > TimeoutTime)
+                    {
+                        TransitionTo(GameState.Counting);
+                    }
+                    break;
+
+                case GameState.Announce:
+                    if (StateTime > AnnounceTime)
+                    {
+                        if (Round < NumberOfRounds)
+                        {
+                            TransitionTo(GameState.Final);
+                        }
+                        else
+                        {
+                            Round += 1;
+                            TransitionTo(GameState.Start);
+                        }
+                    }
+                    break;
+
+                case GameState.Final:
+                    if (StateTime > FinalTime)
+                    {
+                        TransitionTo(GameState.Start);
+                    }
+                    break;
+            }
+        }
+
+        private bool TransitionTo(GameState newState)
+        {
+            if (State == newState)
+            {
+                return false;
+            }
+
+            GameState oldState = State;
+            State = newState;
+
+            Debug.Log($"Transition from {oldState} to {newState}");
+
+            switch (oldState)
+            {
+                case GameState.Final:
+                    Round = 1;
+                    break;
+            }
+
+            StateTime = 0.0f;
+            // switch (newState)
+            // {
+            // }
+
+            return true;
         }
 
         protected override void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)

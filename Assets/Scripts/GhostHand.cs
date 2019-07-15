@@ -1,13 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using Microsoft.MixedReality.Toolkit.Input;
-using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using TMPro;
 using UnityEngine;
 
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;

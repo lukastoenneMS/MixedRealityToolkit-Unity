@@ -15,7 +15,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public abstract class HandTracker : InputSystemGlobalHandlerListener, IMixedRealitySourceStateHandler, IMixedRealityHandJointHandler
     {
-        protected readonly List<IMixedRealityHand> trackedHands = new List<IMixedRealityHand>();
+        private readonly List<IMixedRealityHand> trackedHands = new List<IMixedRealityHand>();
+
+        public bool IsTracking => trackedHands.Count > 0;
+        public IMixedRealityHand TrackedHand => trackedHands.Count > 0 ? trackedHands[trackedHands.Count - 1] : null;
 
         public void OnSourceDetected(SourceStateEventData eventData)
         {

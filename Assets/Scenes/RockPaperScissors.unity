@@ -460,6 +460,13 @@ MonoBehaviour:
   ghostHand: {fileID: 691742831}
   IndicatorPrefab: {fileID: 4963591932516611596, guid: 97d6661fc1d2d2b43b5e7a9c38f5cf63,
     type: 3}
+  NumberOfRounds: 3
+  WaitTime: 2
+  CountTime: 3
+  CompareTime: 0.8
+  TimeoutTime: 2.5
+  AnnounceTime: 6
+  FinalTime: 8
   poseActions:
   - filename: PoseConfig_Rock.json
     clip: {fileID: 8300000, guid: abc578bebbee8d34db90e886327cde1f, type: 3}
