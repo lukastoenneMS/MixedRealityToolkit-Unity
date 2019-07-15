@@ -108,6 +108,16 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return points;
         }
 
+        protected static IDictionary<TrackedHandJoint, Vector3> GetJointsFromPose(PoseConfiguration poseConfig)
+        {
+            var result = new Dictionary<TrackedHandJoint, Vector3>();
+            for (int i = 0; i < UsedJointValues.Length; ++i)
+            {
+                result.Add(UsedJointValues[i], poseConfig.Targets[i]);
+            }
+            return result;
+        }
+
         protected override void RegisterHandlers()
         {
             InputSystem?.RegisterHandler<IMixedRealitySourceStateHandler>(this);

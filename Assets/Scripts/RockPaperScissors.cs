@@ -22,6 +22,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public AudioSource Voice;
 
+        public GhostHand ghostHand;
+
         public GameObject IndicatorPrefab;
 
         [Serializable]
@@ -80,12 +82,20 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 {
                     var action = poseActions[i];
                     float x = (float)i / (float)(poseActions.Length - 1) * 2.0f - 1.0f;
-                    var poseIndicator = GameObject.Instantiate(IndicatorPrefab, new Vector3(x * 0.25f, 0, 0.5f), Quaternion.identity, indicator.transform);
+                    var poseIndicator = GameObject.Instantiate(IndicatorPrefab, new Vector3(x * 0.15f, 0, 0.75f), Quaternion.identity, indicator.transform);
                     poseIndicator.name = action.id;
                 }
             }
 
             materialProps = new MaterialPropertyBlock();
+
+            if (ghostHand)
+            {
+                if (poseActions[0].isLoaded)
+                {
+                    ghostHand.SetPose(GetJointsFromPose(poseActions[0].poseConfig));
+                }
+            }
         }
 
         protected override void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)
@@ -93,7 +103,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Vector3[] points = GetPointsFromJoints(joints);
             float sqrMaxError = GoodMatchError * GoodMatchError;
 
-            string summary = "";
             for (int i = 0; i < poseActions.Length; ++i)
             {
                 var action = poseActions[i];
@@ -120,10 +129,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     float x = Mathf.Sqrt(MSE / sqrMaxError);
                     poseIndicator.transform.localScale = Vector3.one * Sigmoid(1.0f - x);
 
-                    // float a = -Mathf.Log(0.2f);
-                    // float s = Mathf.Exp(-x * a);
-                    // summary += $"{action.id}: SE={Mathf.Sqrt(MSE)}, x={x}, mix={1.0f-s}\n";
-                    // materialProps.SetColor("_Color", Color.red * s + Color.green * (1.0f - s));
                     materialProps.SetColor("_Color", MSE <= sqrMaxError ? Color.green : Color.red);
 
                     var renderer = poseIndicator.GetComponentInChildren<Renderer>();
@@ -133,7 +138,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     }
                 }
             }
-            Debug.Log(summary);
         }
 
         private static float Sigmoid(float x)
