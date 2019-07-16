@@ -34,10 +34,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public int NumberOfRounds = 3;
         public int Round { get; private set; } = 1;
+        public int ScoreHuman { get; private set; } = 0;
+        public int ScoreRobot { get; private set; } = 0;
         public PoseAction ChosenPose { get; private set; } = null;
         public PoseAction DetectedPose { get; private set; } = null;
         private System.Random rng;
 
+        public float InitTime = 5.0f;
         public float WelcomeTime = 4.0f;
         public float WavingTime = 2.0f;
         public AudioClip WelcomeClip;
@@ -46,10 +49,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public float CountTime = 2.5f;
         public AudioClip[] CountClips;
         public float CompareTime = 0.8f;
+        public AudioClip DrawClip;
         public float TimeoutTime = 2.5f;
         public AudioClip TimeoutClip;
-        public float AnnounceTime = 6.0f;
+        public float AnnounceTime = 4.0f;
         public float FinalTime = 8.0f;
+        public AudioClip WinClip;
+        public AudioClip LoseClip;
 
         [Serializable]
         public class PoseAction
@@ -96,6 +102,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private readonly PoseEvaluator evaluator = new PoseEvaluator();
 
         public AudioSource Voice;
+        public TextMeshPro ScoreBoard;
         public GameObject IndicatorPrefab;
         private GameObject indicator;
         private MaterialPropertyBlock materialProps;
@@ -145,6 +152,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         void Update()
         {
+            if (ScoreBoard)
+            {
+                ScoreBoard.text = $"Round {Round}:\nHuman {ScoreHuman} - Robot {ScoreRobot}";
+            }
+
             AnimateGhostHand();
         }
 
@@ -201,25 +213,30 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private IEnumerator RunGameStateWelcome()
         {
             SetGhostPose("greet");
+
+            float startTime = Time.time;
+            while (Time.time < startTime + InitTime)
+            {
+                yield return null;
+            }
+
             PlayMessage(WelcomeClip);
 
             int numWavings = 3;
-
-            float startTime = Time.time;
-            float endTime = startTime + WelcomeTime;
-            while (Time.time <= endTime)
+            startTime = Time.time;
+            while (Time.time <= startTime + WavingTime)
             {
-                if (Time.time <= startTime + WavingTime)
-                {
-                    float relTime = (Time.time - startTime) / WavingTime * numWavings;
-                    if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
-                    else                        { GhostHandTarget = GhostTargetWaveLeft; }
-                }
-                else
-                {
-                    GhostHandTarget = GhostTargetForward;
-                }
-    
+                float relTime = (Time.time - startTime) / WavingTime * numWavings;
+                if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
+                else                        { GhostHandTarget = GhostTargetWaveLeft; }
+
+                yield return null;
+            }
+
+            GhostHandTarget = GhostTargetForward;
+
+            while (Time.time <= startTime + WelcomeTime)
+            {
                 yield return null;
             }
 
@@ -364,10 +381,43 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             TransitionTo(GameState.Counting);
         }
 
+        private static Dictionary<Tuple<string, string>, int> WinTable = new Dictionary<Tuple<string, string>, int>()
+        {
+            { Tuple.Create("rock", "rock"), 0 },
+            { Tuple.Create("rock", "paper"), -1 },
+            { Tuple.Create("rock", "scissors"), 1 },
+            { Tuple.Create("paper", "rock"), 1 },
+            { Tuple.Create("paper", "paper"), 0 },
+            { Tuple.Create("paper", "scissors"), -1 },
+            { Tuple.Create("scissors", "rock"), -1 },
+            { Tuple.Create("scissors", "paper"), 1 },
+            { Tuple.Create("scissors", "scissors"), 0 },
+        };
+
         private IEnumerator RunGameStateAnnounce()
         {
             SetGhostPose("greet");
             GhostHandTarget = GhostTargetUp;
+
+            Debug.Assert(ChosenPose != null);
+            Debug.Assert(DetectedPose != null);
+            if (WinTable.TryGetValue(Tuple.Create(ChosenPose.id, DetectedPose.id), out int win))
+            {
+                if (win == 0)
+                {
+                    PlayMessage(DrawClip);
+                }
+                else if (win < 0)
+                {
+                    PlayMessage(ChosenPose.clipYourWin);
+                    ScoreHuman += 1;
+                }
+                else if (win > 0)
+                {
+                    PlayMessage(ChosenPose.clipMyWin);
+                    ScoreRobot += 1;
+                }
+            }
 
             float startTime = Time.time;
             float endTime = startTime + AnnounceTime;
@@ -378,12 +428,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             if (Round < NumberOfRounds)
             {
-                TransitionTo(GameState.Final);
+                Round += 1;
+                TransitionTo(GameState.Start);
             }
             else
             {
-                Round += 1;
-                TransitionTo(GameState.Start);
+                TransitionTo(GameState.Final);
             }
         }
 
@@ -392,6 +442,19 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             SetGhostPose("greet");
             GhostHandTarget = GhostTargetUp;
 
+            if (ScoreHuman == ScoreRobot)
+            {
+                PlayMessage(DrawClip);
+            }
+            else if (ScoreHuman > ScoreRobot)
+            {
+                PlayMessage(WinClip);
+            }
+            else
+            {
+                PlayMessage(LoseClip);
+            }
+
             float startTime = Time.time;
             float endTime = startTime + FinalTime;
             while (Time.time <= endTime)
@@ -399,6 +462,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 yield return null;
             }
 
+            ScoreHuman = 0;
+            ScoreRobot = 0;
+            Round = 1;
             TransitionTo(GameState.Start);
         }
 
@@ -469,6 +535,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 return;
             }
+
+            /// XXX DEBUG
+            DetectedPose = ValidPoses[0];
+            /// XXX DEBUG
 
             Vector3[] points = GetPointsFromJoints(joints);
             float sqrMaxError = GoodMatchError * GoodMatchError;
