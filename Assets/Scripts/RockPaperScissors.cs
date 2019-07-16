@@ -4,6 +4,7 @@
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Final,
         }
         public GameState State { get; private set; } = GameState.None;
+        private IEnumerator StateCoroutine;
 
         public int NumberOfRounds = 3;
         public int Round { get; private set; } = 1;
@@ -47,8 +49,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public AudioClip TimeoutClip;
         public float AnnounceTime = 6.0f;
         public float FinalTime = 8.0f;
-
-        public float StateTime { get; private set; } = 0.0f;
 
         [Serializable]
         public class PoseAction
@@ -144,113 +144,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         void Update()
         {
-            StateTime += Time.deltaTime;
-
-            if (State == GameState.Welcome)
-            {
-                if (StateTime > WelcomeTime && !IsPlayingMessage)
-                {
-                    TransitionTo(GameState.Start);
-                }
-
-                int numWavings = 3;
-                float relTime = StateTime / WelcomeTime * numWavings;
-                if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
-                else                        { GhostHandTarget = GhostTargetWaveLeft; }
-            }
-            else if (State == GameState.WaitForTracking)
-            {
-                if (IsTracking)
-                {
-                    TransitionTo(GameState.Start);
-                }
-
-                GhostHandTarget = GhostTargetForward;
-            }
-            else if (!IsTracking)
-            {
-                TransitionTo(GameState.WaitForTracking);
-            }
-            else
-            {
-                switch (State)
-                {
-                    case GameState.Start:
-                        if (StateTime > StartTime)
-                        {
-                            TransitionTo(GameState.Counting);
-                        }
-
-                        GhostHandTarget = GhostTargetCountRight;
-                        break;
-
-                    case GameState.Counting:
-                        if (StateTime > CountTime)
-                        {
-                            TransitionTo(GameState.Comparing);
-                        }
-
-                        float relTime = StateTime / CountTime * 5.0f;
-                        if (relTime < 1.0f)         { GhostHandTarget = GhostTargetCountDown; }
-                        else if (relTime < 2.0f)    { GhostHandTarget = GhostTargetCountLeft; }
-                        else if (relTime < 3.0f)    { GhostHandTarget = GhostTargetCountDown; }
-                        else if (relTime < 4.0f)    { GhostHandTarget = GhostTargetCountRight; }
-                        else                        { GhostHandTarget = GhostTargetCountDown; }
-                        break;
-
-                    case GameState.Comparing:
-                        if (StateTime > CompareTime)
-                        {
-                            if (DetectedPose != null)
-                            {
-                                TransitionTo(GameState.Announce);
-                            }
-                            else
-                            {
-                                TransitionTo(GameState.Timeout);
-                            }
-                        }
-
-                        GhostHandTarget = GhostTargetForward;
-                        break;
-
-                    case GameState.Timeout:
-                        if (StateTime > TimeoutTime)
-                        {
-                            TransitionTo(GameState.Counting);
-                        }
-
-                        GhostHandTarget = GhostTargetUp;
-                        break;
-
-                    case GameState.Announce:
-                        if (StateTime > AnnounceTime)
-                        {
-                            if (Round < NumberOfRounds)
-                            {
-                                TransitionTo(GameState.Final);
-                            }
-                            else
-                            {
-                                Round += 1;
-                                TransitionTo(GameState.Start);
-                            }
-                        }
-
-                        GhostHandTarget = GhostTargetUp;
-                        break;
-
-                    case GameState.Final:
-                        if (StateTime > FinalTime)
-                        {
-                            TransitionTo(GameState.Start);
-                        }
-
-                        GhostHandTarget = GhostTargetUp;
-                        break;
-                }
-            }
-
             AnimateGhostHand();
         }
 
@@ -266,53 +159,206 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             Debug.Log($"Transition from {oldState} to {newState}");
 
-            switch (oldState)
+            if (StateCoroutine != null)
             {
-                case GameState.Final:
-                    Round = 1;
-                    break;
+                StopCoroutine(StateCoroutine);
             }
 
-            StateTime = 0.0f;
             switch (newState)
             {
                 case GameState.Welcome:
-                    SetGhostPose("greet");
-                    PlayMessage(WelcomeClip);
+                    StateCoroutine = RunGameStateWelcome();
                     break;
-
+                case GameState.WaitForTracking:
+                    StateCoroutine = RunGameStateWaitForTracking();
+                    break;
                 case GameState.Start:
-                    ChosenPose = null;
-                    DetectedPose = null;
-
-                    SetGhostPose("rock");
-                    PlayMessage(StartClip);
+                    StateCoroutine = RunGameStateStart();
                     break;
-
                 case GameState.Counting:
-                    SetGhostPose("rock");
+                    StateCoroutine = RunGameStateCounting();
                     break;
-
                 case GameState.Comparing:
-                    ChosenPose = ValidPoses[rng.Next() % 3];
-                    SetGhostPose(ChosenPose);
+                    StateCoroutine = RunGameStateComparing();
                     break;
-
                 case GameState.Timeout:
-                    SetGhostPose("greet");
-                    PlayMessage(TimeoutClip);
+                    StateCoroutine = RunGameStateTimeout();
                     break;
-
                 case GameState.Announce:
-                    SetGhostPose("greet");
+                    StateCoroutine = RunGameStateAnnounce();
                     break;
-
                 case GameState.Final:
-                    SetGhostPose("greet");
+                    StateCoroutine = RunGameStateFinal();
                     break;
             }
 
+            StartCoroutine(StateCoroutine);
+
             return true;
+        }
+
+        private IEnumerator RunGameStateWelcome()
+        {
+            SetGhostPose("greet");
+            PlayMessage(WelcomeClip);
+
+            float startTime = Time.time;
+            float endTime = startTime + WelcomeTime;
+            while (Time.time <= endTime)
+            {
+                int numWavings = 3;
+                float relTime = (Time.time - startTime) / WelcomeTime * numWavings;
+                if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
+                else                        { GhostHandTarget = GhostTargetWaveLeft; }
+    
+                yield return null;
+            }
+
+            TransitionTo(GameState.Start);
+        }
+
+        private IEnumerator RunGameStateWaitForTracking()
+        {
+            GhostHandTarget = GhostTargetForward;
+
+            while (!IsTracking)
+            {
+                yield return null;
+            }
+
+            TransitionTo(GameState.Start);
+        }
+
+        private IEnumerator RunGameStateStart()
+        {
+            ChosenPose = null;
+            DetectedPose = null;
+
+            SetGhostPose("rock");
+            PlayMessage(StartClip);
+            GhostHandTarget = GhostTargetCountRight;
+
+            float startTime = Time.time;
+            float endTime = startTime + StartTime;
+            while (Time.time <= endTime)
+            {
+                if (!IsTracking)
+                {
+                    TransitionTo(GameState.WaitForTracking);
+                }
+
+                yield return null;
+            }
+
+            TransitionTo(GameState.Counting);
+        }
+
+        private IEnumerator RunGameStateCounting()
+        {
+            SetGhostPose("rock");
+
+            float startTime = Time.time;
+            float endTime = startTime + CountTime;
+            while (Time.time <= endTime)
+            {
+                if (!IsTracking)
+                {
+                    TransitionTo(GameState.WaitForTracking);
+                }
+
+                float relTime = (Time.time - startTime) / CountTime * 5.0f;
+                if (relTime < 1.0f)         { GhostHandTarget = GhostTargetCountDown; }
+                else if (relTime < 2.0f)    { GhostHandTarget = GhostTargetCountLeft; }
+                else if (relTime < 3.0f)    { GhostHandTarget = GhostTargetCountDown; }
+                else if (relTime < 4.0f)    { GhostHandTarget = GhostTargetCountRight; }
+                else                        { GhostHandTarget = GhostTargetCountDown; }
+
+                yield return null;
+            }
+
+            TransitionTo(GameState.Comparing);
+        }
+
+        private IEnumerator RunGameStateComparing()
+        {
+            ChosenPose = ValidPoses[rng.Next() % 3];
+            SetGhostPose(ChosenPose);
+            GhostHandTarget = GhostTargetForward;
+
+            float startTime = Time.time;
+            float endTime = startTime + CompareTime;
+            while (Time.time <= endTime)
+            {
+                if (!IsTracking)
+                {
+                    TransitionTo(GameState.WaitForTracking);
+                }
+
+                yield return null;
+            }
+
+            if (DetectedPose != null)
+            {
+                TransitionTo(GameState.Announce);
+            }
+            else
+            {
+                TransitionTo(GameState.Timeout);
+            }
+        }
+
+        private IEnumerator RunGameStateTimeout()
+        {
+            SetGhostPose("greet");
+            PlayMessage(TimeoutClip);
+            GhostHandTarget = GhostTargetUp;
+
+            float startTime = Time.time;
+            float endTime = startTime + TimeoutTime;
+            while (Time.time <= endTime)
+            {
+                yield return null;
+            }
+
+            TransitionTo(GameState.Counting);
+        }
+
+        private IEnumerator RunGameStateAnnounce()
+        {
+            SetGhostPose("greet");
+            GhostHandTarget = GhostTargetUp;
+
+            float startTime = Time.time;
+            float endTime = startTime + AnnounceTime;
+            while (Time.time <= endTime)
+            {
+                yield return null;
+            }
+
+            if (Round < NumberOfRounds)
+            {
+                TransitionTo(GameState.Final);
+            }
+            else
+            {
+                Round += 1;
+                TransitionTo(GameState.Start);
+            }
+        }
+
+        private IEnumerator RunGameStateFinal()
+        {
+            SetGhostPose("greet");
+            GhostHandTarget = GhostTargetUp;
+
+            float startTime = Time.time;
+            float endTime = startTime + FinalTime;
+            while (Time.time <= endTime)
+            {
+                yield return null;
+            }
+
+            TransitionTo(GameState.Start);
         }
 
         private bool TryFindPoseAction(string id, out PoseAction action)
