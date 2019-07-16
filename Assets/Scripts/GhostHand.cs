@@ -12,6 +12,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class GhostHand : MonoBehaviour
     {
+        public Material Material;
+
         private GameObject arm;
         private List<Tuple<Joint, GameObject>> fingers;
 
@@ -97,13 +99,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return obj;
         }
 
-        private static GameObject CreateLimbObject(GameObject parentObj, string name, float radius, float length)
+        private GameObject CreateLimbObject(GameObject parentObj, string name, float radius, float length)
         {
             var obj = new GameObject(name);
             obj.transform.SetParent(parentObj.transform, false);
 
             var meshObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(meshObj.GetComponent<Collider>());
+            meshObj.GetComponent<MeshRenderer>().material = Material;
             meshObj.transform.localScale = new Vector3(radius * 2.0f, ArmLength * 0.5f, radius * 2.0f);
             meshObj.transform.localPosition = Vector3.forward * length * 0.5f;
             meshObj.transform.localRotation = Quaternion.FromToRotation(new Vector3(0, 1, 0), Vector3.forward);

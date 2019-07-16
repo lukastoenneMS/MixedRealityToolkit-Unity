@@ -141,6 +141,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba43662c985af5b4eb90732787faf438, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Material: {fileID: 2100000, guid: 3c55769e893c4f4c8c51b7fa69bee2b9, type: 2}
 --- !u!4 &691742832
 Transform:
   m_ObjectHideFlags: 0
@@ -183,7 +184,7 @@ Light:
   serializedVersion: 8
   m_Type: 1
   m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  m_Intensity: 1
+  m_Intensity: 1.4
   m_Range: 10
   m_SpotAngle: 30
   m_CookieSize: 10
@@ -469,7 +470,7 @@ MonoBehaviour:
       m_Calls: []
     m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_text: AAAAAAAA
+  m_text: aaaaaa
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -538,7 +539,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_textInfo:
     textComponent: {fileID: 1792779590}
-    characterCount: 8
+    characterCount: 6
     spriteCount: 0
     spaceCount: 0
     wordCount: 1
@@ -663,6 +664,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NumberOfRounds: 3
+  InitTime: 5
   WelcomeTime: 4
   WavingTime: 2
   WelcomeClip: {fileID: 8300000, guid: 8394487413a7b7d49b8423f2f1f98268, type: 3}
@@ -679,6 +681,8 @@ MonoBehaviour:
   TimeoutClip: {fileID: 8300000, guid: de47bfe9f42c6514189fb4c20593c655, type: 3}
   AnnounceTime: 4
   FinalTime: 8
+  WinClip: {fileID: 0}
+  LoseClip: {fileID: 0}
   poseActions:
   - filename: PoseConfig_Rock.json
     clip: {fileID: 8300000, guid: abc578bebbee8d34db90e886327cde1f, type: 3}
