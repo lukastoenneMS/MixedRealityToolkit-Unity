@@ -454,14 +454,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93bf0bc83f6dd8f429d88dd509d56907, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GoodMatchError: 0.01
-  SloppyMatchError: 0.05
-  Voice: {fileID: 1881614809}
-  GhostHand: {fileID: 691742831}
-  IndicatorPrefab: {fileID: 4963591932516611596, guid: 97d6661fc1d2d2b43b5e7a9c38f5cf63,
-    type: 3}
   NumberOfRounds: 3
-  WaitTime: 2
+  WelcomeTime: 2
+  WelcomeClip: {fileID: 8300000, guid: 8394487413a7b7d49b8423f2f1f98268, type: 3}
+  StartTime: 2
   CountTime: 3
   CompareTime: 0.8
   TimeoutTime: 2.5
@@ -474,6 +470,15 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 0a3ab42170b476c4ba930af7f1a52f7c, type: 3}
   - filename: PoseConfig_Scissors.json
     clip: {fileID: 8300000, guid: d359331cc517381439ceae942c0cf758, type: 3}
+  - filename: PoseConfig_Greet.json
+    clip: {fileID: 0}
+  GhostHand: {fileID: 691742831}
+  GhostHandSmoothTime: 0.15
+  GhostHandMaxSpeed: 150
+  GoodMatchError: 0.01
+  SloppyMatchError: 0.05
+  Voice: {fileID: 1881614809}
+  IndicatorPrefab: {fileID: 0}
 --- !u!82 &1881614809
 AudioSource:
   m_ObjectHideFlags: 0

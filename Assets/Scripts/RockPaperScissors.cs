@@ -18,7 +18,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         public enum GameState
         {
-            Idle,
+            None,
+            Welcome,
+            WaitForTracking,
             Start,
             Counting,
             Comparing,
@@ -26,12 +28,17 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Announce,
             Final,
         }
-        public GameState State { get; private set; } = GameState.Idle;
+        public GameState State { get; private set; } = GameState.None;
 
         public int NumberOfRounds = 3;
         public int Round { get; private set; } = 1;
+        public string ChosenPose { get; private set; } = "";
+        private System.Random rng;
+        private static readonly string[] RandomPoses = new string[] { "rock", "paper", "scissors" };
 
-        public float WaitTime = 2.0f;
+        public float WelcomeTime = 2.0f;
+        public AudioClip WelcomeClip;
+        public float StartTime = 2.0f;
         public float CountTime = 3.0f;
         public float CompareTime = 0.8f;
         public float TimeoutTime = 2.5f;
@@ -48,6 +55,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             public string filename;
             public AudioClip clip;
+            public AudioClip clipMyWin;
+            public AudioClip clipYourWin;
 
             [NonSerialized]
             public PoseConfiguration poseConfig;
@@ -60,6 +69,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             new PoseAction() { id="rock", filename="PoseConfig_Rock.json" },
             new PoseAction() { id="paper", filename="PoseConfig_Paper.json" },
             new PoseAction() { id="scissors", filename="PoseConfig_Scissors.json" },
+            new PoseAction() { id="greet", filename="PoseConfig_Greet.json" },
         };
 
         public GhostHand GhostHand;
@@ -67,6 +77,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public float GhostHandVelocity { get; private set; } = 0.0f;
         public float GhostHandSmoothTime = 0.15f;
         public float GhostHandMaxSpeed = 150.0f;
+        private static readonly Vector3 GhostTargetForward = new Vector3(0.0f, -0.2f, -0.6f);
+        private static readonly Vector3 GhostTargetUp = new Vector3(0.0f, 0.8f, -0.1f);
+        private static readonly Vector3 GhostTargetWaveLeft = new Vector3(0.3f, 0.8f, -0.1f);
+        private static readonly Vector3 GhostTargetWaveRight = new Vector3(-0.3f, 0.8f, -0.1f);
         private static readonly Vector3 GhostTargetCountLeft = new Vector3(0.3f, 0.8f, -0.5f);
         private static readonly Vector3 GhostTargetCountRight = new Vector3(-0.3f, 0.8f, -0.5f);
         private static readonly Vector3 GhostTargetCountDown = new Vector3(0.0f, -0.2f, -0.5f);
@@ -102,6 +116,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Debug.Assert(action.isLoaded);
             }
 
+            rng = new System.Random();
+
             if (IndicatorPrefab)
             {
                 indicator = new GameObject("Indicator");
@@ -116,108 +132,112 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             materialProps = new MaterialPropertyBlock();
 
-            if (GhostHand)
-            {
-                if (poseActions[0].isLoaded)
-                {
-                    GhostHand.SetPose(GetJointsFromPose(poseActions[0].poseConfig));
-                }
-                GhostHand.ArmDirection = GhostHandTarget;
-            }
+            GhostHandTarget = Vector3.back;
+            SnapGhostHand();
+
+            TransitionTo(GameState.Welcome);
         }
 
         void Update()
         {
             StateTime += Time.deltaTime;
 
-            if (!IsTracking)
+            if (State == GameState.Welcome)
             {
-                TransitionTo(GameState.Idle);
-                return;
+                if (StateTime > WelcomeTime && !Voice.isPlaying)
+                {
+                    TransitionTo(GameState.Start);
+                }
+
+                int numWavings = 3;
+                float relTime = StateTime / WelcomeTime * numWavings;
+                if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
+                else                        { GhostHandTarget = GhostTargetWaveLeft; }
             }
-
-            switch (State)
+            else if (State == GameState.WaitForTracking)
             {
-                case GameState.Idle:
-                    if (IsTracking)
-                    {
-                        TransitionTo(GameState.Start);
-                    }
-                    break;
+                if (IsTracking)
+                {
+                    TransitionTo(GameState.Start);
+                }
 
-                case GameState.Start:
-                    if (StateTime > WaitTime)
-                    {
-                        TransitionTo(GameState.Counting);
-                    }
-
-                    GhostHandTarget = GhostTargetCountRight;
-                    break;
-
-                case GameState.Counting:
-                    if (StateTime > CountTime)
-                    {
-                        TransitionTo(GameState.Comparing);
-                    }
-
-                    float relTime = StateTime / CountTime * 5.0f;
-                    if (relTime < 1.0f)
-                    {
-                        GhostHandTarget = GhostTargetCountDown;
-                    }
-                    else if (relTime < 2.0f)
-                    {
-                        GhostHandTarget = GhostTargetCountLeft;
-                    }
-                    else if (relTime < 3.0f)
-                    {
-                        GhostHandTarget = GhostTargetCountDown;
-                    }
-                    else if (relTime < 4.0f)
-                    {
-                        GhostHandTarget = GhostTargetCountRight;
-                    }
-                    else
-                    {
-                        GhostHandTarget = GhostTargetCountDown;
-                    }
-                    break;
-
-                case GameState.Comparing:
-                    if (StateTime > CompareTime)
-                    {
-                        TransitionTo(GameState.Timeout);
-                    }
-                    break;
-
-                case GameState.Timeout:
-                    if (StateTime > TimeoutTime)
-                    {
-                        TransitionTo(GameState.Counting);
-                    }
-                    break;
-
-                case GameState.Announce:
-                    if (StateTime > AnnounceTime)
-                    {
-                        if (Round < NumberOfRounds)
+                GhostHandTarget = GhostTargetForward;
+            }
+            else if (!IsTracking)
+            {
+                TransitionTo(GameState.WaitForTracking);
+            }
+            else
+            {
+                switch (State)
+                {
+                    case GameState.Start:
+                        if (StateTime > StartTime)
                         {
-                            TransitionTo(GameState.Final);
+                            TransitionTo(GameState.Counting);
                         }
-                        else
+
+                        GhostHandTarget = GhostTargetCountRight;
+                        break;
+
+                    case GameState.Counting:
+                        if (StateTime > CountTime)
                         {
-                            Round += 1;
+                            TransitionTo(GameState.Comparing);
+                        }
+
+                        float relTime = StateTime / CountTime * 5.0f;
+                        if (relTime < 1.0f)         { GhostHandTarget = GhostTargetCountDown; }
+                        else if (relTime < 2.0f)    { GhostHandTarget = GhostTargetCountLeft; }
+                        else if (relTime < 3.0f)    { GhostHandTarget = GhostTargetCountDown; }
+                        else if (relTime < 4.0f)    { GhostHandTarget = GhostTargetCountRight; }
+                        else                        { GhostHandTarget = GhostTargetCountDown; }
+                        break;
+
+                    case GameState.Comparing:
+                        if (StateTime > CompareTime)
+                        {
+                            TransitionTo(GameState.Timeout);
+                        }
+
+                        GhostHandTarget = GhostTargetForward;
+                        break;
+
+                    case GameState.Timeout:
+                        if (StateTime > TimeoutTime)
+                        {
+                            TransitionTo(GameState.Counting);
+                        }
+
+                        GhostHandTarget = GhostTargetUp;
+                        break;
+
+                    case GameState.Announce:
+                        if (StateTime > AnnounceTime)
+                        {
+                            if (Round < NumberOfRounds)
+                            {
+                                TransitionTo(GameState.Final);
+                            }
+                            else
+                            {
+                                Round += 1;
+                                TransitionTo(GameState.Start);
+                            }
+                        }
+
+                        GhostHandTarget = GhostTargetUp;
+                        break;
+
+                    case GameState.Final:
+                        if (StateTime > FinalTime)
+                        {
                             TransitionTo(GameState.Start);
                         }
-                    }
-                    break;
 
-                case GameState.Final:
-                    if (StateTime > FinalTime)
-                    {
-                        TransitionTo(GameState.Start);
-                    }
-                    break;
+                        GhostHandTarget = GhostTargetUp;
+                        break;
+                }
             }
 
             AnimateGhostHand();
@@ -245,22 +265,80 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             StateTime = 0.0f;
             switch (newState)
             {
-                case GameState.Idle:
+                case GameState.Welcome:
+                    SetGhostPose("greet");
+                    Voice.PlayOneShot(WelcomeClip);
+                    break;
+
+                case GameState.Start:
+                    SetGhostPose("rock");
+                    break;
+
+                case GameState.Counting:
+                    SetGhostPose("rock");
+                    break;
+
+                case GameState.Comparing:
+                    ChosenPose = RandomPoses[rng.Next() % 3];
+                    SetGhostPose(ChosenPose);
+                    break;
+
+                case GameState.Timeout:
+                    SetGhostPose("greet");
+                    break;
+
+                case GameState.Announce:
+                    SetGhostPose("greet");
+                    break;
+
+                case GameState.Final:
+                    SetGhostPose("greet");
                     break;
             }
 
             return true;
         }
 
+        private bool TryFindPoseAction(string id, out PoseAction action)
+        {
+            action = Array.Find(poseActions, p => p.id == id);
+            return action != null;
+        }
+
+        private void SetGhostPose(string id)
+        {
+            if (GhostHand)
+            {
+                if (TryFindPoseAction(id, out PoseAction action))
+                {
+                    if (action.isLoaded)
+                    {
+                        GhostHand.SetPose(GetJointsFromPose(action.poseConfig));
+                    }
+                }
+            }
+        }
+
+        private void SnapGhostHand()
+        {
+            if (GhostHand)
+            {
+                GhostHand.ArmDirection = GhostHandTarget;
+            }
+        }
+
         private void AnimateGhostHand()
         {
-            Quaternion.FromToRotation(GhostHand.ArmDirection, GhostHandTarget).ToAngleAxis(out float angle, out Vector3 axis);
+            if (GhostHand)
+            {
+                Quaternion.FromToRotation(GhostHand.ArmDirection, GhostHandTarget).ToAngleAxis(out float angle, out Vector3 axis);
 
-            float velocity = GhostHandVelocity;
-            angle = Mathf.SmoothDampAngle(angle, 0.0f, ref velocity, GhostHandSmoothTime, GhostHandMaxSpeed);
-            GhostHandVelocity = velocity;
+                float velocity = GhostHandVelocity;
+                angle = Mathf.SmoothDampAngle(angle, 0.0f, ref velocity, GhostHandSmoothTime, GhostHandMaxSpeed);
+                GhostHandVelocity = velocity;
 
-            GhostHand.ArmDirection = Quaternion.AngleAxis(-angle, axis) * GhostHandTarget;
+                GhostHand.ArmDirection = Quaternion.AngleAxis(-angle, axis) * GhostHandTarget;
+            }
         }
 
         protected override void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)

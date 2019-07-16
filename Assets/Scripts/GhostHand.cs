@@ -130,7 +130,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private static void SetLimbDirection(GameObject obj, Vector3 dir)
         {
-            obj.transform.rotation = Quaternion.LookRotation(dir);
+            obj.transform.rotation = Quaternion.LookRotation(dir, Vector3.right) * Quaternion.Euler(0, 0, -90);
         }
 
         private static Dictionary<Joint, Joint> FingerEnd = new Dictionary<Joint, Joint>()
