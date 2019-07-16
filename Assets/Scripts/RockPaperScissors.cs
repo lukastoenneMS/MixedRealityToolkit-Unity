@@ -32,16 +32,19 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public int NumberOfRounds = 3;
         public int Round { get; private set; } = 1;
-        public string ChosenPose { get; private set; } = "";
+        public PoseAction ChosenPose { get; private set; } = null;
+        public PoseAction DetectedPose { get; private set; } = null;
         private System.Random rng;
-        private static readonly string[] RandomPoses = new string[] { "rock", "paper", "scissors" };
 
         public float WelcomeTime = 2.0f;
         public AudioClip WelcomeClip;
         public float StartTime = 2.0f;
+        public AudioClip StartClip;
         public float CountTime = 3.0f;
+        public AudioClip[] CountClips;
         public float CompareTime = 0.8f;
         public float TimeoutTime = 2.5f;
+        public AudioClip TimeoutClip;
         public float AnnounceTime = 6.0f;
         public float FinalTime = 8.0f;
 
@@ -71,6 +74,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             new PoseAction() { id="scissors", filename="PoseConfig_Scissors.json" },
             new PoseAction() { id="greet", filename="PoseConfig_Greet.json" },
         };
+        private PoseAction[] ValidPoses;
 
         public GhostHand GhostHand;
         public Vector3 GhostHandTarget { get; private set; } = Vector3.back;
@@ -89,7 +93,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public float GoodMatchError = 0.01f;
         public float SloppyMatchError = 0.05f;
         private readonly PoseEvaluator evaluator = new PoseEvaluator();
-        private float lastMatchTime = 0.0f;
 
         public AudioSource Voice;
         public GameObject IndicatorPrefab;
@@ -116,6 +119,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Debug.Assert(action.isLoaded);
             }
 
+            ValidPoses = new PoseAction[] { poseActions[0], poseActions[1], poseActions[2] };
             rng = new System.Random();
 
             if (IndicatorPrefab)
@@ -144,7 +148,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             if (State == GameState.Welcome)
             {
-                if (StateTime > WelcomeTime && !Voice.isPlaying)
+                if (StateTime > WelcomeTime && !IsPlayingMessage)
                 {
                     TransitionTo(GameState.Start);
                 }
@@ -197,7 +201,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     case GameState.Comparing:
                         if (StateTime > CompareTime)
                         {
-                            TransitionTo(GameState.Timeout);
+                            if (DetectedPose != null)
+                            {
+                                TransitionTo(GameState.Announce);
+                            }
+                            else
+                            {
+                                TransitionTo(GameState.Timeout);
+                            }
                         }
 
                         GhostHandTarget = GhostTargetForward;
@@ -267,11 +278,15 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 case GameState.Welcome:
                     SetGhostPose("greet");
-                    Voice.PlayOneShot(WelcomeClip);
+                    PlayMessage(WelcomeClip);
                     break;
 
                 case GameState.Start:
+                    ChosenPose = null;
+                    DetectedPose = null;
+
                     SetGhostPose("rock");
+                    PlayMessage(StartClip);
                     break;
 
                 case GameState.Counting:
@@ -279,12 +294,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     break;
 
                 case GameState.Comparing:
-                    ChosenPose = RandomPoses[rng.Next() % 3];
+                    ChosenPose = ValidPoses[rng.Next() % 3];
                     SetGhostPose(ChosenPose);
                     break;
 
                 case GameState.Timeout:
                     SetGhostPose("greet");
+                    PlayMessage(TimeoutClip);
                     break;
 
                 case GameState.Announce:
@@ -305,16 +321,31 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return action != null;
         }
 
+        private void PlayMessage(AudioClip clip)
+        {
+            if (Voice)
+            {
+                Voice.PlayOneShot(clip);
+            }
+        }
+
+        private bool IsPlayingMessage => Voice ? Voice.isPlaying : false;
+
         private void SetGhostPose(string id)
+        {
+            if (TryFindPoseAction(id, out PoseAction action))
+            {
+                SetGhostPose(action);
+            }
+        }
+
+        private void SetGhostPose(PoseAction action)
         {
             if (GhostHand)
             {
-                if (TryFindPoseAction(id, out PoseAction action))
+                if (action != null && action.isLoaded)
                 {
-                    if (action.isLoaded)
-                    {
-                        GhostHand.SetPose(GetJointsFromPose(action.poseConfig));
-                    }
+                    GhostHand.SetPose(GetJointsFromPose(action.poseConfig));
                 }
             }
         }
@@ -343,27 +374,26 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         protected override void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)
         {
+            if (State != GameState.Comparing)
+            {
+                return;
+            }
+            if (DetectedPose != null)
+            {
+                return;
+            }
+
             Vector3[] points = GetPointsFromJoints(joints);
             float sqrMaxError = GoodMatchError * GoodMatchError;
 
-            for (int i = 0; i < poseActions.Length; ++i)
+            foreach (var action in ValidPoses)
             {
-                var action = poseActions[i];
                 PoseMatch match = evaluator.EvaluatePose(points, action.poseConfig);
                 float MSE = evaluator.ComputeMeanError(points, action.poseConfig, match, true);
 
-                float time = Time.time;
-                if (time > lastMatchTime + 1.2f)
+                if (MSE <= sqrMaxError)
                 {
-                    if (MSE <= sqrMaxError)
-                    {
-                        lastMatchTime = time;
-
-                        if (Voice)
-                        {
-                            Voice.PlayOneShot(action.clip);
-                        }
-                    }
+                    DetectedPose = action;
                 }
 
                 if (indicator)

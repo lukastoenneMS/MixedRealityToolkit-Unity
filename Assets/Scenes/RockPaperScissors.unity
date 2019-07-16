@@ -461,17 +461,26 @@ MonoBehaviour:
   CountTime: 3
   CompareTime: 0.8
   TimeoutTime: 2.5
+  TimeoutClip: {fileID: 8300000, guid: de47bfe9f42c6514189fb4c20593c655, type: 3}
   AnnounceTime: 6
   FinalTime: 8
   poseActions:
   - filename: PoseConfig_Rock.json
     clip: {fileID: 8300000, guid: abc578bebbee8d34db90e886327cde1f, type: 3}
+    clipMyWin: {fileID: 0}
+    clipYourWin: {fileID: 0}
   - filename: PoseConfig_Paper.json
     clip: {fileID: 8300000, guid: 0a3ab42170b476c4ba930af7f1a52f7c, type: 3}
+    clipMyWin: {fileID: 0}
+    clipYourWin: {fileID: 0}
   - filename: PoseConfig_Scissors.json
     clip: {fileID: 8300000, guid: d359331cc517381439ceae942c0cf758, type: 3}
+    clipMyWin: {fileID: 0}
+    clipYourWin: {fileID: 0}
   - filename: PoseConfig_Greet.json
     clip: {fileID: 0}
+    clipMyWin: {fileID: 0}
+    clipYourWin: {fileID: 0}
   GhostHand: {fileID: 691742831}
   GhostHandSmoothTime: 0.15
   GhostHandMaxSpeed: 150
