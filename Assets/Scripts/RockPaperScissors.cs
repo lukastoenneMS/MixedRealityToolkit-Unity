@@ -426,7 +426,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 yield return null;
             }
 
-            if (Round < NumberOfRounds)
+            if (win == 0)
+            {
+                TransitionTo(GameState.Start);
+            }
+            else if (Round < NumberOfRounds)
             {
                 Round += 1;
                 TransitionTo(GameState.Start);
