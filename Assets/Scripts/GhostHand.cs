@@ -12,7 +12,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class GhostHand : MonoBehaviour
     {
-        private GameObject root;
         private GameObject arm;
         private List<Tuple<Joint, GameObject>> fingers;
 
@@ -21,10 +20,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         const float ArmRadius = 0.022f;
         const float FingerRadius = 0.007f;
 
-        public void SetArmDirection(Vector3 dir)
-        {
-            SetLimbDirection(arm, dir);
-        }
+        public Vector3 ArmDirection { get => arm.transform.forward; set => SetLimbDirection(arm, value); }
 
         public void SetPose(IDictionary<Joint, Vector3> joints)
         {
@@ -55,9 +51,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         void Awake()
         {
-            root = new GameObject("GhostHand");
-
-            arm = CreateLimbObject(root, "Arm", ArmRadius, ArmLength);
+            arm = CreateLimbObject(gameObject, "Arm", ArmRadius, ArmLength);
 
             fingers = new List<Tuple<Joint, GameObject>>();
             CreateFinger(Joint.ThumbMetacarpalJoint,      "ThumbMetacarpalJoint", FingerRadius, 1);

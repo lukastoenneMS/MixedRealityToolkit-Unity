@@ -16,16 +16,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class RockPaperScissors : HandTracker
     {
-        public const float MinimumError = 0.0001f;
-        public float GoodMatchError = 0.01f;
-        public float SloppyMatchError = 0.05f;
-
-        public AudioSource Voice;
-
-        public GhostHand ghostHand;
-
-        public GameObject IndicatorPrefab;
-
         public enum GameState
         {
             Idle,
@@ -36,7 +26,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Announce,
             Final,
         }
-
         public GameState State { get; private set; } = GameState.Idle;
 
         public int NumberOfRounds = 3;
@@ -66,8 +55,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public bool isLoaded => poseConfig != null;
         }
 
-        private float lastMatchTime = 0.0f;
-
         public PoseAction[] poseActions = new PoseAction[]
         {
             new PoseAction() { id="rock", filename="PoseConfig_Rock.json" },
@@ -75,8 +62,23 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             new PoseAction() { id="scissors", filename="PoseConfig_Scissors.json" },
         };
 
-        private readonly PoseEvaluator evaluator = new PoseEvaluator();
+        public GhostHand GhostHand;
+        public Vector3 GhostHandTarget { get; private set; } = Vector3.back;
+        public float GhostHandVelocity { get; private set; } = 0.0f;
+        public float GhostHandSmoothTime = 0.15f;
+        public float GhostHandMaxSpeed = 150.0f;
+        private static readonly Vector3 GhostTargetCountLeft = new Vector3(0.3f, 0.8f, -0.5f);
+        private static readonly Vector3 GhostTargetCountRight = new Vector3(-0.3f, 0.8f, -0.5f);
+        private static readonly Vector3 GhostTargetCountDown = new Vector3(0.0f, -0.2f, -0.5f);
 
+        public const float MinimumError = 0.0001f;
+        public float GoodMatchError = 0.01f;
+        public float SloppyMatchError = 0.05f;
+        private readonly PoseEvaluator evaluator = new PoseEvaluator();
+        private float lastMatchTime = 0.0f;
+
+        public AudioSource Voice;
+        public GameObject IndicatorPrefab;
         private GameObject indicator;
         private MaterialPropertyBlock materialProps;
 
@@ -114,12 +116,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             materialProps = new MaterialPropertyBlock();
 
-            if (ghostHand)
+            if (GhostHand)
             {
                 if (poseActions[0].isLoaded)
                 {
-                    ghostHand.SetPose(GetJointsFromPose(poseActions[0].poseConfig));
+                    GhostHand.SetPose(GetJointsFromPose(poseActions[0].poseConfig));
                 }
+                GhostHand.ArmDirection = GhostHandTarget;
             }
         }
 
@@ -147,12 +150,36 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     {
                         TransitionTo(GameState.Counting);
                     }
+
+                    GhostHandTarget = GhostTargetCountRight;
                     break;
 
                 case GameState.Counting:
                     if (StateTime > CountTime)
                     {
                         TransitionTo(GameState.Comparing);
+                    }
+
+                    float relTime = StateTime / CountTime * 5.0f;
+                    if (relTime < 1.0f)
+                    {
+                        GhostHandTarget = GhostTargetCountDown;
+                    }
+                    else if (relTime < 2.0f)
+                    {
+                        GhostHandTarget = GhostTargetCountLeft;
+                    }
+                    else if (relTime < 3.0f)
+                    {
+                        GhostHandTarget = GhostTargetCountDown;
+                    }
+                    else if (relTime < 4.0f)
+                    {
+                        GhostHandTarget = GhostTargetCountRight;
+                    }
+                    else
+                    {
+                        GhostHandTarget = GhostTargetCountDown;
                     }
                     break;
 
@@ -192,6 +219,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     }
                     break;
             }
+
+            AnimateGhostHand();
         }
 
         private bool TransitionTo(GameState newState)
@@ -214,11 +243,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
 
             StateTime = 0.0f;
-            // switch (newState)
-            // {
-            // }
+            switch (newState)
+            {
+                case GameState.Idle:
+                    break;
+            }
 
             return true;
+        }
+
+        private void AnimateGhostHand()
+        {
+            Quaternion.FromToRotation(GhostHand.ArmDirection, GhostHandTarget).ToAngleAxis(out float angle, out Vector3 axis);
+
+            float velocity = GhostHandVelocity;
+            angle = Mathf.SmoothDampAngle(angle, 0.0f, ref velocity, GhostHandSmoothTime, GhostHandMaxSpeed);
+            GhostHandVelocity = velocity;
+
+            GhostHand.ArmDirection = Quaternion.AngleAxis(-angle, axis) * GhostHandTarget;
         }
 
         protected override void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)
