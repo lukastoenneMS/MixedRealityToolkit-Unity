@@ -455,10 +455,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NumberOfRounds: 3
-  WelcomeTime: 2
+  WelcomeTime: 4
+  WavingTime: 2
   WelcomeClip: {fileID: 8300000, guid: 8394487413a7b7d49b8423f2f1f98268, type: 3}
   StartTime: 2
-  CountTime: 3
+  StartClip: {fileID: 8300000, guid: 1f17938c26cf37648906a2b5734020f4, type: 3}
+  CountTime: 2.5
+  CountClips:
+  - {fileID: 8300000, guid: 8ddca4713c3924e4dafe49b3cfce98ed, type: 3}
+  - {fileID: 8300000, guid: df27c8b119e991541bb7ab7a2510befe, type: 3}
+  - {fileID: 8300000, guid: 9e54726f44f0d2a4b95d9765548d26e2, type: 3}
   CompareTime: 0.8
   TimeoutTime: 2.5
   TimeoutClip: {fileID: 8300000, guid: de47bfe9f42c6514189fb4c20593c655, type: 3}

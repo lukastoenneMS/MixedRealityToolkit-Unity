@@ -38,11 +38,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public PoseAction DetectedPose { get; private set; } = null;
         private System.Random rng;
 
-        public float WelcomeTime = 2.0f;
+        public float WelcomeTime = 4.0f;
+        public float WavingTime = 2.0f;
         public AudioClip WelcomeClip;
         public float StartTime = 2.0f;
         public AudioClip StartClip;
-        public float CountTime = 3.0f;
+        public float CountTime = 2.5f;
         public AudioClip[] CountClips;
         public float CompareTime = 0.8f;
         public float TimeoutTime = 2.5f;
@@ -202,19 +203,27 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             SetGhostPose("greet");
             PlayMessage(WelcomeClip);
 
+            int numWavings = 3;
+
             float startTime = Time.time;
             float endTime = startTime + WelcomeTime;
             while (Time.time <= endTime)
             {
-                int numWavings = 3;
-                float relTime = (Time.time - startTime) / WelcomeTime * numWavings;
-                if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
-                else                        { GhostHandTarget = GhostTargetWaveLeft; }
+                if (Time.time <= startTime + WavingTime)
+                {
+                    float relTime = (Time.time - startTime) / WavingTime * numWavings;
+                    if (relTime % 1.0f < 0.5f)  { GhostHandTarget = GhostTargetWaveRight; }
+                    else                        { GhostHandTarget = GhostTargetWaveLeft; }
+                }
+                else
+                {
+                    GhostHandTarget = GhostTargetForward;
+                }
     
                 yield return null;
             }
 
-            TransitionTo(GameState.Start);
+            TransitionTo(GameState.WaitForTracking);
         }
 
         private IEnumerator RunGameStateWaitForTracking()
@@ -257,6 +266,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             SetGhostPose("rock");
 
+            int count = -1;
             float startTime = Time.time;
             float endTime = startTime + CountTime;
             while (Time.time <= endTime)
@@ -267,11 +277,42 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 }
 
                 float relTime = (Time.time - startTime) / CountTime * 5.0f;
-                if (relTime < 1.0f)         { GhostHandTarget = GhostTargetCountDown; }
-                else if (relTime < 2.0f)    { GhostHandTarget = GhostTargetCountLeft; }
-                else if (relTime < 3.0f)    { GhostHandTarget = GhostTargetCountDown; }
-                else if (relTime < 4.0f)    { GhostHandTarget = GhostTargetCountRight; }
-                else                        { GhostHandTarget = GhostTargetCountDown; }
+                int newCount = (int)relTime;
+                if (newCount > count)
+                {
+                    count = newCount;
+
+                    switch (newCount)
+                    {
+                        case 0:
+                            GhostHandTarget = GhostTargetCountDown;
+                            if (CountClips.Length > 0)
+                            {
+                                PlayMessage(CountClips[0]);
+                            }
+                            break;
+                        case 1:
+                            GhostHandTarget = GhostTargetCountLeft;
+                            break;
+                        case 2:
+                            GhostHandTarget = GhostTargetCountDown;
+                            if (CountClips.Length > 1)
+                            {
+                                PlayMessage(CountClips[1]);
+                            }
+                            break;
+                        case 3:
+                            GhostHandTarget = GhostTargetCountRight;
+                            break;
+                        case 4:
+                            GhostHandTarget = GhostTargetCountDown;
+                            if (CountClips.Length > 2)
+                            {
+                                PlayMessage(CountClips[2]);
+                            }
+                            break;
+                    }
+                }
 
                 yield return null;
             }
