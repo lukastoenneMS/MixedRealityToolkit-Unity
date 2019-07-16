@@ -681,8 +681,8 @@ MonoBehaviour:
   TimeoutClip: {fileID: 8300000, guid: de47bfe9f42c6514189fb4c20593c655, type: 3}
   AnnounceTime: 4
   FinalTime: 8
-  WinClip: {fileID: 0}
-  LoseClip: {fileID: 0}
+  WinClip: {fileID: 8300000, guid: 0b21c5f6dd3d31d4bafb833060cbbc17, type: 3}
+  LoseClip: {fileID: 8300000, guid: 51e81203d2de0764bb4ae723eb37101d, type: 3}
   poseActions:
   - filename: PoseConfig_Rock.json
     clip: {fileID: 8300000, guid: abc578bebbee8d34db90e886327cde1f, type: 3}
