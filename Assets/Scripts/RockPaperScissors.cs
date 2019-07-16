@@ -536,10 +536,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 return;
             }
 
-            /// XXX DEBUG
-            DetectedPose = ValidPoses[0];
-            /// XXX DEBUG
-
             Vector3[] points = GetPointsFromJoints(joints);
             float sqrMaxError = GoodMatchError * GoodMatchError;
 
