@@ -9,18 +9,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     // http://blog.wouldbetheologian.com/2011/11/fast-approximate-sqrt-method-in-c.html
     public static class MathUtils
     {
-#if true
-        public static float OneOverSqrt(float z)
-        {
-            FloatIntUnion u;
-            u.tmp = 0;
-            u.f = z;
-            u.tmp -= 1 << 23; /* Subtract 2^m. */
-            u.tmp >>= 1; /* Divide by 2. */
-            u.tmp += 1 << 29; /* Add ((b + 1) / 2) * 2^m. */
-            return u.f;
-        }
-#else // Quake inverse sqrt variant
         public static float OneOverSqrt(float z)
         {
             FloatIntUnion u;
@@ -29,9 +17,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             u.f = z;
             u.tmp = 0x5f375a86 - (u.tmp >> 1);
             u.f = u.f * (1.5f - xhalf * u.f * u.f);
-            return u.f * z;
+            return u.f;
         }
-#endif
 
         [StructLayout(LayoutKind.Explicit)]
         private struct FloatIntUnion
