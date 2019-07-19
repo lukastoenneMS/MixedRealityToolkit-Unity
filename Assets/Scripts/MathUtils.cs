@@ -30,7 +30,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public int tmp;
         }
 
-        private const float sqrtOneHalf = 0.70710678118654752440084436210485f;
+        private const float oneOverSqrtTwo = 0.70710678118654752440084436210485f;
 
         /// <summary>
         /// Compute an approximate Givens rotation on a 2x2 symmetric matrix A.
@@ -55,8 +55,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             float qq = q * q;
             bool b = pp < qq;
             float w = OneOverSqrt(pp + qq);
-            s = b ? w * p : sqrtOneHalf;
-            c = b ? w * q : sqrtOneHalf;
+            s = b ? w * p : oneOverSqrtTwo;
+            c = b ? w * q : oneOverSqrtTwo;
         }
     }
 }

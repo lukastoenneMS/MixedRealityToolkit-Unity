@@ -29,7 +29,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        const float ExpectedGivensEpsilon = 1.0e-6f;
+        const float ExpectedGivensEpsilon = 0.01f;
 
         [Test]
         public void ApproximateGivensRotation()
