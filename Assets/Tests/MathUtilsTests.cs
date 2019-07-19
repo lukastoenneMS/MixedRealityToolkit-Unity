@@ -3,6 +3,7 @@
 
 using NUnit.Framework;
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
@@ -114,6 +115,54 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             Assert.LessOrEqual(Math.Abs(rm.m10), Math.Abs(a21), $"Givens rotation for (({a11}, {a12}), ({a21}, {a22})) does not diagonalize matrix");
             Assert.LessOrEqual(Math.Abs(rm.m01), Math.Abs(a12), $"Givens rotation for (({a11}, {a12}), ({a21}, {a22})) does not diagonalize matrix");
+        }
+
+
+        [Test]
+        public void EigenSolverTest()
+        {
+            float[][] values = new float[][]
+            {
+                new float[] {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+                new float[] {1.0f, 10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+                new float[] {1.0f, 10.0f, 10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+                new float[] {1.0f, 0.0f, 0.0f, 10.0f, 5.0f, 10.0f, 0.0f, 10.0f, 1.0f},
+                new float[] {100.0f, 0.0f, 0.0f, 100.0f, 0.001f, 0.0f, 0.0f, 2.0f, 1.0f},
+                new float[] {10.0f, 5.0f, -3.0f, 100.0f, 0.1f, 1.0f, -20.0f, 2.0f, 1.0f},
+            };
+
+            JacobiEigenSolver solver = new JacobiEigenSolver();
+
+            foreach (float[] v in values)
+            {
+                Matrix4x4 A = Matrix4x4.identity;
+                A.m00 = v[0];
+                A.m10 = v[1];
+                A.m20 = v[2];
+                A.m01 = v[3];
+                A.m11 = v[4];
+                A.m21 = v[5];
+                A.m02 = v[6];
+                A.m12 = v[7];
+                A.m22 = v[8];
+
+                solver.Init(A);
+
+                //Task.WaitAll(solver.Solve());
+                solver.Solve();
+                //solver.SolveStep();
+                //solver.SolveStep();
+                //solver.SolveStep();
+                //for (int i = 0; i < 20; ++i)
+                //{
+                //    solver.SolveStep();
+                //}
+                string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
+                //Debug.Log(str);
+                Debug.Log($"RES={solver.residual} | {str}");
+
+                //Assert.LessOrEqual(solver.residual, solver.squaredErrorThreshold);
+            }
         }
     }
 }
