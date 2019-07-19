@@ -148,20 +148,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                 solver.Init(A);
 
-                //Task.WaitAll(solver.Solve());
                 solver.Solve();
-                //solver.SolveStep();
-                //solver.SolveStep();
-                //solver.SolveStep();
-                //for (int i = 0; i < 20; ++i)
-                //{
-                //    solver.SolveStep();
-                //}
-                string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
-                //Debug.Log(str);
-                Debug.Log($"RES={solver.residual} | {str}");
+                // string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
+                // Debug.Log($"RES={solver.residual} | {str}");
 
-                //Assert.LessOrEqual(solver.residual, solver.squaredErrorThreshold);
+                Assert.LessOrEqual(solver.residual, solver.squaredErrorThreshold);
             }
         }
     }
