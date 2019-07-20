@@ -12,17 +12,27 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         const float ExpectedInvSqrtAccuracy = 0.01f;
 
+        private static readonly float[] values = new float[]
+        {
+            1.0f, 2.0f, 3.0f, 4.0f,
+            0.1f, 0.01f, 0.001f, 1.0e-12f,
+            10.0f, 100.0f, 1000.0f, 1.0e12f,
+            (float)Math.PI, (float)Math.E, 
+        };
+
+        private static readonly float[][] matrices = new float[][]
+        {
+            new float[] {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+            new float[] {1.0f, 10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+            new float[] {1.0f, 10.0f, 10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+            new float[] {1.0f, 0.0f, 0.0f, 10.0f, 5.0f, 10.0f, 0.0f, 10.0f, 1.0f},
+            new float[] {100.0f, 0.0f, 0.0f, 100.0f, 0.001f, 0.0f, 0.0f, 2.0f, 1.0f},
+            new float[] {10.0f, 5.0f, -3.0f, 100.0f, 0.1f, 1.0f, -20.0f, 2.0f, 1.0f},
+        };
+
         [Test]
         public void InvSqrt()
         {
-            float[] values = new float[]
-            {
-                1.0f, 2.0f, 3.0f, 4.0f,
-                0.1f, 0.01f, 0.001f, 1.0e-12f,
-                10.0f, 100.0f, 1000.0f, 1.0e12f,
-                (float)Math.PI, (float)Math.E, 
-            };
-
             foreach (float v in values)
             {
                 float expected = (float)(1.0 / Math.Sqrt(v));
@@ -117,23 +127,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Assert.LessOrEqual(Math.Abs(rm.m01), Math.Abs(a12), $"Givens rotation for (({a11}, {a12}), ({a21}, {a22})) does not diagonalize matrix");
         }
 
-
         [Test]
         public void EigenSolverTest()
         {
-            float[][] values = new float[][]
-            {
-                new float[] {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
-                new float[] {1.0f, 10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
-                new float[] {1.0f, 10.0f, 10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
-                new float[] {1.0f, 0.0f, 0.0f, 10.0f, 5.0f, 10.0f, 0.0f, 10.0f, 1.0f},
-                new float[] {100.0f, 0.0f, 0.0f, 100.0f, 0.001f, 0.0f, 0.0f, 2.0f, 1.0f},
-                new float[] {10.0f, 5.0f, -3.0f, 100.0f, 0.1f, 1.0f, -20.0f, 2.0f, 1.0f},
-            };
-
             JacobiEigenSolver solver = new JacobiEigenSolver();
 
-            foreach (float[] v in values)
+            foreach (float[] v in matrices)
             {
                 Matrix4x4 A = Matrix4x4.identity;
                 A.m00 = v[0];
@@ -153,6 +152,34 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 // Debug.Log($"RES={solver.residual} | {str}");
 
                 Assert.LessOrEqual(solver.residual, solver.squaredErrorThreshold);
+            }
+        }
+
+        [Test]
+        public void SortColumnsTest()
+        {
+            foreach (float[] v in matrices)
+            {
+                Matrix4x4 A = Matrix4x4.identity;
+                A.m00 = v[0];
+                A.m10 = v[1];
+                A.m20 = v[2];
+                A.m01 = v[3];
+                A.m11 = v[4];
+                A.m21 = v[5];
+                A.m02 = v[6];
+                A.m12 = v[7];
+                A.m22 = v[8];
+
+                Matrix4x4 B = A;
+
+                MathUtils.SortColumns(ref A, ref B);
+
+                Assert.GreaterOrEqual(A.GetColumn(0).sqrMagnitude, A.GetColumn(1).sqrMagnitude);
+                Assert.GreaterOrEqual(A.GetColumn(1).sqrMagnitude, A.GetColumn(2).sqrMagnitude);
+
+                Assert.GreaterOrEqual(B.GetColumn(0).sqrMagnitude, B.GetColumn(1).sqrMagnitude);
+                Assert.GreaterOrEqual(B.GetColumn(1).sqrMagnitude, B.GetColumn(2).sqrMagnitude);
             }
         }
     }

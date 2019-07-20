@@ -16,7 +16,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public float residual { get; private set; }
 
-        public float squaredErrorThreshold { get; set; } = 0.005f;
+        public float squaredErrorThreshold { get; set; } = 1.0e-6f;
         public int maxIterations { get; set; } = 30;
 
         public void Init(Matrix4x4 A)
