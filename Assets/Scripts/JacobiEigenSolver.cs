@@ -19,36 +19,27 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     /// </remarks>
     public class JacobiEigenSolver
     {
-        public Matrix4x4 S { get; private set; }
+        public Matrix4x4 S = Matrix4x4.identity;
         /// <remarks>
         /// The paper encourages the use of quaternion-based Givens rotations for efficiency.
         /// Since we are using Unity matrix and quaternion types we have to convert to matrix anyway,
-        /// so the performance gain is not very significant.
+        /// so the performance gain is likely not very significant.
         /// This will be more important for a C++ implementation with efficient math types.
         /// </remarks>
-        public Quaternion Q { get; private set; }
+        public Quaternion Q = Quaternion.identity;
 
-        public int iterations { get; private set; }
-        private int axisPair;
+        public int iterations = 0;
+        private int axisPair = 0;
 
-        public float residual { get; private set; }
+        public float residual = 0.0f;
 
-        public float squaredErrorThreshold { get; set; } = 1.0e-6f;
-        public int maxIterations { get; set; } = 30;
+        public float squaredErrorThreshold = 1.0e-6f;
+        public int maxIterations = 30;
 
-        public void Init(Matrix4x4 A)
+        public void Solve(Matrix4x4 A)
         {
-            this.S = A.transpose * A;
-            Q = Quaternion.identity;
+            Init(A);
 
-            residual = ComputeResidual(A);
-
-            iterations = 0;
-            axisPair = 0;
-        }
-
-        public void Solve()
-        {
             while (iterations < maxIterations)
             {
                 if (residual <= squaredErrorThreshold)
@@ -60,6 +51,17 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
+        public void Init(Matrix4x4 A)
+        {
+            S = A.transpose * A;
+            Q = Quaternion.identity;
+
+            residual = ComputeResidual(A);
+
+            iterations = 0;
+            axisPair = 0;
+        }
+
         public void SolveStep()
         {
             Quaternion Qk = Quaternion.identity;
@@ -67,12 +69,15 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 case 0:
                     MathUtils.ApproximateGivensRotationQuaternion(S.m00, S.m01, S.m11, out Qk.z, out Qk.w);
+                    axisPair = 1;
                     break;
                 case 1:
                     MathUtils.ApproximateGivensRotationQuaternion(S.m22, S.m20, S.m00, out Qk.y, out Qk.w);
+                    axisPair = 2;
                     break;
                 case 2:
                     MathUtils.ApproximateGivensRotationQuaternion(S.m11, S.m12, S.m22, out Qk.x, out Qk.w);
+                    axisPair = 0;
                     break;
             }
 
@@ -83,14 +88,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             //string str = $"[{S.m00:F3} {S.m01:F3} {S.m02:F3}]\n[{S.m10:F3} {S.m11:F3} {S.m12:F3}]\n[{S.m20:F3} {S.m21:F3} {S.m22:F3}]";
             //Debug.Log(str);
 
+            // XXX residual could be computed cheaply by subtracting s^2 from current residual instead (see Section 2.1 of the paper)
             residual = ComputeResidual(S);
-
-            ++axisPair;
-            if (axisPair == 3)
-            {
-                axisPair = 0;
-            }
-
             ++iterations;
         }
 

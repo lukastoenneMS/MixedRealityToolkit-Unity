@@ -21,6 +21,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return u.f;
         }
 
+        public static float Sqrt(float x)
+        {
+            return x * OneOverSqrt(x);
+        }
+
         [StructLayout(LayoutKind.Explicit)]
         private struct FloatIntUnion
         {
@@ -96,14 +101,28 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             r = b ? omega * sh : GivensApproxSinPi8;
         }
 
-        private static void CondSwap(bool c, ref float x, ref float y)
+        public static void CondSwap(bool c, ref float x, ref float y)
         {
             float t = x;
             x = c ? y : x;
             y = c ? t : y;
         }
 
-        private static void CondNegSwap(bool c, ref Vector3 x, ref Vector3 y)
+        public static void CondSwap(bool c, ref Vector3 x, ref Vector3 y)
+        {
+            Vector3 t = x;
+            x = c ? y : x;
+            y = c ? t : y;
+        }
+
+        public static void CondNegSwap(bool c, ref float x, ref float y)
+        {
+            float t = -x;
+            x = c ? y : x;
+            y = c ? t : y;
+        }
+
+        public static void CondNegSwap(bool c, ref Vector3 x, ref Vector3 y)
         {
             Vector3 t = -x;
             x = c ? y : x;

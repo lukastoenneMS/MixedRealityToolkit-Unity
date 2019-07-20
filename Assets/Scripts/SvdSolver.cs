@@ -8,5 +8,19 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class SvdSolver
     {
+        public Quaternion U;
+        public Matrix4x4 S;
+        public Quaternion V;
+
+        private readonly JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
+
+        public void Solve(Matrix4x4 A)
+        {
+            eigenSolver.Solve(A);
+
+            MathUtils.SortColumns(ref S, ref V);
+
+
+        }
     }
 }

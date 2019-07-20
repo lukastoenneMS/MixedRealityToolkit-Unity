@@ -153,9 +153,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 Matrix4x4 A = M;
 
-                solver.Init(A);
-
-                solver.Solve();
+                solver.Solve(A);
                 // string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
                 // Debug.Log($"RES={solver.residual} | {str}");
 
@@ -182,6 +180,27 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                 Assert.GreaterOrEqual(Aq.GetColumn(0).sqrMagnitude, Aq.GetColumn(1).sqrMagnitude);
                 Assert.GreaterOrEqual(Aq.GetColumn(1).sqrMagnitude, Aq.GetColumn(2).sqrMagnitude);
+            }
+        }
+
+        const float ExpectedQREpsilon = 1.0e-4f;
+
+        [Test]
+        public void QRDecompositionTest()
+        {
+            QRSolver solver = new QRSolver();
+
+            foreach (Matrix4x4 M in matrices)
+            {
+                Matrix4x4 A = M;
+
+                solver.Solve(A);
+                // string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
+                // Debug.Log($"RES={solver.residual} | {str}");
+
+                Assert.AreEqual(0.0f, Math.Abs(solver.R.m10), ExpectedQREpsilon);
+                Assert.AreEqual(0.0f, Math.Abs(solver.R.m20), ExpectedQREpsilon);
+                Assert.AreEqual(0.0f, Math.Abs(solver.R.m21), ExpectedQREpsilon);
             }
         }
     }
