@@ -64,9 +64,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         // 3 + 2*sqrt(2)
         private const float GivensApproxGamma = 5.8284271247461900976033774484194f;
         // cos(pi/8)
-        private const float GivensApproxCosPi8 = 0.99997651217454865478849954406816f;
+        private const float GivensApproxCosPi8 = 0.92387953251128675612818318939679f;
         // sin(pi/8)
-        private const float GivensApproxSinPi8 = 0.00685383828411102723918684180104f;
+        private const float GivensApproxSinPi8 = 0.3826834323650897717284599840304f;
 
         /// <summary>
         /// Compute an approximate Givens rotation on a 2x2 symmetric matrix A.
@@ -84,16 +84,16 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         /// and elementary floating point operations.
         /// University of Wisconsin-Madison Department of Computer Sciences, 2011.
         /// </remarks>
-        public static void ApproximateGivensRotationQuaternion(float a11, float a12, float a22, out float x, out float w)
+        public static void ApproximateGivensRotationQuaternion(float a11, float a12, float a22, out float r, out float w)
         {
             float ch = 2.0f * (a11 - a22);
             float cch = ch * ch;
-            float sh = a12;
+            float sh = a12; 
             float ssh = sh * sh;
-            bool b = GivensApproxGamma * ssh < cch;
+            bool b = (GivensApproxGamma * ssh) < cch;
             float omega = OneOverSqrt(cch + ssh);
-            x = b ? omega * ch : GivensApproxCosPi8;
-            w = b ? omega * sh : GivensApproxSinPi8;
+            w = b ? omega * ch : GivensApproxCosPi8;
+            r = b ? omega * sh : GivensApproxSinPi8;
         }
 
         private static void CondSwap(bool c, ref float x, ref float y)
@@ -147,6 +147,42 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             V.SetColumn(0, v1);
             V.SetColumn(1, v2);
             V.SetColumn(2, v3);
+        }
+
+        /// <summary>
+        /// Sorts columns in both B and V based on magnitude of columns in B in descending order.
+        /// </summary>
+        /// <remarks>
+        /// Quaternion variant that applies matrix-equivalent operation on V.
+        /// </remarks>
+        public static void SortColumns(ref Matrix4x4 B, ref Quaternion V)
+        {
+            Vector3 b1 = B.GetColumn(0);
+            Vector3 b2 = B.GetColumn(1);
+            Vector3 b3 = B.GetColumn(2);
+            float p1 = b1.sqrMagnitude;
+            float p2 = b2.sqrMagnitude;
+            float p3 = b3.sqrMagnitude;
+            bool c;
+            
+            c = p1 < p2;
+            CondNegSwap(c, ref b1, ref b2);
+            V = V * new Quaternion(0, 0, c ? 1 : 0, 1);
+            CondSwap(c, ref p1, ref p2);
+
+            c = p1 < p3;
+            CondNegSwap(c, ref b1, ref b3);
+            V = V * new Quaternion(0, c ? 1 : 0, 0, 1);
+            CondSwap(c, ref p1, ref p3);
+
+            c = p2 < p3;
+            CondNegSwap(c, ref b2, ref b3);
+            V = V * new Quaternion(c ? 1 : 0, 0, 0, 1);
+            CondSwap(c, ref p2, ref p3);
+
+            B.SetColumn(0, b1);
+            B.SetColumn(1, b2);
+            B.SetColumn(2, b3);
         }
     }
 }

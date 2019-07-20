@@ -3,6 +3,8 @@
 
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -20,7 +22,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             (float)Math.PI, (float)Math.E, 
         };
 
-        private static readonly float[][] matrices = new float[][]
+        private static readonly float[][] matrixValues = new float[][]
         {
             new float[] {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
             new float[] {1.0f, 10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f},
@@ -29,6 +31,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             new float[] {100.0f, 0.0f, 0.0f, 100.0f, 0.001f, 0.0f, 0.0f, 2.0f, 1.0f},
             new float[] {10.0f, 5.0f, -3.0f, 100.0f, 0.1f, 1.0f, -20.0f, 2.0f, 1.0f},
         };
+
+        private static IEnumerable<Matrix4x4> matrices => matrixValues.Select(m =>
+        {
+            Matrix4x4 A = Matrix4x4.identity;
+            A.m00 = m[0];
+            A.m10 = m[1];
+            A.m20 = m[2];
+            A.m01 = m[3];
+            A.m11 = m[4];
+            A.m21 = m[5];
+            A.m02 = m[6];
+            A.m12 = m[7];
+            A.m22 = m[8];
+            return A;
+        });
 
         [Test]
         public void InvSqrt()
@@ -132,18 +149,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             JacobiEigenSolver solver = new JacobiEigenSolver();
 
-            foreach (float[] v in matrices)
+            foreach (Matrix4x4 M in matrices)
             {
-                Matrix4x4 A = Matrix4x4.identity;
-                A.m00 = v[0];
-                A.m10 = v[1];
-                A.m20 = v[2];
-                A.m01 = v[3];
-                A.m11 = v[4];
-                A.m21 = v[5];
-                A.m02 = v[6];
-                A.m12 = v[7];
-                A.m22 = v[8];
+                Matrix4x4 A = M;
 
                 solver.Init(A);
 
@@ -158,28 +166,22 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         [Test]
         public void SortColumnsTest()
         {
-            foreach (float[] v in matrices)
+            foreach (Matrix4x4 M in matrices)
             {
-                Matrix4x4 A = Matrix4x4.identity;
-                A.m00 = v[0];
-                A.m10 = v[1];
-                A.m20 = v[2];
-                A.m01 = v[3];
-                A.m11 = v[4];
-                A.m21 = v[5];
-                A.m02 = v[6];
-                A.m12 = v[7];
-                A.m22 = v[8];
+                Matrix4x4 Am = M;
+                Matrix4x4 V = M;
 
-                Matrix4x4 B = A;
+                MathUtils.SortColumns(ref Am, ref V);
 
-                MathUtils.SortColumns(ref A, ref B);
+                Assert.GreaterOrEqual(Am.GetColumn(0).sqrMagnitude, Am.GetColumn(1).sqrMagnitude);
+                Assert.GreaterOrEqual(Am.GetColumn(1).sqrMagnitude, Am.GetColumn(2).sqrMagnitude);
 
-                Assert.GreaterOrEqual(A.GetColumn(0).sqrMagnitude, A.GetColumn(1).sqrMagnitude);
-                Assert.GreaterOrEqual(A.GetColumn(1).sqrMagnitude, A.GetColumn(2).sqrMagnitude);
+                Matrix4x4 Aq = M;
+                Quaternion Q = M.rotation;
+                MathUtils.SortColumns(ref Aq, ref Q);
 
-                Assert.GreaterOrEqual(B.GetColumn(0).sqrMagnitude, B.GetColumn(1).sqrMagnitude);
-                Assert.GreaterOrEqual(B.GetColumn(1).sqrMagnitude, B.GetColumn(2).sqrMagnitude);
+                Assert.GreaterOrEqual(Aq.GetColumn(0).sqrMagnitude, Aq.GetColumn(1).sqrMagnitude);
+                Assert.GreaterOrEqual(Aq.GetColumn(1).sqrMagnitude, Aq.GetColumn(2).sqrMagnitude);
             }
         }
     }
