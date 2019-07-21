@@ -145,23 +145,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         }
 
         [Test]
-        public void EigenSolverTest()
-        {
-            JacobiEigenSolver solver = new JacobiEigenSolver();
-
-            foreach (Matrix4x4 M in matrices)
-            {
-                Matrix4x4 A = M;
-
-                solver.Solve(A);
-                // string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
-                // Debug.Log($"RES={solver.residual} | {str}");
-
-                Assert.LessOrEqual(solver.residual, solver.squaredErrorThreshold);
-            }
-        }
-
-        [Test]
         public void SortColumnsTest()
         {
             foreach (Matrix4x4 M in matrices)
@@ -183,7 +166,41 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
+        const float ExpectedEigenAccuracy = 1.0e-2f;
+
+        [Test]
+        public void EigenSolverTest()
+        {
+            JacobiEigenSolver solver = new JacobiEigenSolver();
+
+            foreach (Matrix4x4 M in matrices)
+            {
+                Matrix4x4 A = M.transpose * M;
+
+                solver.Solve(A);
+                // string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
+                // Debug.Log($"RES={solver.residual} | {str}");
+
+                float max = Mathf.Sqrt(Mathf.Max(
+                    A.GetColumn(0).sqrMagnitude,
+                    A.GetColumn(1).sqrMagnitude,
+                    A.GetColumn(2).sqrMagnitude));
+                Matrix4x4 Qm = Matrix4x4.Rotate(solver.Q);
+                Matrix4x4 R = Qm * solver.S * Qm.transpose;
+                for (int i = 0; i < 3; ++i)
+                {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        Assert.AreEqual(A[i, j], R[i, j], max * ExpectedEigenAccuracy);
+                    }
+                }
+
+                Assert.LessOrEqual(solver.residual, solver.squaredErrorThreshold);
+            }
+        }
+
         const float ExpectedQREpsilon = 1.0e-4f;
+        const float ExpectedQRAccuracy = 1.0e-3f;
 
         [Test]
         public void QRDecompositionTest()
@@ -197,6 +214,20 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 solver.Solve(A);
                 // string str = $"[{solver.S.m00:F3} {solver.S.m01:F3} {solver.S.m02:F3}]\n[{solver.S.m10:F3} {solver.S.m11:F3} {solver.S.m12:F3}]\n[{solver.S.m20:F3} {solver.S.m21:F3} {solver.S.m22:F3}]";
                 // Debug.Log($"RES={solver.residual} | {str}");
+
+                float max = Mathf.Sqrt(Mathf.Max(
+                    A.GetColumn(0).sqrMagnitude,
+                    A.GetColumn(1).sqrMagnitude,
+                    A.GetColumn(2).sqrMagnitude));
+                Matrix4x4 Qm = Matrix4x4.Rotate(solver.Q);
+                Matrix4x4 R = Qm * solver.R;
+                for (int i = 0; i < 3; ++i)
+                {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        Assert.AreEqual(A[i, j], R[i, j], max * ExpectedQRAccuracy);
+                    }
+                }
 
                 Assert.AreEqual(0.0f, Math.Abs(solver.R.m10), ExpectedQREpsilon);
                 Assert.AreEqual(0.0f, Math.Abs(solver.R.m20), ExpectedQREpsilon);

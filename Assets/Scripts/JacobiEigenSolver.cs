@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     /// <summary>
-    /// Eigenvalue decomposition solver using the Jacobi method.
+    /// Eigenvalue decomposition of a symmetric matrix using the Jacobi method.
     /// </summary>
     /// <remarks>
     /// Based on:
@@ -44,19 +44,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 if (residual <= squaredErrorThreshold)
                 {
-                    return;
+                    break;
                 }
 
                 SolveStep();
             }
+
+            Q.Normalize();
         }
 
         public void Init(Matrix4x4 A)
         {
-            S = A.transpose * A;
+            S = A;
             Q = Quaternion.identity;
 
-            residual = ComputeResidual(A);
+            residual = ComputeResidual(S);
 
             iterations = 0;
             axisPair = 0;
