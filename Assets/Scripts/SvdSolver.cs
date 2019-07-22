@@ -13,14 +13,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public Quaternion V;
 
         private readonly JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
+        private readonly QRSolver qrSolver = new QRSolver();
 
         public void Solve(Matrix4x4 A)
         {
-            eigenSolver.Solve(A);
+            eigenSolver.Solve(A.transpose * A);
 
-            MathUtils.SortColumns(ref S, ref V);
+            V = eigenSolver.Q;
+            Matrix4x4 B = A * Matrix4x4.Rotate(V);
+            MathUtils.SortColumns(ref B, ref V);
 
+            qrSolver.Solve(B);
 
+            U = qrSolver.Q;
+
+            S = Matrix4x4.identity;
+            S.m00 = qrSolver.R.m00;
+            S.m11 = qrSolver.R.m11;
+            S.m22 = qrSolver.R.m22;
         }
     }
 }

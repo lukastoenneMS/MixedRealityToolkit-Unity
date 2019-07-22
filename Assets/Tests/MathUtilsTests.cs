@@ -234,5 +234,64 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Assert.AreEqual(0.0f, Math.Abs(solver.R.m21), ExpectedQREpsilon);
             }
         }
+
+        const float ExpectedSvdAccuracy = 1.0e-3f;
+
+        [Test]
+        public void SVDTestEigenAnalysis()
+        {
+            JacobiEigenSolver solver = new JacobiEigenSolver();
+
+            foreach (Matrix4x4 M in matrices)
+            {
+                Matrix4x4 A = M;
+
+                solver.Solve(A.transpose * A);
+
+                Vector3 s0 = solver.S.GetColumn(0);
+                Vector3 s1 = solver.S.GetColumn(1);
+                Vector3 s2 = solver.S.GetColumn(2);
+                Assert.AreEqual(s0.magnitude, s0.x, s0.magnitude * ExpectedSvdAccuracy);
+                Assert.AreEqual(s1.magnitude, s1.y, s1.magnitude * ExpectedSvdAccuracy);
+                Assert.AreEqual(s2.magnitude, s2.z, s2.magnitude * ExpectedSvdAccuracy);
+
+                Quaternion V = solver.Q;
+                // Matrix4x4 B = A * Matrix4x4.Rotate(V);
+                Matrix4x4 B = solver.S * Matrix4x4.Rotate(V);
+
+                Vector3 x = B.GetColumn(0);
+                Vector3 y = B.GetColumn(1);
+                Vector3 z = B.GetColumn(2);
+                Assert.AreEqual(0.0f, Vector3.Dot(x, y), x.magnitude * y.magnitude * ExpectedSvdAccuracy);
+                Assert.AreEqual(0.0f, Vector3.Dot(y, z), y.magnitude * z.magnitude * ExpectedSvdAccuracy);
+                Assert.AreEqual(0.0f, Vector3.Dot(z, x), z.magnitude * x.magnitude * ExpectedSvdAccuracy);
+            }
+        }
+
+        [Test]
+        public void SVDTest()
+        {
+            SvdSolver solver = new SvdSolver();
+
+            foreach (Matrix4x4 M in matrices)
+            {
+                Matrix4x4 A = M;
+
+                solver.Solve(A);
+
+                float max = Mathf.Sqrt(Mathf.Max(
+                    A.GetColumn(0).sqrMagnitude,
+                    A.GetColumn(1).sqrMagnitude,
+                    A.GetColumn(2).sqrMagnitude));
+                Matrix4x4 R = Matrix4x4.Rotate(solver.U) * solver.S * Matrix4x4.Rotate(solver.V).transpose;
+                for (int i = 0; i < 3; ++i)
+                {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        Assert.AreEqual(A[i, j], R[i, j], max * ExpectedSvdAccuracy);
+                    }
+                }
+            }
+        }
     }
 }

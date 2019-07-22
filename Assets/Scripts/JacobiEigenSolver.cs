@@ -70,15 +70,15 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             switch (axisPair)
             {
                 case 0:
-                    MathUtils.ApproximateGivensRotationQuaternion(S.m00, S.m01, S.m11, out Qk.z, out Qk.w);
+                    MathUtils.ApproximateGivensRotationQuaternion(S.m00, S.m10, S.m11, out Qk.z, out Qk.w);
                     axisPair = 1;
                     break;
                 case 1:
-                    MathUtils.ApproximateGivensRotationQuaternion(S.m22, S.m20, S.m00, out Qk.y, out Qk.w);
+                    MathUtils.ApproximateGivensRotationQuaternion(S.m22, S.m02, S.m00, out Qk.y, out Qk.w);
                     axisPair = 2;
                     break;
                 case 2:
-                    MathUtils.ApproximateGivensRotationQuaternion(S.m11, S.m12, S.m22, out Qk.x, out Qk.w);
+                    MathUtils.ApproximateGivensRotationQuaternion(S.m11, S.m21, S.m22, out Qk.x, out Qk.w);
                     axisPair = 0;
                     break;
             }
