@@ -65,19 +65,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private void UpdateArcLength()
         {
-            ControlPoint prevCp = controlPoints[0];
             float d = 0.0f;
-            for (int i = 1; i < controlPoints.Count; ++i)
+            if (controlPoints.Count > 0)
             {
-                ControlPoint cp = controlPoints[i];
-                float delta = (cp.position - prevCp.position).magnitude;
+                ControlPoint prevCp = controlPoints[0];
+                for (int i = 1; i < controlPoints.Count; ++i)
+                {
+                    ControlPoint cp = controlPoints[i];
+                    float delta = (cp.position - prevCp.position).magnitude;
 
-                prevCp.segmentLength = delta;
-                cp.segmentStart = d;
+                    prevCp.segmentStart = d;
+                    prevCp.segmentLength = delta;
 
-                d += delta;
+                    d += delta;
+                    prevCp = cp;
+                }
+                prevCp.segmentStart = d;
+                prevCp.segmentLength = 0.0f;
             }
-            prevCp.segmentLength = 0.0f;
             arcLength = d;
         }
 

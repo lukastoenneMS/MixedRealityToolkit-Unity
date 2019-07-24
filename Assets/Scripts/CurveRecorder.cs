@@ -13,6 +13,7 @@ using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
+    [RequireComponent(typeof(MeshFilter))]
     public class CurveRecorder : HandTracker
     {
         public TextMeshPro InfoText;
@@ -23,15 +24,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public float MaxCurveLength = 3.0f;
         public int MaxSamples = 200;
 
+        public int RenderResolution = 6;
+        public float RenderThickness = 0.003f;
+
         public SplineCurve Curve { get; private set; }
         public Handedness CurveHandedness { get; private set; }
         private Vector3? lastPosition;
         private float movedDistance;
 
+        private MeshFilter meshFilter;
         private MaterialPropertyBlock materialProps;
 
         void Awake()
         {
+            meshFilter = GetComponent<MeshFilter>();
+
             // if (JointIndicatorPrefab)
             // {
             //     matchIndicator = new GameObject("PoseMatchIndicator");
@@ -104,14 +111,21 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 }
             }
 
-            if (handedness == CurveHandedness)
+            if (meshFilter)
             {
-                if (InfoText)
+                if (meshFilter.sharedMesh == null)
                 {
-                    // InfoText.text =
-                    //     $"Mean Error = {Mathf.Sqrt(MSE):F5}m\n" +
-                    //     $"Condition = {match.ConditionNumber:F5}\n";
+                    meshFilter.mesh = new Mesh();
                 }
+
+                CurveMeshUtils.UpdateMesh(meshFilter.sharedMesh, Curve, RenderResolution, RenderThickness);
+            }
+
+            if (InfoText)
+            {
+                // InfoText.text =
+                //     $"Mean Error = {Mathf.Sqrt(MSE):F5}m\n" +
+                //     $"Condition = {match.ConditionNumber:F5}\n";
             }
         }
 
