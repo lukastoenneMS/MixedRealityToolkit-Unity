@@ -77,10 +77,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             if (Curve == null)
             {
-                Curve = new SplineCurve();
-                CurveHandedness = handedness;
-                lastPosition = null;
-                movedDistance = 0.0f;
+                InitCurve(handedness);
             }
 
             if (joints.TryGetValue(TrackedJoint, out Pose trackedPose))
@@ -96,6 +93,27 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 //     $"Mean Error = {Mathf.Sqrt(MSE):F5}m\n" +
                 //     $"Condition = {match.ConditionNumber:F5}\n";
             }
+        }
+
+        protected override void ClearHandMatch()
+        {
+            ClearCurve();
+        }
+
+        private void InitCurve(Handedness handedness)
+        {
+            Curve = new SplineCurve();
+            CurveHandedness = handedness;
+            lastPosition = null;
+            movedDistance = 0.0f;
+        }
+
+        private void ClearCurve()
+        {
+            Curve = null;
+            CurveHandedness = Handedness.None;
+            lastPosition = null;
+            movedDistance = 0.0f;
         }
 
         private void ExtendCurve(Vector3 point)
@@ -145,20 +163,25 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private readonly ICPSolver icpSolver = new ICPSolver();
 
+        public bool DrawDebugSolverSteps = true;
+
         private void FindMatchingShapes()
         {
             foreach (ICPShape shape in shapes)
             {
-#if false
-                FindCurveMatchSteps(shape, MeanErrorThreshold, out Pose[] targetOffset, out float[] MSE);
-                if (ShapeObjectSteps == null)
+                if (DrawDebugSolverSteps)
                 {
-                    ShapeObjectSteps = new GameObject[numSteps];
+                    if (!FindCurveMatchSteps(shape, MeanErrorThreshold, out Pose[] targetOffset, out float[] MSE))
+                    {
+                        continue;
+                    }
+
+                    int numSteps = targetOffset.Length;
                     for (int i = 0; i < numSteps; ++i)
                     {
-                        ShapeObjectSteps[i] = GameObject.Instantiate(ShapeObject);
-                        ShapeObjectSteps[i].name = $"ICP Step {i}";
-                        var renderer = ShapeObjectSteps[i].GetComponentInChildren<MeshRenderer>();
+                        GameObject shapeObj = CreateShapeMesh(shape, $"ShapeMatch Step {i}", true, targetOffset[i]);
+
+                        var renderer = shapeObj.GetComponentInChildren<MeshRenderer>();
                         if (renderer)
                         {
                             float mix = (float)i / (float)(numSteps - 1);
@@ -167,47 +190,22 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                         }
                     }
                 }
-                for (int i = 0; i < numSteps; ++i)
+                else
                 {
-                    ShapeObjectSteps[i].transform.position = targetOffset[i].Multiply(transform.position);
-                    ShapeObjectSteps[i].transform.rotation = targetOffset[i].Multiply(transform.rotation);
-                }
-#else
-                if (!FindCurveMatch(shape, MeanErrorThreshold, out Pose targetOffset, out float icpError))
-                {
-                    continue;
-                }
-                if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset, out float coverageError))
-                {
-                    Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
-                    // continue;
-                }
-
-                var lineShape = shape as LineShape;
-                if (lineShape != null)
-                {
-                    // GameObject shapeObj = new GameObject();
-                    // shapeObj.name = $"ShapeMatch_{coverageError}";
-                    GameObject shapeObj = GameObject.Find("ShapeMatch");
-                    if (!shapeObj)
+                    if (!FindCurveMatch(shape, MeanErrorThreshold, out Pose targetOffset, out float icpError))
                     {
-                        shapeObj = new GameObject();
-                        shapeObj.name = $"ShapeMatch";
-
-                        var shapeMeshFilter = shapeObj.AddComponent<MeshFilter>();
-                        shapeMeshFilter.mesh = new Mesh();
-                        CurveMeshUtils.GenerateLineShapeMesh(shapeMeshFilter.sharedMesh, lineShape, RenderResolution, RenderThickness);
-
-                        var shapeRenderer = shapeObj.AddComponent<MeshRenderer>();
-                        shapeRenderer.sharedMaterial = ShapeMaterial;
+                        continue;
+                    }
+                    if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset, out float coverageError))
+                    {
+                        Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
+                        // continue;
                     }
 
-                    shapeObj.transform.position = targetOffset.Position;
-                    shapeObj.transform.rotation = targetOffset.Rotation;
-                }
+                    CreateShapeMesh(shape, "ShapeMatch", true, targetOffset);
 
-                // Curve.Clear();
-#endif
+                    // Curve.Clear();
+                }
             }
         }
 
@@ -281,18 +279,36 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return MSE <= ErrorThreshold * ErrorThreshold;
         }
 
-        protected override void ClearHandMatch()
+        private GameObject CreateShapeMesh(ICPShape shape, string name, bool useExisting, Pose pose)
         {
-            Curve = null;
-            CurveHandedness = Handedness.None;
-            lastPosition = null;
-            movedDistance = 0.0f;
+            GameObject shapeObj = null;
+            if (useExisting)
+            {
+                shapeObj = GameObject.Find(name);
+            }
 
-            // foreach (var item in jointIndicators)
-            // {
-            //     var jointOb = item.Value;
-            //     jointOb.SetActive(false);
-            // }
+            if (!shapeObj)
+            {
+                shapeObj = new GameObject();
+                shapeObj.name = name;
+
+                var shapeMeshFilter = shapeObj.AddComponent<MeshFilter>();
+                shapeMeshFilter.mesh = new Mesh();
+
+                var lineShape = shape as LineShape;
+                if (lineShape != null)
+                {
+                    CurveMeshUtils.GenerateLineShapeMesh(shapeMeshFilter.sharedMesh, lineShape, RenderResolution, RenderThickness);
+                }
+
+                var shapeRenderer = shapeObj.AddComponent<MeshRenderer>();
+                shapeRenderer.sharedMaterial = ShapeMaterial;
+            }
+
+            shapeObj.transform.position = pose.Position;
+            shapeObj.transform.rotation = pose.Rotation;
+
+            return shapeObj;
         }
     }
 }
