@@ -179,15 +179,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     int numSteps = targetOffset.Length;
                     for (int i = 0; i < numSteps; ++i)
                     {
-                        GameObject shapeObj = CreateShapeMesh(shape, $"ShapeMatch Step {i}", true, targetOffset[i]);
-
-                        var renderer = shapeObj.GetComponentInChildren<MeshRenderer>();
-                        if (renderer)
-                        {
-                            float mix = (float)i / (float)(numSteps - 1);
-                            materialProps.SetColor("_Color", Color.green * mix + Color.red * (1.0f - mix));
-                            renderer.SetPropertyBlock(materialProps);
-                        }
+                        float mix = (float)i / (float)(numSteps - 1);
+                        GameObject shapeObj = CreateShapeMesh(shape, $"ShapeMatch Step {i}", true, targetOffset[i], mix);
                     }
                 }
                 else
@@ -230,8 +223,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
-            result = new Pose[icpSolver.MaxIterations];
-            MSE = new float[icpSolver.MaxIterations];
+            List<Pose> poseList = new List<Pose>();
+            List<float> mseList = new List<float>();
 
             // icpSolver.Solve(points, shape);
 
@@ -244,8 +237,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 {
                     icpSolver.SolveStep();
 
-                    result[i] = icpSolver.TargetOffset;
-                    MSE[i] = icpSolver.MeanSquareError;
+                    poseList.Add(icpSolver.TargetOffset);
+                    mseList.Add(icpSolver.MeanSquareError);
                     ++i;
 
                     // Finish when MSE does not decrease significantly
@@ -256,6 +249,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 }
             }
 
+            result = poseList.ToArray();
+            MSE = mseList.ToArray();
             return icpSolver.HasFoundLocalOptimum && icpSolver.MeanSquareError <= ErrorThreshold * ErrorThreshold;
         }
 
@@ -279,7 +274,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return MSE <= ErrorThreshold * ErrorThreshold;
         }
 
-        private GameObject CreateShapeMesh(ICPShape shape, string name, bool useExisting, Pose pose)
+        private GameObject CreateShapeMesh(ICPShape shape, string name, bool useExisting, Pose pose, float? colorMix = null)
         {
             GameObject shapeObj = null;
             if (useExisting)
@@ -303,6 +298,16 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                 var shapeRenderer = shapeObj.AddComponent<MeshRenderer>();
                 shapeRenderer.sharedMaterial = ShapeMaterial;
+            }
+
+            if (colorMix.HasValue)
+            {
+                var renderer = shapeObj.GetComponentInChildren<MeshRenderer>();
+                if (renderer)
+                {
+                    materialProps.SetColor("_Color", Color.green * colorMix.Value + Color.red * (1.0f - colorMix.Value));
+                    renderer.SetPropertyBlock(materialProps);
+                }
             }
 
             shapeObj.transform.position = pose.Position;
