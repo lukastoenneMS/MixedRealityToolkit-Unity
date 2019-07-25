@@ -36,6 +36,68 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public int tmp;
         }
 
+        public static float ComputeMeanError(Vector3[] points, Vector3[] targets, float[] weights)
+        {
+            Debug.Assert(points.Length == targets.Length);
+            Debug.Assert(weights == null || points.Length == weights.Length);
+
+            float SSE = 0.0f;
+            // float totWeight = 0.0f;
+            for (int i = 0; i < points.Length; ++i)
+            {
+                float sqrResidual = (points[i] - targets[i]).sqrMagnitude;
+                if (weights != null)
+                {
+                    sqrResidual *= weights[i];
+                }
+
+                SSE += sqrResidual;
+                // totWeight += weights[i];
+            }
+
+            float MSE = SSE / Mathf.Max(1, points.Length);
+            // weightedMSE = totWeight > 0.0f ? weightedSSE / totWeight : 0.0f;
+
+            return MSE;
+        }
+
+        public static float ComputeMeanError(Vector3[] points, Vector3[] targets)
+        {
+            return ComputeMeanError(points, targets, null);
+        }
+
+        public static void ComputeResiduals(Vector3[] points, Vector3[] targets, float[] weights, out float[] residuals, out float MSE)
+        {
+            Debug.Assert(points.Length == targets.Length);
+            Debug.Assert(weights == null || points.Length == weights.Length);
+
+            residuals = new float[points.Length];
+
+            float SSE = 0.0f;
+            // float totWeight = 0.0f;
+            for (int i = 0; i < points.Length; ++i)
+            {
+                float sqrResidual = (points[i] - targets[i]).sqrMagnitude;
+                if (weights != null)
+                {
+                    sqrResidual *= weights[i];
+                }
+
+                SSE += sqrResidual;
+                // totWeight += weights[i];
+
+                residuals[i] = Mathf.Sqrt(sqrResidual);
+            }
+
+            MSE = SSE / Mathf.Max(1, points.Length);
+            // weightedMSE = totWeight > 0.0f ? weightedSSE / totWeight : 0.0f;
+        }
+
+        public static void ComputeResiduals(Vector3[] points, Vector3[] targets, out float[] residuals, out float MSE)
+        {
+            ComputeResiduals(points, targets, null, out residuals, out MSE);
+        }
+
         private const float oneOverSqrtTwo = 0.70710678118654752440084436210485f;
 
         /// <summary>

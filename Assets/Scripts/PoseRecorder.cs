@@ -148,7 +148,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Vector3[] points = GetPointsFromJoints(joints);
                 PoseMatch match = evaluator.EvaluatePose(points, PoseConfig);
 
-                evaluator.ComputeResiduals(points, PoseConfig, match, true, out float[] residuals, out float MSE);
+                Vector3[] result = points.Select(p => match.Offset.Multiply(p)).ToArray();
+                MathUtils.ComputeResiduals(result, PoseConfig.Targets, PoseConfig.Weights, out float[] residuals, out float MSE);
                 // string summary = $"{Time.time}: condition={match.ConditionNumber} MSE={MSE}";
 
                 matchIndicator.transform.SetPositionAndRotation(match.Offset.Position, match.Offset.Rotation);
