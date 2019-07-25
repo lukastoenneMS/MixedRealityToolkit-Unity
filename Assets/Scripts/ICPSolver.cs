@@ -4,6 +4,7 @@
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
@@ -14,7 +15,27 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         ICPClosestPointFinder CreateClosestPointFinder();
 
-        int MinimumPointCount { get; }
+        void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer);
+    }
+
+    public interface ICPClosestPointFinder
+    {
+        void Reserve(int numPoints);
+
+        void FindClosestPoints(Vector3[] points, Vector3[] result);
+    }
+
+    public class ICPSampleBuffer
+    {
+        public Vector3[] samples = new Vector3[0];
+
+        public void Transform(Pose offset)
+        {
+            for (int i = 0; i < samples.Length; ++i)
+            {
+                samples[i] = offset.Multiply(samples[i]);
+            }
+        }
     }
 
     public class ICPSolver
@@ -47,15 +68,17 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder)
         {
             Init(points, targetPointFinder);
-
-            while (iterations < MaxIterations)
+            if (points.Length > 0)
             {
-                SolveStep();
-
-                // Finish when MSE does not decrease significantly
-                if (hasFoundLocalOptimum)
+                while (iterations < MaxIterations)
                 {
-                    break;
+                    SolveStep();
+
+                    // Finish when MSE does not decrease significantly
+                    if (hasFoundLocalOptimum)
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -91,7 +114,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             targetOffset = targetOffset.Multiply(offset);
 
             float prevMeanSquareError = meanSquareError;
-            meanSquareError = MathUtils.ComputeMeanError(points, closestPoints);
+            meanSquareError = MathUtils.ComputeMeanSquareError(points, closestPoints);
 
             float sqrTau = ErrorConvergenceThreshold * ErrorConvergenceThreshold;
             hasFoundLocalOptimum = iterations > 1 && prevMeanSquareError - meanSquareError <= sqrTau;

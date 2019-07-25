@@ -173,17 +173,26 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     ShapeObjectSteps[i].transform.rotation = targetOffset[i].Multiply(transform.rotation);
                 }
 #else
-                if (FindCurveMatch(shape, MeanErrorThreshold, out Pose targetOffset))
+                if (!FindCurveMatch(shape, MeanErrorThreshold, out Pose targetOffset, out float icpError))
                 {
-                    // ShapeObject.SetActive(true);
-                    // ShapeObject.transform.position = targetOffset.Multiply(transform.position);
-                    // ShapeObject.transform.rotation = targetOffset.Multiply(transform.rotation);
+                    continue;
+                }
+                if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset, out float coverageError))
+                {
+                    Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
+                    // continue;
+                }
 
-                    var lineShape = shape as LineShape;
-                    if (lineShape != null)
+                var lineShape = shape as LineShape;
+                if (lineShape != null)
+                {
+                    // GameObject shapeObj = new GameObject();
+                    // shapeObj.name = $"ShapeMatch_{coverageError}";
+                    GameObject shapeObj = GameObject.Find("ShapeMatch");
+                    if (!shapeObj)
                     {
-                        GameObject shapeObj = new GameObject();
-                        shapeObj.name = $"ShapeMatch_{icpSolver.MeanSquareError}";
+                        shapeObj = new GameObject();
+                        shapeObj.name = $"ShapeMatch";
 
                         var shapeMeshFilter = shapeObj.AddComponent<MeshFilter>();
                         shapeMeshFilter.mesh = new Mesh();
@@ -191,74 +200,85 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                         var shapeRenderer = shapeObj.AddComponent<MeshRenderer>();
                         shapeRenderer.sharedMaterial = ShapeMaterial;
-
-                        shapeObj.transform.position = targetOffset.Position;
-                        shapeObj.transform.rotation = targetOffset.Rotation;
                     }
 
-                    Curve.Clear();
+                    shapeObj.transform.position = targetOffset.Position;
+                    shapeObj.transform.rotation = targetOffset.Rotation;
                 }
-                else
-                {
-                    // ShapeObject.SetActive(false);
-                }
+
+                // Curve.Clear();
 #endif
             }
         }
 
-        private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose result)
+        private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose result, out float MSE)
         {
-            if (Curve.Count < shape.MinimumPointCount)
-            {
-                result = Pose.ZeroIdentity;
-                return false;
-            }
+            ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
 
-            Vector3[] points = Curve.ControlPoints.Select(cp => cp.position).ToArray();
-            var targetPointFinder = shape.CreateClosestPointFinder();
+            ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
+            Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
-            icpSolver.Solve(points, targetPointFinder);
+            icpSolver.Solve(curveBuffer.samples, shapePointFinder);
 
             result = icpSolver.TargetOffset;
+            MSE = icpSolver.MeanSquareError;
             return icpSolver.HasFoundLocalOptimum && icpSolver.MeanSquareError <= ErrorThreshold * ErrorThreshold;
         }
 
         private bool FindCurveMatchSteps(ICPShape shape, float ErrorThreshold, out Pose[] result, out float[] MSE)
         {
-            if (Curve.Count < shape.MinimumPointCount)
-            {
-                result = null;
-                MSE = null;
-                return false;
-            }
+            ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
 
-            Vector3[] points = Curve.ControlPoints.Select(cp => cp.position).ToArray();
-            var targetPointFinder = shape.CreateClosestPointFinder();
+            ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
+            Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
             result = new Pose[icpSolver.MaxIterations];
             MSE = new float[icpSolver.MaxIterations];
 
             // icpSolver.Solve(points, shape);
 
-            icpSolver.Init(points, targetPointFinder);
+            icpSolver.Init(curveBuffer.samples, shapePointFinder);
 
-            int i = 0;
-            while (icpSolver.Iterations < icpSolver.MaxIterations)
+            if (curveBuffer.samples.Length > 0)
             {
-                icpSolver.SolveStep();
-
-                result[i] = icpSolver.TargetOffset;
-                MSE[i] = icpSolver.MeanSquareError;
-                ++i;
-
-                // Finish when MSE does not decrease significantly
-                if (icpSolver.HasFoundLocalOptimum)
+                int i = 0;
+                while (icpSolver.Iterations < icpSolver.MaxIterations)
                 {
-                    break;
+                    icpSolver.SolveStep();
+
+                    result[i] = icpSolver.TargetOffset;
+                    MSE[i] = icpSolver.MeanSquareError;
+                    ++i;
+
+                    // Finish when MSE does not decrease significantly
+                    if (icpSolver.HasFoundLocalOptimum)
+                    {
+                        break;
+                    }
                 }
             }
 
             return icpSolver.HasFoundLocalOptimum && icpSolver.MeanSquareError <= ErrorThreshold * ErrorThreshold;
+        }
+
+        // Verify shape coverage by sampling the target shape and computing residual
+        // under the tranform provided by ICP.
+        // This ensures that the target shape is matched in its entirety rather than just
+        // a small section that happens to fit the input curve.
+        private bool CompareShapeCoverage(ICPShape shape, float ErrorThreshold, Pose targetOffset, out float MSE)
+        {
+            ICPClosestPointFinder curvePointFinder = Curve.CreateClosestPointFinder();
+
+            ICPSampleBuffer shapeBuffer = new ICPSampleBuffer();
+            shape.GenerateSamples(ErrorThreshold, shapeBuffer);
+            // Transform into curve space for computing the MSE
+            shapeBuffer.Transform(targetOffset);
+
+            Vector3[] closestCurvePoints = new Vector3[shapeBuffer.samples.Length];
+            curvePointFinder.FindClosestPoints(shapeBuffer.samples, closestCurvePoints);
+
+            MSE = MathUtils.ComputeMeanSquareError(shapeBuffer.samples, closestCurvePoints);
+            return MSE <= ErrorThreshold * ErrorThreshold;
         }
 
         protected override void ClearHandMatch()
@@ -276,3 +296,4 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         }
     }
 }
+

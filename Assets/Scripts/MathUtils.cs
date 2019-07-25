@@ -36,7 +36,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public int tmp;
         }
 
-        public static float ComputeMeanError(Vector3[] points, Vector3[] targets, float[] weights)
+        public static float ComputeMeanSquareError(Vector3[] points, Vector3[] targets, float[] weights)
         {
             Debug.Assert(points.Length == targets.Length);
             Debug.Assert(weights == null || points.Length == weights.Length);
@@ -61,9 +61,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return MSE;
         }
 
-        public static float ComputeMeanError(Vector3[] points, Vector3[] targets)
+        public static float ComputeMeanSquareError(Vector3[] points, Vector3[] targets)
         {
-            return ComputeMeanError(points, targets, null);
+            return ComputeMeanSquareError(points, targets, null);
         }
 
         public static void ComputeResiduals(Vector3[] points, Vector3[] targets, float[] weights, out float[] residuals, out float MSE)

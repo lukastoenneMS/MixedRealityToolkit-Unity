@@ -547,7 +547,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 PoseMatch match = evaluator.EvaluatePose(points, action.poseConfig);
                 Vector3[] result = points.Select(p => match.Offset.Multiply(p)).ToArray();
-                float MSE = MathUtils.ComputeMeanError(result, action.poseConfig.Targets, action.poseConfig.Weights);
+                float MSE = MathUtils.ComputeMeanSquareError(result, action.poseConfig.Targets, action.poseConfig.Weights);
 
                 if (MSE <= sqrMaxError)
                 {

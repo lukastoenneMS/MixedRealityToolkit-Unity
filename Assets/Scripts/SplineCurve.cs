@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     [Serializable]
-    public class SplineCurve
+    public class SplineCurve : ICPShape
     {
         [Serializable]
         public class ControlPoint
@@ -105,6 +105,44 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             index = lowIdx;
             return lowIdx >= 0 && lowIdx < controlPoints.Count;
+        }
+
+        public void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer)
+        {
+            if (buffer.samples.Length != controlPoints.Count)
+            {
+                buffer.samples = new Vector3[controlPoints.Count];
+            }
+
+            for (int i = 0; i < controlPoints.Count; ++i)
+            {
+                buffer.samples[i] = controlPoints[i].position;
+            }
+        }
+
+        public ICPClosestPointFinder CreateClosestPointFinder()
+        {
+            return new SplineCurveClosestPointFinder(this);
+        }
+    }
+
+    public class SplineCurveClosestPointFinder : ICPClosestPointFinder
+    {
+        private SplineCurve curve;
+
+        public SplineCurveClosestPointFinder(SplineCurve curve)
+        {
+            this.curve = curve;
+        }
+
+        public void Reserve(int numPoints)
+        {
+
+        }
+
+        public void FindClosestPoints(Vector3[] points, Vector3[] result)
+        {
+
         }
     }
 }

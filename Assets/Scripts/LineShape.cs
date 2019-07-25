@@ -8,13 +8,6 @@ using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
-    public interface ICPClosestPointFinder
-    {
-        void Reserve(int numPoints);
-
-        void FindClosestPoints(Vector3[] points, Vector3[] result);
-    }
-
     [Serializable]
     public class LineShape : ICPShape
     {
@@ -31,6 +24,38 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public ICPClosestPointFinder CreateClosestPointFinder()
         {
             return new LineShapeClosestPointFinder(this);
+        }
+
+        public void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer)
+        {
+            int numSamples = 0;
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                Line line = lines[i];
+                numSamples += GetNumLineSamples(line, maxSampleDistance);
+            }
+
+            buffer.samples = new Vector3[numSamples];
+
+            int k = 0;
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                Line line = lines[i];
+                int numLineSamples = GetNumLineSamples(line, maxSampleDistance);
+                Vector3 dir = line.end - line.start;
+                Vector3 delta = dir / (numLineSamples - 1);
+                for (int j = 0; j < numLineSamples; ++j)
+                {
+                    buffer.samples[k++] = line.start + delta * j;
+                }
+            }
+        }
+
+        private static int GetNumLineSamples(Line line, float maxSampleDistance)
+        {
+            Vector3 dir = line.end - line.start;
+            float length = dir.magnitude;
+            return Mathf.Max(2, (int)Mathf.Ceil(length / maxSampleDistance));
         }
 
         // XXX arbitrary?
