@@ -8,15 +8,15 @@ using UnityEngine;
 
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
-    public interface ICPClosestPointFinder<T>
+    public interface ICPClosestPointFinder
     {
         void Reserve(int numPoints);
 
-        void FindClosestPoints(T shape, Vector3[] points, Vector3[] result);
+        void FindClosestPoints(Vector3[] points, Vector3[] result);
     }
 
     [Serializable]
-    public class LineShape
+    public class LineShape : ICPShape
     {
         public struct Line
         {
@@ -27,6 +27,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         [SerializeField]
         private readonly List<Line> lines = new List<Line>();
         public List<Line> Lines => lines;
+
+        public ICPClosestPointFinder CreateClosestPointFinder()
+        {
+            return new LineShapeClosestPointFinder(this);
+        }
+
+        // XXX arbitrary?
+        public int MinimumPointCount => 8;
 
         public void AddLines(IEnumerable<Line> addedLines)
         {
@@ -64,13 +72,20 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         }
     }
 
-    public class LineShapeClosestPointFinder : ICPClosestPointFinder<LineShape>
+    public class LineShapeClosestPointFinder : ICPClosestPointFinder
     {
+        private LineShape shape;
+
+        public LineShapeClosestPointFinder(LineShape shape)
+        {
+            this.shape = shape;
+        }
+
         public void Reserve(int numPoints)
         {
         }
 
-        public void FindClosestPoints(LineShape shape, Vector3[] points, Vector3[] result)
+        public void FindClosestPoints(Vector3[] points, Vector3[] result)
         {
             // TODO:
             // - Optimize: cache line deltas, sqr lengths
@@ -83,7 +98,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Vector3 closestPoint = Vector3.zero;
                 for (int j = 0; j < shape.Lines.Count; ++j)
                 {
-                    GetClosestPointOnLine(p, shape.Lines[i], out Vector3 closestLinePoint, out float lambda);
+                    GetClosestPointOnLine(p, shape.Lines[j], out Vector3 closestLinePoint, out float lambda);
                     float sqrDist = (p - closestPoint).sqrMagnitude;
                     if (sqrDist < minSqrDist)
                     {

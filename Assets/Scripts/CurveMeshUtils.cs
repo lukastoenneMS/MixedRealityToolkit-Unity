@@ -13,7 +13,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private static Vector3 yAxis = new Vector3(0, 1, 0);
         private static Vector3 dirAxis = new Vector3(0, 0, 1);
 
-        public static void UpdateMesh(Mesh mesh, SplineCurve curve, int resolution, float thickness)
+        public static void GenerateCurveMesh(Mesh mesh, SplineCurve curve, int resolution, float thickness)
         {
             Vector3[] circle = GetCircle(resolution);
             int count = curve.Count;
@@ -76,6 +76,71 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 int di0 = i * resolution;
                 int di1 = (i + 1) * resolution;
+                for (int j = 0; j < resolution; ++j)
+                {
+                    int dj0 = j;
+                    int dj1 = j < resolution - 1 ? j + 1 : 0;
+                    triangles[t + 0] = di0 + dj0;
+                    triangles[t + 1] = di1 + dj0;
+                    triangles[t + 2] = di1 + dj1;
+                    triangles[t + 3] = di1 + dj1;
+                    triangles[t + 4] = di0 + dj1;
+                    triangles[t + 5] = di0 + dj0;
+
+                    t += 6;
+                }
+            }
+
+            mesh.Clear();
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.triangles = triangles;
+
+            mesh.RecalculateBounds();
+        }
+
+        public static void GenerateLineShapeMesh(Mesh mesh, LineShape shape, int resolution, float thickness)
+        {
+            Vector3[] circle = GetCircle(resolution);
+            var lines = shape.Lines;
+            int count = lines.Count;
+
+            if (count == 0)
+            {
+                mesh.Clear();
+                return;
+            }
+
+            Vector3[] vertices = new Vector3[2 * count * resolution];
+            Vector3[] normals = new Vector3[2 * count * resolution];
+            int[] triangles = new int[count * resolution * 6];
+
+            int v = 0;
+            for (int i = 0; i < count; ++i)
+            {
+                Vector3 start = lines[i].start;
+                Vector3 end = lines[i].end;
+                Quaternion rotation = Quaternion.FromToRotation(dirAxis, end - start);
+
+                for (int j = 0; j < resolution; ++j)
+                {
+                    vertices[v] = (rotation * circle[j]) * thickness + start;
+                    normals[v] = rotation * circle[j];
+                    ++v;
+                }
+                for (int j = 0; j < resolution; ++j)
+                {
+                    vertices[v] = (rotation * circle[j]) * thickness + end;
+                    normals[v] = rotation * circle[j];
+                    ++v;
+                }
+            }
+
+            int t = 0;
+            for (int i = 0; i < count; ++i)
+            {
+                int di0 = (2 * i) * resolution;
+                int di1 = (2 * i + 1) * resolution;
                 for (int j = 0; j < resolution; ++j)
                 {
                     int dj0 = j;

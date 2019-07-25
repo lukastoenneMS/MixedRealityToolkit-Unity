@@ -12,15 +12,17 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public interface ICPShape
     {
-        void FindClosestPoints(Vector3[] points, Vector3[] result);
+        ICPClosestPointFinder CreateClosestPointFinder();
+
+        int MinimumPointCount { get; }
     }
 
     public class ICPSolver
     {
         public float ErrorConvergenceThreshold = 0.001f;
-        public float MaxIterations = 30;
+        public int MaxIterations = 30;
 
-        private ICPShape targetShape;
+        private ICPClosestPointFinder targetPointFinder;
         private Vector3[] points;
         public Vector3[] Points => points;
 
@@ -33,39 +35,40 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private int iterations = 0;
         public int Iterations => iterations;
 
+        private bool hasFoundLocalOptimum = false;
+        public bool HasFoundLocalOptimum => hasFoundLocalOptimum;
+
         private Pose targetOffset;
         public Pose TargetOffset => targetOffset;
 
         private readonly PointSetTransformSolver pointSetSolver = new PointSetTransformSolver();
         public PointSetTransformSolver PointSetSolver => pointSetSolver;
 
-        public void Solve(Vector3[] points, ICPShape targetShape)
+        public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder)
         {
-            Init(points, targetShape);
+            Init(points, targetPointFinder);
 
-            float sqrTau = ErrorConvergenceThreshold * ErrorConvergenceThreshold;
             while (iterations < MaxIterations)
             {
-                float prevMeanSquareError = meanSquareError;
-
                 SolveStep();
 
                 // Finish when MSE does not decrease significantly
-                if (iterations > 1 && prevMeanSquareError - meanSquareError <= sqrTau)
+                if (hasFoundLocalOptimum)
                 {
                     break;
                 }
             }
         }
 
-        public void Init(Vector3[] points, ICPShape targetShape)
+        public void Init(Vector3[] points, ICPClosestPointFinder targetPointFinder)
         {
-            this.targetShape = targetShape;
+            this.targetPointFinder = targetPointFinder;
             this.points = points;
 
             closestPoints = new Vector3[points.Length];
 
             meanSquareError = 0.0f;
+            hasFoundLocalOptimum = false;
             iterations = 0;
             targetOffset = Pose.ZeroIdentity;
         }
@@ -87,7 +90,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
             targetOffset = targetOffset.Multiply(offset);
 
+            float prevMeanSquareError = meanSquareError;
             meanSquareError = MathUtils.ComputeMeanError(points, closestPoints);
+
+            float sqrTau = ErrorConvergenceThreshold * ErrorConvergenceThreshold;
+            hasFoundLocalOptimum = iterations > 1 && prevMeanSquareError - meanSquareError <= sqrTau;
 
             ++iterations;
             return true;
@@ -95,7 +102,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private bool FindClosestPoints()
         {
-            targetShape.FindClosestPoints(points, closestPoints);
+            targetPointFinder.FindClosestPoints(points, closestPoints);
             return true;
         }
     }
