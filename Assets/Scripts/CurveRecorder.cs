@@ -18,6 +18,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         public TextMeshPro InfoText;
         public AudioSource Claxon;
+        public GameObject FollowerPrefab;
 
         public TrackedHandJoint TrackedJoint = TrackedHandJoint.IndexTip;
         public float SamplingDistance = 0.03f;
@@ -45,6 +46,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private MeshFilter meshFilter;
         private MaterialPropertyBlock materialProps;
+        private GameObject follower;
 
         void Awake()
         {
@@ -128,6 +130,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             if (joints.TryGetValue(TrackedJoint, out Pose trackedPose))
             {
                 ExtendCurve(trackedPose.Position);
+
+                if (follower)
+                {
+                    follower.transform.position = trackedPose.Position;
+                    follower.transform.rotation = trackedPose.Rotation;
+                }
             }
 
             if (InfoText)
@@ -157,6 +165,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     meshFilter.mesh = new Mesh();
                 }
             }
+
+            if (!follower && FollowerPrefab)
+            {
+                follower = GameObject.Instantiate(FollowerPrefab);
+            }
         }
 
         private void ClearCurve()
@@ -173,6 +186,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     meshFilter.sharedMesh.Clear();
                 }
             }
+
+            // if (follower)
+            // {
+            //     Destroy(follower);
+            //     follower = null;
+            // }
         }
 
         private void ExtendCurve(Vector3 point)

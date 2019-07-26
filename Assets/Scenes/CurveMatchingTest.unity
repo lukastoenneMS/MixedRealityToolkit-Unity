@@ -849,6 +849,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   InfoText: {fileID: 553474277}
   Claxon: {fileID: 2049634641}
+  FollowerPrefab: {fileID: 6359695617397090128, guid: 4985ea70077056e428a917554a12a601,
+    type: 3}
   TrackedJoint: 11
   SamplingDistance: 0.02
   MaxRecordingTime: 0.8
@@ -1075,7 +1077,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 47f3c5e1cb6142ba9697cd4c86d74321, type: 2}
+  - {fileID: 2100000, guid: 6d26965de4c5b9b40a63e0158f93856d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
