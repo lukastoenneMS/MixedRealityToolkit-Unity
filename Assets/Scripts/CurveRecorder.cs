@@ -19,16 +19,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public TextMeshPro InfoText;
         public AudioSource Claxon;
         public GameObject FollowerPrefab;
+        public GameObject ShapeVisualizerPrefab;
 
         public TrackedHandJoint TrackedJoint = TrackedHandJoint.IndexTip;
         public float SamplingDistance = 0.03f;
         public float MaxRecordingTime = 0.8f;
         public float MaxCurveLength = 3.0f;
         public int MaxSamples = 200;
-
-        public int RenderResolution = 6;
-        public float RenderThickness = 0.003f;
-        public Material ShapeMaterial;
 
         public SplineCurve Curve { get; private set; }
         public Handedness CurveHandedness { get; private set; }
@@ -43,34 +40,17 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public float MeanErrorThreshold = 0.05f;
 
         private bool curveDirty = false;
-
-        private MeshFilter meshFilter;
-        private MaterialPropertyBlock materialProps;
+        private SplineCurveRenderer curveRenderer;
         private GameObject follower;
 
         void Awake()
         {
-            meshFilter = GetComponent<MeshFilter>();
-
-            // if (JointIndicatorPrefab)
-            // {
-            //     matchIndicator = new GameObject("PoseMatchIndicator");
-            //     matchIndicator.transform.SetParent(transform);
-
-            //     foreach (TrackedHandJoint joint in UsedJointValues)
-            //     {
-            //         var jointOb = GameObject.Instantiate(JointIndicatorPrefab, matchIndicator.transform);
-            //         jointIndicators.Add(joint, jointOb);
-            //         jointOb.SetActive(false);
-            //     }
-            // }
+            curveRenderer = GetComponentInChildren<SplineCurveRenderer>();
 
             if (InfoText)
             {
                 InfoText.text = "...";
             }
-
-            materialProps = new MaterialPropertyBlock();
         }
 
         void Update()
@@ -105,9 +85,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 {
                     FindMatchingShapes();
 
-                    if (meshFilter)
+                    if (curveRenderer)
                     {
-                        CurveMeshUtils.GenerateCurveMesh(meshFilter.sharedMesh, Curve, RenderResolution, RenderThickness);
+                        curveRenderer.UpdateCurveMesh(Curve);
                     }
 
                     curveDirty = false;
@@ -158,14 +138,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             lastPosition = null;
             movedDistance = 0.0f;
 
-            if (meshFilter)
-            {
-                if (meshFilter.sharedMesh == null)
-                {
-                    meshFilter.mesh = new Mesh();
-                }
-            }
-
             if (!follower && FollowerPrefab)
             {
                 follower = GameObject.Instantiate(FollowerPrefab);
@@ -179,19 +151,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             lastPosition = null;
             movedDistance = 0.0f;
 
-            if (meshFilter)
+            if (curveRenderer)
             {
-                if (meshFilter.sharedMesh != null)
-                {
-                    meshFilter.sharedMesh.Clear();
-                }
+                curveRenderer.ClearCurveMesh();
             }
-
-            // if (follower)
-            // {
-            //     Destroy(follower);
-            //     follower = null;
-            // }
         }
 
         private void ExtendCurve(Vector3 point)
@@ -241,7 +204,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     for (int i = 0; i < numSteps; ++i)
                     {
                         float mix = (float)i / (float)(numSteps - 1);
-                        GameObject shapeObj = CreateShapeMesh(shape, $"ShapeMatch Step {i}", true, targetOffset[i], mix);
+                        CreateShapeMesh(shape, $"ShapeMatch Step {i}", targetOffset[i], mix);
                     }
                 }
                 else
@@ -256,7 +219,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                         continue;
                     }
 
-                    CreateShapeMesh(shape, "ShapeMatch", true, targetOffset);
+                    CreateShapeMesh(shape, "ShapeMatch", targetOffset);
 
                     Curve.Clear();
                 }
@@ -342,39 +305,23 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return MSE <= ErrorThreshold * ErrorThreshold;
         }
 
-        private GameObject CreateShapeMesh(ICPShape shape, string name, bool useExisting, Pose pose, float? colorMix = null)
+        private GameObject CreateShapeMesh(ICPShape shape, string name, Pose pose, float? colorMix = null)
         {
-            GameObject shapeObj = null;
-            if (useExisting)
+            if (!ShapeVisualizerPrefab)
             {
-                shapeObj = GameObject.Find(name);
+                return null;
             }
 
-            if (!shapeObj)
+            GameObject shapeObj = GameObject.Instantiate(ShapeVisualizerPrefab);
+            shapeObj.name = name;
+
+            var shapeRenderer = shapeObj.GetComponentInChildren<ICPShapeRenderer>();
+            if (shapeRenderer)
             {
-                shapeObj = new GameObject();
-                shapeObj.name = name;
-
-                var shapeMeshFilter = shapeObj.AddComponent<MeshFilter>();
-                shapeMeshFilter.mesh = new Mesh();
-
-                var lineShape = shape as LineShape;
-                if (lineShape != null)
+                shapeRenderer.UpdateShapeMesh(shape);
+                if (colorMix.HasValue)
                 {
-                    CurveMeshUtils.GenerateLineShapeMesh(shapeMeshFilter.sharedMesh, lineShape, RenderResolution, RenderThickness);
-                }
-
-                var shapeRenderer = shapeObj.AddComponent<MeshRenderer>();
-                shapeRenderer.sharedMaterial = ShapeMaterial;
-            }
-
-            if (colorMix.HasValue)
-            {
-                var renderer = shapeObj.GetComponentInChildren<MeshRenderer>();
-                if (renderer)
-                {
-                    materialProps.SetColor("_Color", Color.green * colorMix.Value + Color.red * (1.0f - colorMix.Value));
-                    renderer.SetPropertyBlock(materialProps);
+                    shapeRenderer.SetColorMix(colorMix.Value);
                 }
             }
 

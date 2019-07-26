@@ -851,16 +851,15 @@ MonoBehaviour:
   Claxon: {fileID: 2049634641}
   FollowerPrefab: {fileID: 6359695617397090128, guid: 4985ea70077056e428a917554a12a601,
     type: 3}
+  ShapeVisualizerPrefab: {fileID: 895258310363733941, guid: a5c52b7f51be5044faaeb8f211f8263e,
+    type: 3}
   TrackedJoint: 11
   SamplingDistance: 0.02
   MaxRecordingTime: 0.8
   MaxCurveLength: 5
   MaxSamples: 200
-  RenderResolution: 6
-  RenderThickness: 0.003
-  ShapeMaterial: {fileID: 2100000, guid: 71d471797c0e430783230146721c3fcb, type: 2}
   MeanErrorThreshold: 0.05
-  DrawDebugSolverSteps: 1
+  DrawDebugSolverSteps: 0
 --- !u!114 &2049634639
 MonoBehaviour:
   m_ObjectHideFlags: 0
