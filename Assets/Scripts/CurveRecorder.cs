@@ -205,12 +205,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose result, out float MSE)
         {
             ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
-            ICPSampleBuffer shapeSamples = new ICPSampleBuffer();
-            shape.GenerateSamples(ErrorThreshold, shapeSamples);
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
-            icpSolver.Solve(curveBuffer.samples, shapePointFinder, shapeSamples);
+            icpSolver.Solve(curveBuffer.samples, shapePointFinder);
 
             result = icpSolver.TargetOffset;
             MSE = icpSolver.MeanSquareError;
@@ -220,8 +218,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private bool FindCurveMatchSteps(ICPShape shape, float ErrorThreshold, out Pose[] result, out float[] MSE)
         {
             ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
-            ICPSampleBuffer shapeSamples = new ICPSampleBuffer();
-            shape.GenerateSamples(ErrorThreshold, shapeSamples);
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
@@ -230,18 +226,19 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             // icpSolver.Solve(points, shape);
 
-            icpSolver.Init(curveBuffer.samples, shapePointFinder, shapeSamples);
+            icpSolver.Init(curveBuffer.samples, shapePointFinder);
 
             if (curveBuffer.samples.Length > 0)
             {
-                int i = 0;
+                poseList.Add(icpSolver.TargetOffset);
+                mseList.Add(icpSolver.MeanSquareError);
+
                 while (icpSolver.Iterations < icpSolver.MaxIterations)
                 {
                     icpSolver.SolveStep();
 
                     poseList.Add(icpSolver.TargetOffset);
                     mseList.Add(icpSolver.MeanSquareError);
-                    ++i;
 
                     // Finish when MSE does not decrease significantly
                     if (icpSolver.HasFoundLocalOptimum)
