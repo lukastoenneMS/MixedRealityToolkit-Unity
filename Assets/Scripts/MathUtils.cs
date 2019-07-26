@@ -36,6 +36,26 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public int tmp;
         }
 
+        public static float GetMean(float[] values)
+        {
+            float sum = 0.0f;
+            foreach (var v in values)
+            {
+                sum += v;
+            }
+            return sum / Mathf.Max(1, values.Length);
+        }
+
+        public static Vector3 GetCentroid(Vector3[] points)
+        {
+            Vector3 sum = Vector3.zero;
+            foreach (Vector3 p in points)
+            {
+                sum += p;
+            }
+            return sum / Mathf.Max(1, points.Length);
+        }
+
         public static float ComputeMeanSquareError(Vector3[] points, Vector3[] targets, float[] weights)
         {
             Debug.Assert(points.Length == targets.Length);

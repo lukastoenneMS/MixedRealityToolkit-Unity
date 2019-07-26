@@ -33,8 +33,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 return true;
             }
 
-            Vector3 fromCentroid = GetCentroid(targetPoints);
-            Vector3 toCentroid = GetCentroid(inputPoints);
+            Vector3 fromCentroid = MathUtils.GetCentroid(targetPoints);
+            Vector3 toCentroid = MathUtils.GetCentroid(inputPoints);
 
             if (inputPoints.Length == 2)
             {
@@ -90,26 +90,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             this.targetWeights = weights;
             Debug.Assert(input.Length == targets.Length);
             Debug.Assert(weights == null || input.Length == weights.Length);
-        }
-
-        private static float GetMean(float[] values)
-        {
-            float sum = 0.0f;
-            foreach (var v in values)
-            {
-                sum += v;
-            }
-            return sum / Mathf.Max(1, values.Length);
-        }
-
-        private static Vector3 GetCentroid(Vector3[] points)
-        {
-            Vector3 sum = Vector3.zero;
-            foreach (Vector3 p in points)
-            {
-                sum += p;
-            }
-            return sum / Mathf.Max(1, points.Length);
         }
 
         private static Vector<float> GetNVectorFromVector(Vector3 v)

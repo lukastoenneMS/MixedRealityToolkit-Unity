@@ -353,7 +353,6 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_textAlignment: 257
-  m_isAlignmentEnumConverted: 1
   m_characterSpacing: 0
   m_wordSpacing: 0
   m_lineSpacing: 0
@@ -380,6 +379,7 @@ MonoBehaviour:
   m_verticalMapping: 0
   m_uvLineOffset: 0
   m_geometrySortingOrder: 0
+  m_VertexBufferAutoSizeReduction: 1
   m_firstVisibleCharacter: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
@@ -394,12 +394,9 @@ MonoBehaviour:
     lineCount: 3
     pageCount: 1
     materialCount: 1
-  m_havePropertiesChanged: 0
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_spriteAnimator: {fileID: 0}
-  m_isInputParsingRequired: 0
-  m_inputSource: 0
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 553474280}
   m_subTextObjects:
@@ -856,7 +853,8 @@ MonoBehaviour:
   RenderResolution: 6
   RenderThickness: 0.003
   ShapeMaterial: {fileID: 2100000, guid: 71d471797c0e430783230146721c3fcb, type: 2}
-  MeanErrorThreshold: 0.05
+  MeanErrorThreshold: 0.5
+  DrawDebugSolverSteps: 1
 --- !u!114 &2049634639
 MonoBehaviour:
   m_ObjectHideFlags: 0

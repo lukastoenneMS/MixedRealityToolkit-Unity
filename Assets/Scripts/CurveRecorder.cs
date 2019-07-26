@@ -205,11 +205,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose result, out float MSE)
         {
             ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
-
+            ICPSampleBuffer shapeSamples = new ICPSampleBuffer();
+            shape.GenerateSamples(ErrorThreshold, shapeSamples);
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
-            icpSolver.Solve(curveBuffer.samples, shapePointFinder);
+            icpSolver.Solve(curveBuffer.samples, shapePointFinder, shapeSamples);
 
             result = icpSolver.TargetOffset;
             MSE = icpSolver.MeanSquareError;
@@ -219,7 +220,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private bool FindCurveMatchSteps(ICPShape shape, float ErrorThreshold, out Pose[] result, out float[] MSE)
         {
             ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
-
+            ICPSampleBuffer shapeSamples = new ICPSampleBuffer();
+            shape.GenerateSamples(ErrorThreshold, shapeSamples);
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
@@ -228,7 +230,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             // icpSolver.Solve(points, shape);
 
-            icpSolver.Init(curveBuffer.samples, shapePointFinder);
+            icpSolver.Init(curveBuffer.samples, shapePointFinder, shapeSamples);
 
             if (curveBuffer.samples.Length > 0)
             {

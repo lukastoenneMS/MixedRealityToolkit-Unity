@@ -65,9 +65,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private readonly PointSetTransformSolver pointSetSolver = new PointSetTransformSolver();
         public PointSetTransformSolver PointSetSolver => pointSetSolver;
 
-        public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder)
+        public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder, ICPSampleBuffer targetSamples)
         {
-            Init(points, targetPointFinder);
+            Init(points, targetPointFinder, targetSamples);
             if (points.Length > 0)
             {
                 while (iterations < MaxIterations)
@@ -83,7 +83,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        public void Init(Vector3[] points, ICPClosestPointFinder targetPointFinder)
+        public void Init(Vector3[] points, ICPClosestPointFinder targetPointFinder, ICPSampleBuffer targetSamples)
         {
             this.targetPointFinder = targetPointFinder;
             this.points = points;
@@ -93,7 +93,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             meanSquareError = 0.0f;
             hasFoundLocalOptimum = false;
             iterations = 0;
-            targetOffset = Pose.ZeroIdentity;
+            targetOffset = InitPose(targetSamples);
+        }
+
+        private Pose InitPose(ICPSampleBuffer targetSamples)
+        {
+            Vector3 centroid = MathUtils.GetCentroid(targetSamples.samples);
+
+            return new Pose(centroid, Quaternion.identity);
         }
 
         public bool SolveStep()
