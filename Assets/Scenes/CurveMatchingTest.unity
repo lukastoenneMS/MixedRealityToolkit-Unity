@@ -860,7 +860,7 @@ MonoBehaviour:
   RenderThickness: 0.003
   ShapeMaterial: {fileID: 2100000, guid: 71d471797c0e430783230146721c3fcb, type: 2}
   MeanErrorThreshold: 0.05
-  DrawDebugSolverSteps: 0
+  DrawDebugSolverSteps: 1
 --- !u!114 &2049634639
 MonoBehaviour:
   m_ObjectHideFlags: 0

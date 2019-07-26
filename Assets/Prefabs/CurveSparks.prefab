@@ -983,29 +983,38 @@ ParticleSystem:
         - serializedVersion: 3
           time: 0
           value: 0.013513565
+          inSlope: 16.945948
+          outSlope: 16.945948
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0.33333334
+          outWeight: 0.30474272
+        - serializedVersion: 3
+          time: 0.08524484
+          value: 1
           inSlope: 0
           outSlope: 0
           tangentMode: 0
-          weightedMode: 0
-          inWeight: 0.33333334
-          outWeight: 0.33333334
+          weightedMode: 2
+          inWeight: 0.8524814
+          outWeight: 0.33719707
         - serializedVersion: 3
-          time: 0.19887611
-          value: 1
-          inSlope: -0.0000011043829
-          outSlope: -0.0000011043829
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0.33333334
-          outWeight: 0.13473819
+          time: 0.77676606
+          value: 0.6221754
+          inSlope: -1.5966452
+          outSlope: -1.5966452
+          tangentMode: 1
+          weightedMode: 3
+          inWeight: 0.33630368
+          outWeight: 0.32584578
         - serializedVersion: 3
           time: 1
           value: 0.013513565
-          inSlope: -2.6845047
+          inSlope: -1.301679
           outSlope: 0.03463656
           tangentMode: 1
           weightedMode: 1
-          inWeight: 0.47754905
+          inWeight: 0.34293732
           outWeight: 0
         m_PreInfinity: 2
         m_PostInfinity: 2
@@ -1312,9 +1321,9 @@ ParticleSystem:
       maxColor: {r: 1, g: 1, b: 1, a: 1}
       maxGradient:
         serializedVersion: 2
-        key0: {r: 1, g: 1, b: 1, a: 1}
+        key0: {r: 1, g: 0, b: 0, a: 1}
         key1: {r: 1, g: 1, b: 1, a: 1}
-        key2: {r: 0, g: 0, b: 0, a: 0}
+        key2: {r: 0, g: 0, b: 0, a: 1}
         key3: {r: 0, g: 0, b: 0, a: 0}
         key4: {r: 0, g: 0, b: 0, a: 0}
         key5: {r: 0, g: 0, b: 0, a: 0}
@@ -1330,7 +1339,7 @@ ParticleSystem:
         ctime7: 0
         atime0: 0
         atime1: 65535
-        atime2: 0
+        atime2: 65535
         atime3: 0
         atime4: 0
         atime5: 0

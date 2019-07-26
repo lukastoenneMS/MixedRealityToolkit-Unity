@@ -269,7 +269,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
-            icpSolver.Solve(curveBuffer.samples, shapePointFinder);
+            icpSolver.Solve(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform);
 
             result = icpSolver.TargetOffset;
             MSE = icpSolver.MeanSquareError;
@@ -287,7 +287,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             // icpSolver.Solve(points, shape);
 
-            icpSolver.Init(curveBuffer.samples, shapePointFinder);
+            icpSolver.Init(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform);
 
             if (curveBuffer.samples.Length > 0)
             {

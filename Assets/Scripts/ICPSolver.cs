@@ -16,6 +16,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         ICPClosestPointFinder CreateClosestPointFinder();
 
         void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer);
+
+        Pose PrincipalComponentsTransform { get; }
     }
 
     public interface ICPClosestPointFinder
@@ -65,11 +67,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private readonly PointSetTransformSolver pointSetSolver = new PointSetTransformSolver();
         public PointSetTransformSolver PointSetSolver => pointSetSolver;
 
+        private readonly PCASolver pcaSolver = new PCASolver();
+        public PCASolver PCASolver => pcaSolver;
+
         public bool DebugDrawingEnabled = false;
 
-        public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder)
+        public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder, Pose targetPCAPose)
         {
-            Init(points, targetPointFinder);
+            Init(points, targetPointFinder, targetPCAPose);
             if (points.Length > 0)
             {
                 while (iterations < MaxIterations)
@@ -85,7 +90,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        public void Init(Vector3[] points, ICPClosestPointFinder targetPointFinder)
+        public void Init(Vector3[] points, ICPClosestPointFinder targetPointFinder, Pose targetPCAPose)
         {
             this.targetPointFinder = targetPointFinder;
             this.points = points;
@@ -95,14 +100,19 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             meanSquareError = 0.0f;
             hasFoundLocalOptimum = false;
             iterations = 0;
-            InitPose(points);
+            InitPose(points, targetPCAPose);
         }
 
-        private void InitPose(Vector3[] points)
+        private void InitPose(Vector3[] points, Pose targetPCAPose)
         {
-            Vector3 centroid = MathUtils.GetCentroid(points);
+            #if false
+            pcaSolver.Solve(points);
+            Pose inputPCAPose = new Pose(pcaSolver.CentroidOffset, pcaSolver.RotationOffset);
+            #else
+            Pose inputPCAPose = new Pose(MathUtils.GetCentroid(points), Quaternion.identity);
+            #endif
 
-            Pose offset = new Pose(centroid, Quaternion.identity);
+            Pose offset = inputPCAPose.Inverse().Multiply(targetPCAPose);
             Pose invOffset = offset.Inverse();
 
             for (int i = 0; i < points.Length; ++i)

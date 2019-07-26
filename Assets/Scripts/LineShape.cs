@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
+
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     [Serializable]
@@ -16,6 +18,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public Vector3 start;
             public Vector3 end;
         }
+
+        // TODO compute using PCA and cache
+        public Pose PrincipalComponentsTransform => Pose.ZeroIdentity;
 
         [SerializeField]
         private readonly List<Line> lines = new List<Line>();

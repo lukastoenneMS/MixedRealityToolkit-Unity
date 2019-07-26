@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
+
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     [Serializable]
@@ -22,6 +24,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             [SerializeField]
             internal float segmentLength;
         }
+
+        // TODO compute using PCA and cache
+        public Pose PrincipalComponentsTransform => Pose.ZeroIdentity;
 
         [SerializeField]
         private readonly List<ControlPoint> controlPoints = new List<ControlPoint>();
