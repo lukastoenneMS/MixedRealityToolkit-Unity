@@ -35,6 +35,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public readonly ICPShape[] shapes = new ICPShape[]
         {
             LineShapeUtils.CreateCircle(0.2f, 16),
+            LineShapeUtils.CreateArrow(0.3f, 0.2f),
+            LineShapeUtils.CreateRectangle(0.3f, 0.3f),
         };
 
         public float MeanErrorThreshold = 0.05f;

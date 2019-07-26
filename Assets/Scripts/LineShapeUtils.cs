@@ -24,5 +24,32 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             return shape;
         }
+
+        public static LineShape CreateArrow(float length, float width)
+        {
+            LineShape shape = new LineShape();
+            shape.AddOpenShape(new Vector3[]
+            {
+                new Vector3(-length/2, width/2, 0),
+                new Vector3(length/2, 0, 0),
+                new Vector3(-length/2, -width/2, 0),
+            });
+
+            return shape;
+        }
+
+        public static LineShape CreateRectangle(float width, float height)
+        {
+            LineShape shape = new LineShape();
+            shape.AddClosedShape(new Vector3[]
+            {
+                new Vector3(-width/2, -height/2, 0),
+                new Vector3(width/2, -height/2, 0),
+                new Vector3(width/2, height/2, 0),
+                new Vector3(-width/2, height/2, 0),
+            });
+
+            return shape;
+        }
     }
 }
