@@ -137,12 +137,35 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public void Reserve(int numPoints)
         {
-
         }
 
         public void FindClosestPoints(Vector3[] points, Vector3[] result)
         {
+            if (curve.Count > 0)
+            {
+                for (int i = 0; i < points.Length; ++i)
+                {
+                    Vector3 p = points[i];
 
+                    float minSqrDist = float.MaxValue;
+
+                    Vector3 prevCP = curve.ControlPoints[0].position;
+                    for (int j = 1; j < curve.Count; ++j)
+                    {
+                        Vector3 CP = curve.ControlPoints[j].position;
+
+                        MathUtils.GetClosestPointOnLine(p, prevCP, CP, out Vector3 closestPointOnSegment, out float lambda);
+                        float sqrDist = (p - closestPointOnSegment).sqrMagnitude;
+                        if (sqrDist < minSqrDist)
+                        {
+                            minSqrDist = sqrDist;
+                            result[i] = closestPointOnSegment;
+                        }
+
+                        prevCP = CP;
+                    }
+                }
+            }
         }
     }
 }

@@ -192,12 +192,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset, out float coverageError))
                     {
                         Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
-                        // continue;
+                        continue;
                     }
 
                     CreateShapeMesh(shape, "ShapeMatch", true, targetOffset);
 
-                    // Curve.Clear();
+                    Curve.Clear();
                 }
             }
         }
@@ -235,6 +235,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                 while (icpSolver.Iterations < icpSolver.MaxIterations)
                 {
+                    icpSolver.DebugDrawingEnabled = icpSolver.Iterations == 0;
                     icpSolver.SolveStep();
 
                     poseList.Add(icpSolver.TargetOffset);
@@ -268,6 +269,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             Vector3[] closestCurvePoints = new Vector3[shapeBuffer.samples.Length];
             curvePointFinder.FindClosestPoints(shapeBuffer.samples, closestCurvePoints);
+
+            // for (int i = 0; i < shapeBuffer.samples.Length; ++i)
+            // {
+            //     Vector3 a = shapeBuffer.samples[i];
+            //     Vector3 b = closestCurvePoints[i];
+            //     Debug.DrawLine(a, b, Color.magenta);
+            // }
 
             MSE = MathUtils.ComputeMeanSquareError(shapeBuffer.samples, closestCurvePoints);
             return MSE <= ErrorThreshold * ErrorThreshold;

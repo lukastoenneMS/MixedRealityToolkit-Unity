@@ -56,6 +56,15 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return sum / Mathf.Max(1, points.Length);
         }
 
+        public static void GetClosestPointOnLine(Vector3 point, Vector3 start, Vector3 end, out Vector3 closestPoint, out float lambda)
+        {
+            Vector3 dir = end - start;
+            Vector3 q = point - start;
+            float sqrLen = dir.sqrMagnitude;
+            lambda = sqrLen > 0.0f ? Vector3.Dot(dir, q) / sqrLen : 0.0f;
+            closestPoint = lambda <= 0.0f ? start : (lambda >= 1.0f ? end : start + lambda * dir);
+        }
+
         public static float ComputeMeanSquareError(Vector3[] points, Vector3[] targets, float[] weights)
         {
             Debug.Assert(points.Length == targets.Length);

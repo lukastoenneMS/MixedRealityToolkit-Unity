@@ -123,8 +123,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 Vector3 closestPoint = Vector3.zero;
                 for (int j = 0; j < shape.Lines.Count; ++j)
                 {
-                    GetClosestPointOnLine(p, shape.Lines[j], out Vector3 closestLinePoint, out float lambda);
-                    float sqrDist = (p - closestPoint).sqrMagnitude;
+                    LineShape.Line line = shape.Lines[j];
+                    MathUtils.GetClosestPointOnLine(p, line.start, line.end, out Vector3 closestLinePoint, out float lambda);
+                    float sqrDist = (p - closestLinePoint).sqrMagnitude;
                     if (sqrDist < minSqrDist)
                     {
                         minSqrDist = sqrDist;
@@ -134,15 +135,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                 result[i] = closestPoint;
             }
-        }
-
-        private static void GetClosestPointOnLine(Vector3 point, LineShape.Line line, out Vector3 closestPoint, out float lambda)
-        {
-            Vector3 dir = line.end - line.start;
-            Vector3 q = point - line.start;
-            float sqrLen = dir.sqrMagnitude;
-            lambda = sqrLen > 0.0f ? Vector3.Dot(dir, q) / sqrLen : 0.0f;
-            closestPoint = lambda <= 0.0f ? line.start : (lambda >= 1.0f ? line.end : line.start + lambda * dir);
         }
     }
 }

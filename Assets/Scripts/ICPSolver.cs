@@ -65,6 +65,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private readonly PointSetTransformSolver pointSetSolver = new PointSetTransformSolver();
         public PointSetTransformSolver PointSetSolver => pointSetSolver;
 
+        public bool DebugDrawingEnabled = false;
+
         public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder)
         {
             Init(points, targetPointFinder);
@@ -140,6 +142,15 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private bool FindClosestPoints()
         {
             targetPointFinder.FindClosestPoints(points, closestPoints);
+            // if (DebugDrawingEnabled)
+            // {
+            //     for (int i = 0; i < points.Length; ++i)
+            //     {
+            //         Vector3 a = targetOffset.Multiply(points[i]);
+            //         Vector3 b = targetOffset.Multiply(closestPoints[i]);
+            //         Debug.DrawLine(a, b, Color.white);
+            //     }
+            // }
             return true;
         }
     }
