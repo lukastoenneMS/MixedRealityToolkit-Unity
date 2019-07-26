@@ -851,6 +851,7 @@ MonoBehaviour:
   Claxon: {fileID: 2049634641}
   TrackedJoint: 11
   SamplingDistance: 0.02
+  MaxRecordingTime: 0.8
   MaxCurveLength: 5
   MaxSamples: 200
   RenderResolution: 6

@@ -21,6 +21,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public TrackedHandJoint TrackedJoint = TrackedHandJoint.IndexTip;
         public float SamplingDistance = 0.03f;
+        public float MaxRecordingTime = 0.8f;
         public float MaxCurveLength = 3.0f;
         public int MaxSamples = 200;
 
@@ -39,6 +40,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         };
 
         public float MeanErrorThreshold = 0.05f;
+
+        private bool curveDirty = false;
 
         private MeshFilter meshFilter;
         private MaterialPropertyBlock materialProps;
@@ -68,6 +71,48 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             materialProps = new MaterialPropertyBlock();
         }
 
+        void Update()
+        {
+            if (Curve != null)
+            {
+                float currentTime = Time.time;
+                float arcLength = Curve.ArcLength;
+                int numRemoved = Curve.RemoveAll(cp =>
+                {
+                    float segmentEnd = cp.segmentStart + cp.segmentLength;
+                    float lengthFromTail = arcLength - segmentEnd;
+                    if (lengthFromTail > MaxCurveLength)
+                    {
+                        return true;
+                    }
+
+                    float age = currentTime - cp.timestamp;
+                    if (age > MaxRecordingTime)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                });
+                if (numRemoved > 0)
+                {
+                    curveDirty = true;
+                }
+
+                if (curveDirty)
+                {
+                    FindMatchingShapes();
+
+                    if (meshFilter)
+                    {
+                        CurveMeshUtils.GenerateCurveMesh(meshFilter.sharedMesh, Curve, RenderResolution, RenderThickness);
+                    }
+
+                    curveDirty = false;
+                }
+            }
+        }
+
         protected override void UpdateHandMatch(Handedness handedness, IDictionary<TrackedHandJoint, Pose> joints)
         {
             if (handedness != TrackedHand.ControllerHandedness)
@@ -83,8 +128,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             if (joints.TryGetValue(TrackedJoint, out Pose trackedPose))
             {
                 ExtendCurve(trackedPose.Position);
-
-                FindMatchingShapes();
             }
 
             if (InfoText)
@@ -106,6 +149,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             CurveHandedness = handedness;
             lastPosition = null;
             movedDistance = 0.0f;
+
+            if (meshFilter)
+            {
+                if (meshFilter.sharedMesh == null)
+                {
+                    meshFilter.mesh = new Mesh();
+                }
+            }
         }
 
         private void ClearCurve()
@@ -114,6 +165,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             CurveHandedness = Handedness.None;
             lastPosition = null;
             movedDistance = 0.0f;
+
+            if (meshFilter)
+            {
+                if (meshFilter.sharedMesh != null)
+                {
+                    meshFilter.sharedMesh.Clear();
+                }
+            }
         }
 
         private void ExtendCurve(Vector3 point)
@@ -131,33 +190,16 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             if (movedDistance >= SamplingDistance)
             {
-                Curve.Append(point);
+                float timestamp = Time.time;
+                Curve.Append(point, timestamp);
                 movedDistance = 0.0f;
 
                 if (Curve.Count > MaxSamples)
                 {
                     Curve.RemoveRange(0, Curve.Count - MaxSamples);
                 }
-                if (Curve.ArcLength > MaxCurveLength)
-                {
-                    if (Curve.TryFindControlPoint(Curve.ArcLength - MaxCurveLength, out int numRemove))
-                    {
-                        Curve.RemoveRange(0, numRemove);
-                    }
-                    else
-                    {
-                        Curve.Clear();
-                    }
-                }
 
-                if (meshFilter)
-                {
-                    if (meshFilter.sharedMesh == null)
-                    {
-                        meshFilter.mesh = new Mesh();
-                    }
-                    CurveMeshUtils.GenerateCurveMesh(meshFilter.sharedMesh, Curve, RenderResolution, RenderThickness);
-                }
+                curveDirty = true;
             }
         }
 
@@ -191,7 +233,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     }
                     if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset, out float coverageError))
                     {
-                        Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
+                        // Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
                         continue;
                     }
 

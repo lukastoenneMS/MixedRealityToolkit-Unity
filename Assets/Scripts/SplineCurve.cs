@@ -15,6 +15,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             public Vector3 position;
 
+            public float timestamp;
+
             [SerializeField]
             internal float segmentStart;
             [SerializeField]
@@ -31,10 +33,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         public int Count => controlPoints.Count;
 
-        public void Append(Vector3 point)
+        public void Append(Vector3 point, float timestamp)
         {
             var cp = new ControlPoint();
             cp.position = point;
+            cp.timestamp = timestamp;
             controlPoints.Add(cp);
             UpdateArcLength();
         }
@@ -45,10 +48,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             UpdateArcLength();
         }
 
-        public void RemoveAll(Predicate<ControlPoint> pred)
+        public int RemoveAll(Predicate<ControlPoint> pred)
         {
-            controlPoints.RemoveAll(pred);
+            int numRemoved = controlPoints.RemoveAll(pred);
             UpdateArcLength();
+            return numRemoved;
         }
 
         public void RemoveRange(int index, int count)
