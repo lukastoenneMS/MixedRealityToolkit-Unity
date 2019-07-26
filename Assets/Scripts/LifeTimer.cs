@@ -14,14 +14,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
     {
         public AnimationCurve curve;
 
-        private new Renderer renderer;
+        private Renderer theRenderer;
         private MaterialPropertyBlock materialProps;
 
         private float localTime;
 
         void Awake()
         {
-            renderer = GetComponent<Renderer>();
+            theRenderer = GetComponent<Renderer>();
             materialProps = new MaterialPropertyBlock();
 
             localTime = 0.0f;
@@ -42,11 +42,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 {
                     hasEnded = false;
                     float weight = curve.Evaluate(localTime);
-                    if (renderer)
+                    if (theRenderer)
                     {
-                        Color matColor = renderer.material.GetColor("_Color");
+                        Color matColor = theRenderer.material.GetColor("_Color");
                         materialProps.SetColor("_Color", matColor * weight);
-                        renderer.SetPropertyBlock(materialProps);
+                        theRenderer.SetPropertyBlock(materialProps);
                     }
                 }
             }
