@@ -17,7 +17,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public float RenderThickness = 0.003f;
 
         private MeshFilter meshFilter;
-        private MaterialPropertyBlock materialProps;
 
         public void UpdateShapeMesh(ICPShape shape)
         {
@@ -30,20 +29,9 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        public void SetColorMix(float value)
-        {
-            var renderer = GetComponent<MeshRenderer>();
-            if (renderer)
-            {
-                materialProps.SetColor("_Color", Color.green * value + Color.red * (1.0f - value));
-                renderer.SetPropertyBlock(materialProps);
-            }
-        }
-
         void Awake()
         {
             meshFilter = GetComponent<MeshFilter>();
-            materialProps = new MaterialPropertyBlock();
         }
     }
 }

@@ -105,14 +105,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private void InitPose(Vector3[] points, Pose targetPCAPose)
         {
-            #if false
+            #if true
             pcaSolver.Solve(points);
             Pose inputPCAPose = new Pose(pcaSolver.CentroidOffset, pcaSolver.RotationOffset);
             #else
             Pose inputPCAPose = new Pose(MathUtils.GetCentroid(points), Quaternion.identity);
             #endif
 
-            Pose offset = inputPCAPose.Inverse().Multiply(targetPCAPose);
+            Pose offset = targetPCAPose.Inverse().Multiply(inputPCAPose);
             Pose invOffset = offset.Inverse();
 
             for (int i = 0; i < points.Length; ++i)

@@ -17,11 +17,18 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private Renderer theRenderer;
         private MaterialPropertyBlock materialProps;
 
+        private Color baseColor;
+        public Color BaseColor { get => baseColor; set => baseColor = value; }
+
         private float localTime;
 
         void Awake()
         {
             theRenderer = GetComponent<Renderer>();
+            if (theRenderer)
+            {
+                baseColor = theRenderer.material.GetColor("_Color");
+            }
             materialProps = new MaterialPropertyBlock();
 
             localTime = 0.0f;
@@ -44,8 +51,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     float weight = curve.Evaluate(localTime);
                     if (theRenderer)
                     {
-                        Color matColor = theRenderer.material.GetColor("_Color");
-                        materialProps.SetColor("_Color", matColor * weight);
+                        materialProps.SetColor("_Color", baseColor * weight);
                         theRenderer.SetPropertyBlock(materialProps);
                     }
                 }

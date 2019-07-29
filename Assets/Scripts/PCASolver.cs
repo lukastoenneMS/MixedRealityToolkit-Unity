@@ -22,6 +22,15 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         {
             Init(input);
 
+            if (inputPoints.Length == 0)
+            {
+                CentroidOffset = Vector3.zero;
+                RotationOffset =  Quaternion.identity;
+                ConditionNumber = 0.0f;
+                ReflectionCase = false;
+                return false;
+            }
+
             if (inputPoints.Length == 1)
             {
                 CentroidOffset = inputPoints[0];
@@ -53,7 +62,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             Matrix<float> X = CreateMatrix.Dense<float>(inputPoints.Length, 3);
             for (int i = 0; i < inputPoints.Length; ++i)
             {
-                X.SetRow(i, GetNVectorFromVector(inputPoints[i]));
+                X.SetRow(i, GetNVectorFromVector(inputPoints[i] - toCentroid));
             }
 
             var svdSolver = X.Svd();
@@ -61,13 +70,19 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             //     Vector3 x = GetVectorFromNVector(svdSolver.VT.Row(0));
             //     Vector3 y = GetVectorFromNVector(svdSolver.VT.Row(1));
             //     Vector3 z = GetVectorFromNVector(svdSolver.VT.Row(2));
-            //     Debug.Log($"X = {x}, {x.magnitude}");
-            //     Debug.DrawLine(toCentroid, toCentroid + 0.2f * x, Color.red);
-            //     Debug.DrawLine(toCentroid, toCentroid + 0.2f * y, Color.green);
-            //     Debug.DrawLine(toCentroid, toCentroid + 0.2f * z, Color.blue);
+            //     // Vector3 x = GetVectorFromNVector(svdSolver.VT.Column(0));
+            //     // Vector3 y = GetVectorFromNVector(svdSolver.VT.Column(1));
+            //     // Vector3 z = GetVectorFromNVector(svdSolver.VT.Column(2));
+            //     float s = 0.1f;
+            //     Vector3 c = toCentroid;
+            //     float dur = 5.0f;
+            //     Debug.DrawLine(c, c + x * s, Color.red, dur);
+            //     Debug.DrawLine(c, c + y * s, Color.green, dur);
+            //     Debug.DrawLine(c, c + z * s, Color.blue, dur);
             // }
 
             Matrix<float> rotationMatrix = svdSolver.VT.Transpose();
+            // Debug.Log($"x={svdSolver.W[0, 0]:F4}, y={svdSolver.W[1, 1]:F4}, z={svdSolver.W[2, 2]:F4}");
             // Handle reflection case
             ReflectionCase = (rotationMatrix.Determinant() < 0);
             if (ReflectionCase)

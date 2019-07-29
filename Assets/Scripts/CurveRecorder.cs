@@ -201,6 +201,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     {
                         continue;
                     }
+                    if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset[targetOffset.Length - 1], out float coverageError))
+                    {
+                        // Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
+                        continue;
+                    }
 
                     int numSteps = targetOffset.Length;
                     for (int i = 0; i < numSteps; ++i)
@@ -208,6 +213,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                         float mix = (float)i / (float)(numSteps - 1);
                         CreateShapeMesh(shape, $"ShapeMatch Step {i}", targetOffset[i], mix);
                     }
+
+                    Curve.Clear();
                 }
                 else
                 {
@@ -217,7 +224,6 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     }
                     if (!CompareShapeCoverage(shape, MeanErrorThreshold, targetOffset, out float coverageError))
                     {
-                        // Debug.Log($"targetOffset.Position=({targetOffset.Position.x:F4}, {targetOffset.Position.y:F4}, {targetOffset.Position.z:F4}) coverageError={Mathf.Sqrt(coverageError)}");
                         continue;
                     }
 
@@ -321,9 +327,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             if (shapeRenderer)
             {
                 shapeRenderer.UpdateShapeMesh(shape);
-                if (colorMix.HasValue)
+            }
+            if (colorMix.HasValue)
+            {
+                var lifeTimer = shapeObj.GetComponentInChildren<LifeTimer>();
+                if (lifeTimer)
                 {
-                    shapeRenderer.SetColorMix(colorMix.Value);
+                    lifeTimer.BaseColor = Color.green * colorMix.Value + Color.red * (1.0f - colorMix.Value);
                 }
             }
 
