@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/CurveMatchingTest.unity
+    guid: f34d1ec729fc6924e894b4d3ed0d6c46
+  - enabled: 1
     path: Assets/Scenes/RockPaperScissors.unity
     guid: 11e3e3570d296bf4c96aed8ae0b5ee2b
   - enabled: 1
