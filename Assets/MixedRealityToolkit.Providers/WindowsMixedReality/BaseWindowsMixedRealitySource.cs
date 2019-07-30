@@ -146,8 +146,8 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
 
                 // We want the source to follow the Playspace, so fold in the playspace transform here to 
                 // put the source pose into world space.
-                currentSourcePosition = MixedRealityPlayspace.TransformPoint(currentSourcePosition);
-                currentSourceRotation = MixedRealityPlayspace.Rotation * currentSourceRotation;
+                currentSourcePose.Position = MixedRealityPlayspace.TransformPoint(currentSourcePose.Position);
+                currentSourcePose.Rotation = MixedRealityPlayspace.Rotation * currentSourcePose.Rotation;
 
                 // Devices are considered tracked if we receive position OR rotation data from the sensors.
                 TrackingState = (IsPositionAvailable || IsRotationAvailable) ? TrackingState.Tracked : TrackingState.NotTracked;
@@ -157,9 +157,6 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                 // The input source does not support tracking.
                 TrackingState = TrackingState.NotApplicable;
             }
-
-            currentSourcePose.Position = currentSourcePose.Position;
-            currentSourcePose.Rotation = currentSourcePose.Rotation;
 
             // Raise input system events if it is enabled.
             if (lastState != TrackingState)
