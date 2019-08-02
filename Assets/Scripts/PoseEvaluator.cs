@@ -12,7 +12,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class PoseEvaluator
     {
-        private readonly PointSetTransformSolver solver = new PointSetTransformSolver();
+        private readonly PointSetTransformSolver solver = new PointSetTransformSolver(PointSetTransformSolver.ScaleSolverMode.Fixed);
 
         public PoseMatch EvaluatePose(Vector3[] input, PoseConfiguration config)
         {

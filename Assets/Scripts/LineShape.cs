@@ -19,8 +19,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public Vector3 end;
         }
 
-        // TODO compute using PCA and cache
-        public Pose PrincipalComponentsTransform => Pose.ZeroIdentity;
+        private Pose principalComponentsTransform = Pose.ZeroIdentity;
+        public Pose PrincipalComponentsTransform => principalComponentsTransform;
+        private Vector3 principalComponentsMoments = Vector3.one;
+        public Vector3 PrincipalComponentsMoments => principalComponentsMoments;
 
         [SerializeField]
         private readonly List<Line> lines = new List<Line>();
@@ -99,6 +101,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     prev = iter.Current;
                 }
             }
+        }
+
+        private void Update()
+        {
+            
+
+            principalComponentsTransform = Pose.ZeroIdentity;
+            principalComponentsMoments = Vector3.one;
         }
     }
 

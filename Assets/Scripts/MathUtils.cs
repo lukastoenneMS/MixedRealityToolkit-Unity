@@ -36,6 +36,26 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             public int tmp;
         }
 
+        /// <summary>
+        /// Compute reciprocal scale a / b for each component.
+        /// </summary>
+        public static Vector3 RScale(Vector3 a, Vector3 b)
+        {
+            return new Vector3(
+                b.x != 0.0f ? a.x / b.x : 0.0f,
+                b.y != 0.0f ? a.y / b.y : 0.0f,
+                b.z != 0.0f ? a.z / b.z : 0.0f
+            );
+        }
+
+        /// <summary>
+        /// Compute square root for each component.
+        /// </summary>
+        public static Vector3 VSqrt(Vector3 v)
+        {
+            return new Vector3(Mathf.Sqrt(v.x), Mathf.Sqrt(v.y), Mathf.Sqrt(v.z));
+        }
+
         public static float GetMean(float[] values)
         {
             float sum = 0.0f;

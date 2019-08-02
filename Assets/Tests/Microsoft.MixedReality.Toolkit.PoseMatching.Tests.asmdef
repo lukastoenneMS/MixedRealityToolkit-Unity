@@ -1,6 +1,7 @@
 {
     "name": "Microsoft.MixedReality.Toolkit.PoseMatching.Tests",
     "references": [
+        "Microsoft.MixedReality.Toolkit",
         "Microsoft.MixedReality.Toolkit.PoseMatching"
     ],
     "optionalUnityReferences": [

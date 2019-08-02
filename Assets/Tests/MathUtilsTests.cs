@@ -271,7 +271,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         [Test]
         public void SVDTest()
         {
-            SvdSolver solver = new SvdSolver();
+            SVDSolver solver = new SVDSolver();
 
             foreach (Matrix4x4 M in matrices)
             {
@@ -283,7 +283,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     A.GetColumn(0).sqrMagnitude,
                     A.GetColumn(1).sqrMagnitude,
                     A.GetColumn(2).sqrMagnitude));
-                Matrix4x4 R = Matrix4x4.Rotate(solver.U) * solver.S * Matrix4x4.Rotate(solver.V).transpose;
+                Matrix4x4 R = solver.U * solver.S * solver.V.transpose;
                 for (int i = 0; i < 3; ++i)
                 {
                     for (int j = 0; j < 3; ++j)

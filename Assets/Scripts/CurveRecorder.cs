@@ -35,18 +35,24 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         public readonly ICPShape[] shapes = new ICPShape[]
         {
             LineShapeUtils.CreateCircle(0.2f, 16),
-            LineShapeUtils.CreateArrow(0.3f, 0.2f),
-            LineShapeUtils.CreateRectangle(0.3f, 0.3f),
+            // LineShapeUtils.CreateArrow(0.3f, 0.2f),
+            // LineShapeUtils.CreateRectangle(0.3f, 0.3f),
         };
 
         public float MeanErrorThreshold = 0.05f;
 
+        public PointSetTransformSolver.ScaleSolverMode ScaleMode = PointSetTransformSolver.ScaleSolverMode.Fixed;
+
+        public bool DrawDebugSolverSteps = true;
+
         private bool curveDirty = false;
+        private ICPSolver icpSolver;
         private SplineCurveRenderer curveRenderer;
         private GameObject follower;
 
         void Awake()
         {
+            icpSolver = new ICPSolver(ScaleMode); 
             curveRenderer = GetComponentInChildren<SplineCurveRenderer>();
 
             if (InfoText)
@@ -187,17 +193,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        private readonly ICPSolver icpSolver = new ICPSolver();
-
-        public bool DrawDebugSolverSteps = true;
-
         private void FindMatchingShapes()
         {
             foreach (ICPShape shape in shapes)
             {
                 if (DrawDebugSolverSteps)
                 {
-                    if (!FindCurveMatchSteps(shape, MeanErrorThreshold, out Pose[] targetOffset, out float[] MSE))
+                    if (!FindCurveMatchSteps(shape, MeanErrorThreshold, out Pose[] targetOffset, out Vector3[] targetScale, out float[] MSE))
                     {
                         continue;
                     }
@@ -211,14 +213,14 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     for (int i = 0; i < numSteps; ++i)
                     {
                         float mix = (float)i / (float)(numSteps - 1);
-                        CreateShapeMesh(shape, $"ShapeMatch Step {i}", targetOffset[i], mix);
+                        CreateShapeMesh(shape, $"ShapeMatch Step {i}", targetOffset[i], targetScale[i], mix);
                     }
 
                     Curve.Clear();
                 }
                 else
                 {
-                    if (!FindCurveMatch(shape, MeanErrorThreshold, out Pose targetOffset, out float icpError))
+                    if (!FindCurveMatch(shape, MeanErrorThreshold, out Pose targetOffset, out Vector3 targetScale, out float icpError))
                     {
                         continue;
                     }
@@ -227,42 +229,45 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                         continue;
                     }
 
-                    CreateShapeMesh(shape, "ShapeMatch", targetOffset);
+                    CreateShapeMesh(shape, "ShapeMatch", targetOffset, targetScale);
 
                     Curve.Clear();
                 }
             }
         }
 
-        private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose result, out float MSE)
+        private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose poseResult, out Vector3 scaleResult, out float MSE)
         {
             ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
-            icpSolver.Solve(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform);
+            icpSolver.Solve(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform, shape.PrincipalComponentsMoments);
 
-            result = icpSolver.TargetOffset;
+            poseResult = icpSolver.TargetOffset;
+            scaleResult = icpSolver.TargetScale;
             MSE = icpSolver.MeanSquareError;
             return icpSolver.HasFoundLocalOptimum && icpSolver.MeanSquareError <= ErrorThreshold * ErrorThreshold;
         }
 
-        private bool FindCurveMatchSteps(ICPShape shape, float ErrorThreshold, out Pose[] result, out float[] MSE)
+        private bool FindCurveMatchSteps(ICPShape shape, float ErrorThreshold, out Pose[] poseResult, out Vector3[] scaleResult, out float[] MSE)
         {
             ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
             ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
             List<Pose> poseList = new List<Pose>();
+            List<Vector3> scaleList = new List<Vector3>();
             List<float> mseList = new List<float>();
 
             // icpSolver.Solve(points, shape);
 
-            icpSolver.Init(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform);
+            icpSolver.Init(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform, shape.PrincipalComponentsMoments);
 
             if (curveBuffer.samples.Length > 0)
             {
                 poseList.Add(icpSolver.TargetOffset);
+                scaleList.Add(icpSolver.TargetScale);
                 mseList.Add(icpSolver.MeanSquareError);
 
                 while (icpSolver.Iterations < icpSolver.MaxIterations)
@@ -271,6 +276,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                     icpSolver.SolveStep();
 
                     poseList.Add(icpSolver.TargetOffset);
+                    scaleList.Add(icpSolver.TargetScale);
                     mseList.Add(icpSolver.MeanSquareError);
 
                     // Finish when MSE does not decrease significantly
@@ -281,7 +287,8 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
                 }
             }
 
-            result = poseList.ToArray();
+            poseResult = poseList.ToArray();
+            scaleResult = scaleList.ToArray();
             MSE = mseList.ToArray();
             return icpSolver.HasFoundLocalOptimum && icpSolver.MeanSquareError <= ErrorThreshold * ErrorThreshold;
         }
@@ -313,7 +320,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return MSE <= ErrorThreshold * ErrorThreshold;
         }
 
-        private GameObject CreateShapeMesh(ICPShape shape, string name, Pose pose, float? colorMix = null)
+        private GameObject CreateShapeMesh(ICPShape shape, string name, Pose pose, Vector3 scale, float? colorMix = null)
         {
             if (!ShapeVisualizerPrefab)
             {
@@ -339,6 +346,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
             shapeObj.transform.position = pose.Position;
             shapeObj.transform.rotation = pose.Rotation;
+            shapeObj.transform.localScale = scale;
 
             return shapeObj;
         }

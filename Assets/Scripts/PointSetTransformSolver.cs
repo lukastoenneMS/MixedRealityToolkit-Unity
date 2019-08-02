@@ -11,14 +11,29 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     public class PointSetTransformSolver
     {
+        public enum ScaleSolverMode
+        {
+            Fixed,
+            Uniform,
+            NonUniform,
+        }
+
+        public ScaleSolverMode ScaleMode = ScaleSolverMode.Fixed;
+
         public Vector3 CentroidOffset;
         public Quaternion RotationOffset;
+        public Vector3 Scale;
         public bool ReflectionCase;
         public float ConditionNumber;
 
         private Vector3[] inputPoints;
         private Vector3[] targetPoints;
         private float[] targetWeights;
+
+        public PointSetTransformSolver(ScaleSolverMode scaleMode)
+        {
+            this.ScaleMode = scaleMode;
+        }
 
         public bool Solve(Vector3[] input, Vector3[] targets, float[] weights = null)
         {
@@ -28,6 +43,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             {
                 CentroidOffset = inputPoints[0] - targetPoints[0];
                 RotationOffset =  Quaternion.identity;
+                Scale = Vector3.one;
                 ConditionNumber = 0.0f;
                 ReflectionCase = false;
                 return true;
@@ -44,6 +60,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
                 CentroidOffset = toCentroid - rot * fromCentroid;
                 RotationOffset = rot;
+                Scale = Vector3.one * (vFrom.magnitude > 0.0f ? vTo.magnitude / vFrom.magnitude : 1.0f);
                 ConditionNumber = 0.0f;
                 ReflectionCase = false;
                 return true;
@@ -53,15 +70,62 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             // “Least-Squares Fitting of Two 3-D Point Sets”, Arun, K. S. and Huang, T. S. and Blostein, S. D,
             // IEEE Transactions on Pattern Analysis and Machine Intelligence, Volume 9 Issue 5, May 1987
 
+            // Solve scale
+            switch (ScaleMode)
+            {
+                case ScaleSolverMode.Fixed:
+                    Scale = Vector3.one;
+                    break;
+                
+                case ScaleSolverMode.Uniform:
+                    break;
+
+                case ScaleSolverMode.NonUniform:
+                    // TODO norm of target points can be computed in advance, target points don't change during solve
+                    // Vector3 norm = Vector3.zero;
+                    // for (int i = 0; i < targetPoints.Length; ++i)
+                    // {
+                    //     Vector3 m = targetPoints[i] - fromCentroid;
+                    //     norm += new Vector3(m.x * m.x, m.y * m.y, m.z * m.z);
+                    // }
+                    // Scale = Vector3.zero;
+                    // for (int i = 0; i < inputPoints.Length; ++i)
+                    // {
+                    //     Vector3 p = inputPoints[i] - toCentroid;
+                    //     Vector3 m = targetPoints[i] - fromCentroid;
+                    //     Scale += new Vector3(m.x * p.x, m.y * p.y, m.z * p.z);
+                    // }
+                    Vector3 norm = Vector3.zero;
+                    for (int i = 0; i < inputPoints.Length; ++i)
+                    {
+                        Vector3 p = inputPoints[i] - toCentroid;
+                        norm += new Vector3(p.x * p.x, p.y * p.y, p.z * p.z);
+                    }
+                    Scale = Vector3.zero;
+                    for (int i = 0; i < targetPoints.Length; ++i)
+                    {
+                        Vector3 p = inputPoints[i] - toCentroid;
+                        Vector3 m = targetPoints[i] - fromCentroid;
+                        Scale += new Vector3(m.x * p.x, m.y * p.y, m.z * p.z);
+                    }
+                    Scale = MathUtils.RScale(Scale, norm);
+                    break;
+            }
+            Scale = Vector3.one;
+
             // Build covariance matrix
             Matrix<float> H = CreateMatrix.Dense<float>(3, 3, 0.0f);
             for (int i = 0; i < inputPoints.Length; ++i)
             {
-                float weight = targetWeights != null ? targetWeights[i] : 1.0f;
-                Vector<float> pa = GetNVectorFromVector((targetPoints[i] - fromCentroid) * weight);
-                Vector<float> pb = GetNVectorFromVector(inputPoints[i] - toCentroid);
+                Vector3 m = targetPoints[i] - fromCentroid;
+                Vector3 p = inputPoints[i] - toCentroid;
+                p.Scale(Scale);
 
-                H += Vector<float>.OuterProduct(pa, pb);
+                Vector<float> pa = GetNVectorFromVector(m);
+                Vector<float> pb = GetNVectorFromVector(p);
+
+                float weight = targetWeights != null ? targetWeights[i] : 1.0f;
+                H += Vector<float>.OuterProduct(pa, pb) * weight;
             }
 
             var svdSolver = H.Svd();

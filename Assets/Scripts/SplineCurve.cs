@@ -27,6 +27,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         // TODO compute using PCA and cache
         public Pose PrincipalComponentsTransform => Pose.ZeroIdentity;
+        public Vector3 PrincipalComponentsMoments => Vector3.one;
 
         [SerializeField]
         private readonly List<ControlPoint> controlPoints = new List<ControlPoint>();
