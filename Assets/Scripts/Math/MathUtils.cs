@@ -204,7 +204,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
         {
             float ch = 2.0f * (a11 - a22);
             float cch = ch * ch;
-            float sh = a12; 
+            float sh = a12;
             float ssh = sh * sh;
             bool b = (GivensApproxGamma * ssh) < cch;
             float omega = OneOverSqrt(cch + ssh);

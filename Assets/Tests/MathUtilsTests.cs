@@ -238,37 +238,6 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
         const float ExpectedSvdAccuracy = 1.0e-3f;
 
         [Test]
-        public void SVDTestEigenAnalysis()
-        {
-            JacobiEigenSolver solver = new JacobiEigenSolver();
-
-            foreach (Matrix4x4 M in matrices)
-            {
-                Matrix4x4 A = M;
-
-                solver.Solve(A.transpose * A);
-
-                Vector3 s0 = solver.S.GetColumn(0);
-                Vector3 s1 = solver.S.GetColumn(1);
-                Vector3 s2 = solver.S.GetColumn(2);
-                Assert.AreEqual(s0.magnitude, s0.x, s0.magnitude * ExpectedSvdAccuracy);
-                Assert.AreEqual(s1.magnitude, s1.y, s1.magnitude * ExpectedSvdAccuracy);
-                Assert.AreEqual(s2.magnitude, s2.z, s2.magnitude * ExpectedSvdAccuracy);
-
-                Quaternion V = solver.Q;
-                // Matrix4x4 B = A * Matrix4x4.Rotate(V);
-                Matrix4x4 B = solver.S * Matrix4x4.Rotate(V);
-
-                Vector3 x = B.GetColumn(0);
-                Vector3 y = B.GetColumn(1);
-                Vector3 z = B.GetColumn(2);
-                Assert.AreEqual(0.0f, Vector3.Dot(x, y), x.magnitude * y.magnitude * ExpectedSvdAccuracy);
-                Assert.AreEqual(0.0f, Vector3.Dot(y, z), y.magnitude * z.magnitude * ExpectedSvdAccuracy);
-                Assert.AreEqual(0.0f, Vector3.Dot(z, x), z.magnitude * x.magnitude * ExpectedSvdAccuracy);
-            }
-        }
-
-        [Test]
         public void SVDTest()
         {
             SVDSolver solver = new SVDSolver();
