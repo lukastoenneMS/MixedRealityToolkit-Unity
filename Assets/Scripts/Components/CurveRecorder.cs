@@ -32,7 +32,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private Vector3? lastPosition;
         private float movedDistance;
 
-        public readonly ICPShape[] shapes = new ICPShape[]
+        public readonly Shape[] shapes = new Shape[]
         {
             LineShapeUtils.CreateCircle(0.2f, 16),
             // LineShapeUtils.CreateArrow(0.3f, 0.2f),
@@ -195,7 +195,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
 
         private void FindMatchingShapes()
         {
-            foreach (ICPShape shape in shapes)
+            foreach (Shape shape in shapes)
             {
                 if (DrawDebugSolverSteps)
                 {
@@ -236,10 +236,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        private bool FindCurveMatch(ICPShape shape, float ErrorThreshold, out Pose poseResult, out Vector3 scaleResult, out float MSE)
+        private bool FindCurveMatch(Shape shape, float ErrorThreshold, out Pose poseResult, out Vector3 scaleResult, out float MSE)
         {
-            ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
-            ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
+            ShapeClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
+            ShapeSampleBuffer curveBuffer = new ShapeSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
             icpSolver.Solve(curveBuffer.samples, shapePointFinder, shape.PrincipalComponentsTransform, shape.PrincipalComponentsMoments);
@@ -250,10 +250,10 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return icpSolver.HasFoundLocalOptimum && icpSolver.MeanSquareError <= ErrorThreshold * ErrorThreshold;
         }
 
-        private bool FindCurveMatchSteps(ICPShape shape, float ErrorThreshold, out Pose[] poseResult, out Vector3[] scaleResult, out float[] MSE)
+        private bool FindCurveMatchSteps(Shape shape, float ErrorThreshold, out Pose[] poseResult, out Vector3[] scaleResult, out float[] MSE)
         {
-            ICPClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
-            ICPSampleBuffer curveBuffer = new ICPSampleBuffer();
+            ShapeClosestPointFinder shapePointFinder = shape.CreateClosestPointFinder();
+            ShapeSampleBuffer curveBuffer = new ShapeSampleBuffer();
             Curve.GenerateSamples(ErrorThreshold, curveBuffer);
 
             List<Pose> poseList = new List<Pose>();
@@ -297,11 +297,11 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         // under the tranform provided by ICP.
         // This ensures that the target shape is matched in its entirety rather than just
         // a small section that happens to fit the input curve.
-        private bool CompareShapeCoverage(ICPShape shape, float ErrorThreshold, Pose targetOffset, out float MSE)
+        private bool CompareShapeCoverage(Shape shape, float ErrorThreshold, Pose targetOffset, out float MSE)
         {
-            ICPClosestPointFinder curvePointFinder = Curve.CreateClosestPointFinder();
+            ShapeClosestPointFinder curvePointFinder = Curve.CreateClosestPointFinder();
 
-            ICPSampleBuffer shapeBuffer = new ICPSampleBuffer();
+            ShapeSampleBuffer shapeBuffer = new ShapeSampleBuffer();
             shape.GenerateSamples(ErrorThreshold, shapeBuffer);
             // Transform into curve space for computing the MSE
             shapeBuffer.Transform(targetOffset);
@@ -320,7 +320,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return MSE <= ErrorThreshold * ErrorThreshold;
         }
 
-        private GameObject CreateShapeMesh(ICPShape shape, string name, Pose pose, Vector3 scale, float? colorMix = null)
+        private GameObject CreateShapeMesh(Shape shape, string name, Pose pose, Vector3 scale, float? colorMix = null)
         {
             if (!ShapeVisualizerPrefab)
             {
@@ -330,7 +330,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             GameObject shapeObj = GameObject.Instantiate(ShapeVisualizerPrefab);
             shapeObj.name = name;
 
-            var shapeRenderer = shapeObj.GetComponentInChildren<ICPShapeRenderer>();
+            var shapeRenderer = shapeObj.GetComponentInChildren<ShapeRenderer>();
             if (shapeRenderer)
             {
                 shapeRenderer.UpdateShapeMesh(shape);

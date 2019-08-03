@@ -10,7 +10,7 @@ using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     [Serializable]
-    public class SplineCurve : ICPShape
+    public class SplineCurve : Shape
     {
         [Serializable]
         public class ControlPoint
@@ -117,7 +117,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             return lowIdx >= 0 && lowIdx < controlPoints.Count;
         }
 
-        public void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer)
+        public void GenerateSamples(float maxSampleDistance, ShapeSampleBuffer buffer)
         {
             if (buffer.samples.Length != controlPoints.Count)
             {
@@ -130,13 +130,13 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        public ICPClosestPointFinder CreateClosestPointFinder()
+        public ShapeClosestPointFinder CreateClosestPointFinder()
         {
             return new SplineCurveClosestPointFinder(this);
         }
     }
 
-    public class SplineCurveClosestPointFinder : ICPClosestPointFinder
+    public class SplineCurveClosestPointFinder : ShapeClosestPointFinder
     {
         private SplineCurve curve;
 

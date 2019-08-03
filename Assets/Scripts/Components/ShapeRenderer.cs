@@ -11,14 +11,14 @@ using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     [RequireComponent(typeof(MeshFilter))]
-    public class ICPShapeRenderer : MonoBehaviour
+    public class ShapeRenderer : MonoBehaviour
     {
         public int RenderResolution = 6;
         public float RenderThickness = 0.003f;
 
         private MeshFilter meshFilter;
 
-        public void UpdateShapeMesh(ICPShape shape)
+        public void UpdateShapeMesh(Shape shape)
         {
             meshFilter.mesh = new Mesh();
 

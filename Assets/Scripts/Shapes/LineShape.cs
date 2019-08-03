@@ -11,7 +11,7 @@ using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
     [Serializable]
-    public class LineShape : ICPShape
+    public class LineShape : Shape
     {
         public struct Line
         {
@@ -28,12 +28,12 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         private readonly List<Line> lines = new List<Line>();
         public List<Line> Lines => lines;
 
-        public ICPClosestPointFinder CreateClosestPointFinder()
+        public ShapeClosestPointFinder CreateClosestPointFinder()
         {
             return new LineShapeClosestPointFinder(this);
         }
 
-        public void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer)
+        public void GenerateSamples(float maxSampleDistance, ShapeSampleBuffer buffer)
         {
             int numSamples = 0;
             for (int i = 0; i < lines.Count; ++i)
@@ -112,7 +112,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
         }
     }
 
-    public class LineShapeClosestPointFinder : ICPClosestPointFinder
+    public class LineShapeClosestPointFinder : ShapeClosestPointFinder
     {
         private LineShape shape;
 

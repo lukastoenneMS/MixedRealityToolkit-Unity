@@ -11,42 +11,12 @@ using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 
 namespace Microsoft.MixedReality.Toolkit.PoseMatching
 {
-    public interface ICPShape
-    {
-        ICPClosestPointFinder CreateClosestPointFinder();
-
-        void GenerateSamples(float maxSampleDistance, ICPSampleBuffer buffer);
-
-        Pose PrincipalComponentsTransform { get; }
-        Vector3 PrincipalComponentsMoments { get; }
-    }
-
-    public interface ICPClosestPointFinder
-    {
-        void Reserve(int numPoints);
-
-        void FindClosestPoints(Vector3[] points, Vector3[] result);
-    }
-
-    public class ICPSampleBuffer
-    {
-        public Vector3[] samples = new Vector3[0];
-
-        public void Transform(Pose offset)
-        {
-            for (int i = 0; i < samples.Length; ++i)
-            {
-                samples[i] = offset.Multiply(samples[i]);
-            }
-        }
-    }
-
     public class ICPSolver
     {
         public float ErrorConvergenceThreshold = 0.001f;
         public int MaxIterations = 30;
 
-        private ICPClosestPointFinder targetPointFinder;
+        private ShapeClosestPointFinder targetPointFinder;
         private Vector3[] points;
         public Vector3[] Points => points;
 
@@ -82,7 +52,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             pcaSolver = new PCASolver();
         }
 
-        public void Solve(Vector3[] points, ICPClosestPointFinder targetPointFinder, Pose targetPCAPose, Vector3 targetPCAMoments)
+        public void Solve(Vector3[] points, ShapeClosestPointFinder targetPointFinder, Pose targetPCAPose, Vector3 targetPCAMoments)
         {
             Init(points, targetPointFinder, targetPCAPose, targetPCAMoments);
             if (points.Length > 0)
@@ -100,7 +70,7 @@ namespace Microsoft.MixedReality.Toolkit.PoseMatching
             }
         }
 
-        public void Init(Vector3[] points, ICPClosestPointFinder targetPointFinder, Pose targetPCAPose, Vector3 targetPCAMoments)
+        public void Init(Vector3[] points, ShapeClosestPointFinder targetPointFinder, Pose targetPCAPose, Vector3 targetPCAMoments)
         {
             this.targetPointFinder = targetPointFinder;
             this.points = points;
