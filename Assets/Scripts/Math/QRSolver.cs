@@ -5,7 +5,7 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 {
     public class QRSolver
     {

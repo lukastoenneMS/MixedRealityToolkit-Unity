@@ -1,14 +1,14 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using Microsoft.MixedReality.Toolkit.Utilities.MathSolvers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
 {
     [Serializable]
     public class LineShape : Shape

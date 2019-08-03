@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
 {
     [Serializable]
     internal class SerializablePoseConfiguration

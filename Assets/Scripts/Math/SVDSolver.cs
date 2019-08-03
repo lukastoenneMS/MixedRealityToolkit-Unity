@@ -6,7 +6,7 @@ using MathNet.Numerics.LinearAlgebra.Factorization;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 {
     public class SVDSolver
     {

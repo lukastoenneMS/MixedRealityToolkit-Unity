@@ -3,13 +3,14 @@
 
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
+using Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 {
     public class ICPSolver
     {

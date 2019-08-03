@@ -8,7 +8,7 @@ using UnityEngine;
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 using Joint = Microsoft.MixedReality.Toolkit.Utilities.TrackedHandJoint;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Examples.Demos.RockPaperScissors
 {
     public class GhostHand : MonoBehaviour
     {

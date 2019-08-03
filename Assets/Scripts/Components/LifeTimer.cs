@@ -8,7 +8,7 @@ using UnityEngine;
 
 using Pose = Microsoft.MixedReality.Toolkit.Utilities.MixedRealityPose;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
 {
     public class LifeTimer : MonoBehaviour
     {

@@ -4,7 +4,7 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-namespace Microsoft.MixedReality.Toolkit.PoseMatching
+namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 {
     public static class MathUtils
     {
