@@ -144,9 +144,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 4
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &215102680
 MeshRenderer:
@@ -239,9 +239,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 7
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &215403935
 MeshRenderer:
@@ -334,9 +334,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 5
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &253942817
 MeshRenderer:
@@ -488,9 +488,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 0
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!1 &428494659
 GameObject:
@@ -524,9 +524,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 2
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &428494661
 MeshRenderer:
@@ -663,9 +663,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 11
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &593204446
 MeshRenderer:
@@ -969,9 +969,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 1
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &661748363
 MeshRenderer:
@@ -1064,9 +1064,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 9
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &873185795
 MeshRenderer:
@@ -1159,9 +1159,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 3
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &1002294505
 MeshRenderer:
@@ -1254,9 +1254,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 10
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &1218517715
 MeshRenderer:
@@ -1349,9 +1349,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 8
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &1654661922
 MeshRenderer:
@@ -1475,9 +1475,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RenderResolution: 6
-  RenderThickness: 0.003
+  RenderThickness: 0.01
   TestShape: 6
-  PrincipalComponentsPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
+  AxisPrefab: {fileID: 3341852519978685113, guid: 9c567a8d3cda50b428e4e00dadbb0577,
     type: 3}
 --- !u!23 &2069353578
 MeshRenderer:

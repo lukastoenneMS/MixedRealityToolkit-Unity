@@ -56,8 +56,11 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
             { ShapeType.TwistedCircle4, CreateTransformedShape(baseCircle2, pose2, scale1) },
         };
 
-        public GameObject PrincipalComponentsPrefab;
-        private GameObject principalComponents;
+        public GameObject AxisPrefab;
+        private GameObject transformViz;
+        private GameObject axisX;
+        private GameObject axisY;
+        private GameObject axisZ;
 
         protected new void Awake()
         {
@@ -67,13 +70,39 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
             {
                 UpdateShapeMesh(shape);
 
-                if (PrincipalComponentsPrefab)
+                if (AxisPrefab)
                 {
-                    principalComponents = GameObject.Instantiate(PrincipalComponentsPrefab, transform);
+                    transformViz = new GameObject("Transform Visualizer");
+                    transformViz.transform.SetParent(transform, false);
+
+                    axisX = GameObject.Instantiate(AxisPrefab, transformViz.transform);
+                    axisY = GameObject.Instantiate(AxisPrefab, transformViz.transform);
+                    axisZ = GameObject.Instantiate(AxisPrefab, transformViz.transform);
+                    axisX.transform.localPosition = Vector3.zero;
+                    axisY.transform.localPosition = Vector3.zero;
+                    axisZ.transform.localPosition = Vector3.zero;
+                    axisX.transform.localRotation = Quaternion.identity;
+                    axisY.transform.localRotation = Quaternion.Euler(0, 0, 90);
+                    axisZ.transform.localRotation = Quaternion.Euler(0, -90, 0);
+
+                    var rendererX = axisX.GetComponentInChildren<Renderer>();
+                    var rendererY = axisY.GetComponentInChildren<Renderer>();
+                    var rendererZ = axisZ.GetComponentInChildren<Renderer>();
+
+                    MaterialPropertyBlock props = new MaterialPropertyBlock();
+                    props.SetColor("_Color", Color.red);
+                    rendererX.SetPropertyBlock(props);
+                    props.SetColor("_Color", Color.green);
+                    rendererY.SetPropertyBlock(props);
+                    props.SetColor("_Color", Color.blue);
+                    rendererZ.SetPropertyBlock(props);
                 }
-                principalComponents.transform.localPosition = shape.PrincipalComponentsTransform.Position;
-                principalComponents.transform.localRotation = shape.PrincipalComponentsTransform.Rotation;
-                principalComponents.transform.localScale = shape.PrincipalComponentsMoments;
+
+                transformViz.transform.localPosition = shape.PrincipalComponentsTransform.Position;
+                transformViz.transform.localRotation = shape.PrincipalComponentsTransform.Rotation;
+                axisX.transform.localScale = new Vector3(shape.PrincipalComponentsMoments.x, 1, 1);
+                axisY.transform.localScale = new Vector3(shape.PrincipalComponentsMoments.y, 1, 1);
+                axisZ.transform.localScale = new Vector3(shape.PrincipalComponentsMoments.z, 1, 1);
             }
         }
 

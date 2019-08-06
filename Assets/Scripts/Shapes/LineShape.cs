@@ -131,27 +131,29 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
             centroid /= 2 * count;
 
             Matrix4x4 I = Matrix4x4.zero;
+            float mass = 0.0f;
             foreach (var line in lines)
             {
                 Vector3 c = 0.5f * (line.end + line.start) - centroid;
                 Vector3 d = (line.end - line.start) * 1.0f / 3.0f;
+                float lineMass = (line.end - line.start).magnitude;
+                mass += lineMass;
 
-                Matrix4x4 Idiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, d.sqrMagnitude);
-                Matrix4x4 Iouter = MathUtils.OuterProduct(d, d);
-                Matrix4x4 Icenter = MathUtils.SubMatrix3x3(Idiag, Iouter);
-
-                Matrix4x4 Icdiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, c.sqrMagnitude);
-                Matrix4x4 Icouter = MathUtils.OuterProduct(c, c);
-                Matrix4x4 Ioffset = MathUtils.SubMatrix3x3(Icdiag, Icouter);
-
-                I = MathUtils.AddMatrix3x3(I, MathUtils.AddMatrix3x3(Icenter, Ioffset));
+                Matrix4x4 Icenter = MathUtils.OuterProduct(d, d);
+                Matrix4x4 Ioffset = MathUtils.OuterProduct(c, c);
+                I = MathUtils.AddMatrix3x3(I, MathUtils.ScalarMultiplyMatrix3x3(MathUtils.AddMatrix3x3(Icenter, Ioffset), lineMass));
+            }
+            if (mass > 0.0f)
+            {
+                I = MathUtils.ScalarMultiplyMatrix3x3(I, 1.0f / mass);
             }
 
             JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
             eigenSolver.Solve(I);
+            eigenSolver.SortEigenValues();
 
             transform = new Pose(centroid, eigenSolver.Q);
-            moments = eigenSolver.S;
+            moments = MathUtils.VSqrt(eigenSolver.S);
         }
     }
 

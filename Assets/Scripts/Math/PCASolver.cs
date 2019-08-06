@@ -45,25 +45,21 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             Matrix4x4 I = Matrix4x4.zero;
             foreach (var p in input)
             {
-                Matrix4x4 Idiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, p.sqrMagnitude);
-                Matrix4x4 Iouter = MathUtils.OuterProduct(p, p);
-                Matrix4x4 Ipoint = MathUtils.SubMatrix3x3(Idiag, Iouter);
-
+                Matrix4x4 Ipoint = MathUtils.OuterProduct(p, p);
                 I = MathUtils.AddMatrix3x3(I, Ipoint);
             }
+            I = MathUtils.ScalarMultiplyMatrix3x3(I, 1.0f / count);
 
-            Matrix4x4 Icdiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, centroid.sqrMagnitude);
-            Matrix4x4 Icouter = MathUtils.OuterProduct(centroid, centroid);
-            Matrix4x4 Ioffset = MathUtils.SubMatrix3x3(Icdiag, Icouter);
-
-            I = MathUtils.AddMatrix3x3(I, Ioffset);
+            Matrix4x4 Icentroid = MathUtils.OuterProduct(centroid, centroid);
+            I = MathUtils.AddMatrix3x3(I, Icentroid);
 
             JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
             eigenSolver.Solve(I);
+            eigenSolver.SortEigenValues();
 
             CentroidOffset = centroid;
             RotationOffset =  eigenSolver.Q;
-            Scale = eigenSolver.S;
+            Scale = MathUtils.VSqrt(eigenSolver.S);
             ConditionNumber = 0.0f;
             ReflectionCase = false;
 

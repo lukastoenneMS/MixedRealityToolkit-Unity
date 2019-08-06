@@ -93,6 +93,37 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             ++iterations;
         }
 
+        private const float oneOverSqrt2 = 0.70710678118654752440084436210485f;
+
+        public void SortEigenValues()
+        {
+            float t;
+            if (W.m00 < W.m11)
+            {
+                t = W.m00; W.m00 = W.m11; W.m11 = t;
+                Q = new Quaternion(oneOverSqrt2 * (+Q.w +Q.y),
+                                   oneOverSqrt2 * (+Q.z -Q.x),
+                                   oneOverSqrt2 * (-Q.y +Q.w),
+                                   oneOverSqrt2 * (-Q.x -Q.z));
+            }
+            if (W.m00 < W.m22)
+            {
+                t = W.m00; W.m00 = W.m22; W.m22 = t;
+                Q = new Quaternion(oneOverSqrt2 * (+Q.w +Q.y),
+                                   oneOverSqrt2 * (+Q.z -Q.x),
+                                   oneOverSqrt2 * (-Q.y +Q.w),
+                                   oneOverSqrt2 * (-Q.x -Q.z));
+            }
+            if (W.m11 < W.m22)
+            {
+                t = W.m11; W.m11 = W.m22; W.m22 = t;
+                Q = new Quaternion(oneOverSqrt2 * (-Q.z +Q.y),
+                                   oneOverSqrt2 * (+Q.w -Q.x),
+                                   oneOverSqrt2 * (+Q.x +Q.w),
+                                   oneOverSqrt2 * (-Q.y -Q.z));
+            }
+        }
+
         public static float ComputeResidual(Matrix4x4 m)
         {
             return m.m10*m.m10 + m.m01*m.m01 + m.m20*m.m20 + m.m02*m.m02 + m.m21*m.m21 + m.m12*m.m12;
