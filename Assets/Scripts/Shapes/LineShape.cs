@@ -135,7 +135,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
             foreach (var line in lines)
             {
                 Vector3 c = 0.5f * (line.end + line.start) - centroid;
-                Vector3 d = (line.end - line.start) * 1.0f / 3.0f;
+                Vector3 d = (line.end - line.start) * 2.0f / 3.0f;
                 float lineMass = (line.end - line.start).magnitude;
                 mass += lineMass;
 

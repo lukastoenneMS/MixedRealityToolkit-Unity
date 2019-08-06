@@ -84,43 +84,40 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             InitPose(points, targetPCAPose, targetPCAMoments);
         }
 
+        private const float debugDrawTime = 3.0f;
+
         private void InitPose(Vector3[] points, Pose targetPCAPose, Vector3 targetPCAMoments)
         {
-            #if true
             pcaSolver.Solve(points);
             Pose inputPCAPose = new Pose(pcaSolver.CentroidOffset, pcaSolver.RotationOffset);
-            #else
-            Pose inputPCAPose = new Pose(MathUtils.GetCentroid(points), Quaternion.identity);
-            #endif
 
-            Pose offset = targetPCAPose.Inverse().Multiply(inputPCAPose);
-            Pose invOffset = offset.Inverse();
-
-            Vector3 moments = Vector3.zero;
+            Pose offset = inputPCAPose.Multiply(targetPCAPose.Inverse());
+            // Pose invOffset = inputPCAPose.Inverse().Multiply(targetPCAPose);
+            Vector3 scale = MathUtils.RScale(pcaSolver.Scale, targetPCAMoments);
+            // Vector3 invScale = MathUtils.RScale(targetPCAMoments, pcaSolver.Scale);
             for (int i = 0; i < points.Length; ++i)
             {
-                points[i] = invOffset.Multiply(points[i]);
-                moments += Vector3.Scale(points[i], points[i]);
+                // points[i] = invOffset.Multiply(points[i].Scale);
+                // points[i] = targetPCAPose.Multiply(inputPCAPose.Inverse().Multiply(points[i]));
+                points[i] = inputPCAPose.Inverse().Multiply(points[i]);
             }
-            // moments /= Mathf.Max(points.Length, 1);
 
             targetOffset = offset;
-            targetScale = MathUtils.VSqrt(MathUtils.RScale(moments, targetPCAMoments));
-            Debug.Log($"SCALE = {targetScale.x:F4}, {targetScale.y:F4}, {targetScale.z:F4}");
+            // targetScale = scale;
+            targetScale = Vector3.one;
+            // targetScale = MathUtils.VSqrt(MathUtils.RScale(moments, targetPCAMoments));
+            // Debug.Log($"SCALE = {targetScale.x:F4}, {targetScale.y:F4}, {targetScale.z:F4}");
 
             for (int i = 0; i < points.Length; ++i)
             {
-                points[i] = MathUtils.RScale(points[i], targetScale);
-                {
-                    Vector3 p = points[i];
-                    float s = 0.0005f;
-                    Vector3 dx = new Vector3(1, 0, 0) * s;
-                    Vector3 dy = new Vector3(0, 1, 0) * s;
-                    Vector3 dz = new Vector3(0, 0, 1) * s;
-                    Debug.DrawLine(p - dx, p + dx, Color.cyan, 3.0f);
-                    Debug.DrawLine(p - dy, p + dy, Color.cyan, 3.0f);
-                    Debug.DrawLine(p - dz, p + dz, Color.cyan, 3.0f);
-                }
+                Vector3 p = points[i];
+                float s = 0.0005f;
+                Vector3 dx = new Vector3(1, 0, 0) * s;
+                Vector3 dy = new Vector3(0, 1, 0) * s;
+                Vector3 dz = new Vector3(0, 0, 1) * s;
+                Debug.DrawLine(p - dx, p + dx, Color.cyan, debugDrawTime);
+                Debug.DrawLine(p - dy, p + dy, Color.cyan, debugDrawTime);
+                Debug.DrawLine(p - dz, p + dz, Color.cyan, debugDrawTime);
             }
         }
 
@@ -162,7 +159,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             {
                 for (int i = 0; i < points.Length; ++i)
                 {
-                    if (i % 5 != 0)
+                    if (i % 20 != 0)
                     {
                         continue;
                     }
@@ -170,7 +167,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
                     // Vector3 b = targetOffset.Multiply(closestPoints[i]);
                     Vector3 a = points[i];
                     Vector3 b = closestPoints[i];
-                    Debug.DrawLine(a, b, Color.white, 3.0f);
+                    Debug.DrawLine(a, b, Color.white, debugDrawTime);
                 }
             }
             return true;
