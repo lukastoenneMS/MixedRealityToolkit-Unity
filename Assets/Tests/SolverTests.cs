@@ -85,17 +85,17 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             new Quaternion(-.5f, -.5f, -.5f, -.5f),
         };
 
-        [Test]
-        public void TestShapePrincipalComponents()
-        {
-            LineShape shape = triangleShape;
+        // [Test]
+        // public void TestShapePrincipalComponents()
+        // {
+        //     LineShape shape = triangleShape;
 
-            foreach (Quaternion initRot in initialRotations)
-            {
+        //     foreach (Quaternion initRot in initialRotations)
+        //     {
                 
-            }
-            // shape.PrincipalComponentsTransform
-        }
+        //     }
+        //     // shape.PrincipalComponentsTransform
+        // }
 
         [Test]
         public void TestPCASolver()

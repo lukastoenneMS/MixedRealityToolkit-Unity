@@ -24,12 +24,17 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
             Circle2,
             Circle3,
             Circle4,
+            TwistedCircle1,
+            TwistedCircle2,
+            TwistedCircle3,
+            TwistedCircle4,
         }
 
         public ShapeType TestShape = ShapeType.Triangle1;
 
         private static LineShape baseTriangle = LineShapeUtils.CreateTriangle(-0.3f, 0.2f, -0.5f, -0.1f, 1.6f, -0.4f);
         private static LineShape baseCircle = LineShapeUtils.CreateCircle(1.0f, 17);
+        private static LineShape baseCircle2 = CreateTwistedCircle(1.0f, 17, 60.0f);
         private static Pose pose0 = Pose.ZeroIdentity;
         private static Pose pose1 = new Pose(new Vector3(.3f, -.5f, -0.2f), Quaternion.identity);
         private static Pose pose2 = new Pose(new Vector3(.3f, -.5f, -0.2f), Quaternion.Euler(82, -20, 193));
@@ -45,6 +50,10 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
             { ShapeType.Circle2, CreateTransformedShape(baseCircle, pose1, scale0) },
             { ShapeType.Circle3, CreateTransformedShape(baseCircle, pose2, scale0) },
             { ShapeType.Circle4, CreateTransformedShape(baseCircle, pose2, scale1) },
+            { ShapeType.TwistedCircle1, baseCircle2 },
+            { ShapeType.TwistedCircle2, CreateTransformedShape(baseCircle2, pose1, scale0) },
+            { ShapeType.TwistedCircle3, CreateTransformedShape(baseCircle2, pose2, scale0) },
+            { ShapeType.TwistedCircle4, CreateTransformedShape(baseCircle2, pose2, scale1) },
         };
 
         public GameObject PrincipalComponentsPrefab;
@@ -64,6 +73,7 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
                 }
                 principalComponents.transform.localPosition = shape.PrincipalComponentsTransform.Position;
                 principalComponents.transform.localRotation = shape.PrincipalComponentsTransform.Rotation;
+                principalComponents.transform.localScale = shape.PrincipalComponentsMoments;
             }
         }
 
@@ -87,6 +97,22 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
 
             result.AddLines(newLines);
             return result;
+        }
+
+        private static LineShape CreateTwistedCircle(float radius, int numPoints, float twistAngle)
+        {
+            Vector3[] points = new Vector3[numPoints];
+            for (int i = 0; i < numPoints; ++i)
+            {
+                float a = 2.0f * Mathf.PI * (float)i / (float)(numPoints - 1);
+                float b = Mathf.Cos(a) * Mathf.Deg2Rad * twistAngle;
+                points[i] = new Vector3(Mathf.Cos(a), Mathf.Sin(a) * Mathf.Cos(b), Mathf.Sin(a) * Mathf.Sin(b)) * radius;
+            }
+
+            LineShape shape = new LineShape();
+            shape.AddClosedShape(points);
+
+            return shape;
         }
     }
 }
