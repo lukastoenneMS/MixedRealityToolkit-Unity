@@ -56,6 +56,91 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             return new Vector3(Mathf.Sqrt(v.x), Mathf.Sqrt(v.y), Mathf.Sqrt(v.z));
         }
 
+        public static Matrix4x4 OuterProduct(Vector3 a, Vector3 b)
+        {
+            Matrix4x4 r = new Matrix4x4();
+            r.m00 = a.x * b.x;
+            r.m10 = a.y * b.x;
+            r.m20 = a.z * b.x;
+
+            r.m01 = a.x * b.y;
+            r.m11 = a.y * b.y;
+            r.m21 = a.z * b.y;
+
+            r.m02 = a.x * b.z;
+            r.m12 = a.y * b.z;
+            r.m22 = a.z * b.z;
+            return r;
+        }
+
+        public static Matrix4x4 AddMatrix3x3(Matrix4x4 a, Matrix4x4 b)
+        {
+            Matrix4x4 r = new Matrix4x4();
+            r.m00 = a.m00 + b.m00;
+            r.m10 = a.m10 + b.m10;
+            r.m20 = a.m20 + b.m20;
+
+            r.m01 = a.m01 + b.m01;
+            r.m11 = a.m11 + b.m11;
+            r.m21 = a.m21 + b.m21;
+
+            r.m02 = a.m02 + b.m02;
+            r.m12 = a.m12 + b.m12;
+            r.m22 = a.m22 + b.m22;
+            return r;
+        }
+
+        public static Matrix4x4 SubMatrix3x3(Matrix4x4 a, Matrix4x4 b)
+        {
+            Matrix4x4 r = new Matrix4x4();
+            r.m00 = a.m00 - b.m00;
+            r.m10 = a.m10 - b.m10;
+            r.m20 = a.m20 - b.m20;
+
+            r.m01 = a.m01 - b.m01;
+            r.m11 = a.m11 - b.m11;
+            r.m21 = a.m21 - b.m21;
+
+            r.m02 = a.m02 - b.m02;
+            r.m12 = a.m12 - b.m12;
+            r.m22 = a.m22 - b.m22;
+            return r;
+        }
+
+        public static Matrix4x4 ScalarMultiplyMatrix3x3(Matrix4x4 a, float s)
+        {
+            Matrix4x4 r = new Matrix4x4();
+            r.m00 = a.m00 * s;
+            r.m10 = a.m10 * s;
+            r.m20 = a.m20 * s;
+
+            r.m01 = a.m01 * s;
+            r.m11 = a.m11 * s;
+            r.m21 = a.m21 * s;
+
+            r.m02 = a.m02 * s;
+            r.m12 = a.m12 * s;
+            r.m22 = a.m22 * s;
+            return r;
+        }
+
+        public static float CopySign(float value, float copySignFrom)
+        {
+            bool fromPos = value >= 0;
+            bool toPos = copySignFrom >= 0;
+            return fromPos == toPos ? value : -value;
+        }
+
+        public static Quaternion CopySign(Quaternion value, Quaternion copySignFrom)
+        {
+            return new Quaternion(
+                CopySign(value.x, copySignFrom.x),
+                CopySign(value.y, copySignFrom.y),
+                CopySign(value.z, copySignFrom.z),
+                CopySign(value.w, copySignFrom.w)
+            );
+        }
+
         public static float GetMean(float[] values)
         {
             float sum = 0.0f;

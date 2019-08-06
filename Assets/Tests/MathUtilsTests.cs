@@ -186,7 +186,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
                     A.GetColumn(1).sqrMagnitude,
                     A.GetColumn(2).sqrMagnitude));
                 Matrix4x4 Qm = Matrix4x4.Rotate(solver.Q);
-                Matrix4x4 R = Qm * solver.S * Qm.transpose;
+                Matrix4x4 R = Qm * solver.W * Qm.transpose;
                 for (int i = 0; i < 3; ++i)
                 {
                     for (int j = 0; j < 3; ++j)

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using MathNet.Numerics.LinearAlgebra;
 using Microsoft.MixedReality.Toolkit.Utilities.MathSolvers;
 using System;
 using System.Collections.Generic;
@@ -65,12 +66,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
             return Mathf.Max(2, (int)Mathf.Ceil(length / maxSampleDistance));
         }
 
-        // XXX arbitrary?
-        public int MinimumPointCount => 8;
-
         public void AddLines(IEnumerable<Line> addedLines)
         {
             lines.AddRange(addedLines);
+
+            Update();
         }
 
         public void AddClosedShape(IEnumerable<Vector3> points)
@@ -87,6 +87,8 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
                 }
                 lines.Add(new Line() {start=prev, end=first});
             }
+
+            Update();
         }
 
         public void AddOpenShape(IEnumerable<Vector3> points)
@@ -101,14 +103,66 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
                     prev = iter.Current;
                 }
             }
+
+            Update();
         }
 
         private void Update()
         {
-            
+            ComputePrincipalComponents(out principalComponentsTransform, out principalComponentsMoments);
+        }
 
-            principalComponentsTransform = Pose.ZeroIdentity;
-            principalComponentsMoments = Vector3.one;
+        private void ComputePrincipalComponents(out Pose transform, out Vector3 moments)
+        {
+            int count = lines.Count;
+            if (count == 0)
+            {
+                transform = Pose.ZeroIdentity;
+                moments = Vector3.one;
+                return;
+            }
+
+            Vector3 centroid = Vector3.zero;
+            foreach (var line in lines)
+            {
+                centroid += line.start;
+                centroid += line.end;
+            }
+            centroid /= 2 * count;
+
+            Matrix4x4 I = Matrix4x4.zero;
+            foreach (var line in lines)
+            {
+                Vector3 c = 0.5f * (line.end + line.start);
+                Vector3 d = 0.5f * (line.end - line.start);
+
+                Matrix4x4 Idiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, d.sqrMagnitude / 3.0f);
+                Matrix4x4 Iouter = MathUtils.ScalarMultiplyMatrix3x3(MathUtils.OuterProduct(d, d), 1.0f / 3.0f);
+                Matrix4x4 Icenter = MathUtils.AddMatrix3x3(Idiag, Iouter);
+
+                Matrix4x4 Icdiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, c.sqrMagnitude);
+                Matrix4x4 Icouter = MathUtils.OuterProduct(c, c);
+                Matrix4x4 Ioffset = MathUtils.AddMatrix3x3(Icdiag, Icouter);
+
+                I = MathUtils.AddMatrix3x3(I, MathUtils.AddMatrix3x3(Icenter, Ioffset));
+                // I = MathUtils.AddMatrix3x3(I, MathUtils.ScalarMultiplyMatrix3x3(MathUtils.OuterProduct(d, d), 1.0f / 3.0f));
+                // Matrix4x4 centerCov = MathUtils.OuterProduct(line.start, line.end);
+                // Matrix4x4 lineCov = MathUtils.ScalarMultiplyMatrix3x3(MathUtils.OuterProduct(d, d), 1.0f / 3.0f);
+                // I = MathUtils.AddMatrix3x3(I, MathUtils.AddMatrix3x3(centerCov, lineCov));
+                // int N = 1000;
+                // for (int i = 0; i < N; ++i)
+                // {
+                //     float lambda = (float)i / (float)(N-1) - 0.5f;
+                //     Vector3 q = centroid + lambda * d;
+                //     I = MathUtils.AddMatrix3x3(I, MathUtils.OuterProduct(d, d));
+                // }
+            }
+
+            JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
+            eigenSolver.Solve(I);
+
+            transform = new Pose(centroid, eigenSolver.Q);
+            moments = eigenSolver.S;
         }
     }
 

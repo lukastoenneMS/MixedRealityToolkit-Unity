@@ -19,7 +19,8 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
     /// </remarks>
     public class JacobiEigenSolver
     {
-        public Matrix4x4 S = Matrix4x4.identity;
+        public Matrix4x4 W = Matrix4x4.identity;
+        public Vector3 S => new Vector3(W.m00, W.m11, W.m22);
         /// <remarks>
         /// The paper encourages the use of quaternion-based Givens rotations for efficiency.
         /// Since we are using Unity matrix and quaternion types we have to convert to matrix anyway,
@@ -55,10 +56,10 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 
         public void Init(Matrix4x4 A)
         {
-            S = A;
+            W = A;
             Q = Quaternion.identity;
 
-            residual = ComputeResidual(S);
+            residual = ComputeResidual(W);
 
             iterations = 0;
             axisPair = 0;
@@ -70,28 +71,25 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             switch (axisPair)
             {
                 case 0:
-                    MathUtils.ApproximateGivensRotationQuaternion(S.m00, S.m10, S.m11, out Qk.z, out Qk.w);
+                    MathUtils.ApproximateGivensRotationQuaternion(W.m00, W.m10, W.m11, out Qk.z, out Qk.w);
                     axisPair = 1;
                     break;
                 case 1:
-                    MathUtils.ApproximateGivensRotationQuaternion(S.m22, S.m02, S.m00, out Qk.y, out Qk.w);
+                    MathUtils.ApproximateGivensRotationQuaternion(W.m22, W.m02, W.m00, out Qk.y, out Qk.w);
                     axisPair = 2;
                     break;
                 case 2:
-                    MathUtils.ApproximateGivensRotationQuaternion(S.m11, S.m21, S.m22, out Qk.x, out Qk.w);
+                    MathUtils.ApproximateGivensRotationQuaternion(W.m11, W.m21, W.m22, out Qk.x, out Qk.w);
                     axisPair = 0;
                     break;
             }
 
             Q = Q * Qk;
             Matrix4x4 MQk = Matrix4x4.Rotate(Qk);
-            S = MQk.transpose * S * MQk;
-
-            //string str = $"[{S.m00:F3} {S.m01:F3} {S.m02:F3}]\n[{S.m10:F3} {S.m11:F3} {S.m12:F3}]\n[{S.m20:F3} {S.m21:F3} {S.m22:F3}]";
-            //Debug.Log(str);
+            W = MQk.transpose * W * MQk;
 
             // XXX residual could be computed cheaply by subtracting s^2 from current residual instead (see Section 2.1 of the paper)
-            residual = ComputeResidual(S);
+            residual = ComputeResidual(W);
             ++iterations;
         }
 

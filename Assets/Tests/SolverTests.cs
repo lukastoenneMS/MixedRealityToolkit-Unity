@@ -18,10 +18,10 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
         LineShape shape;
         System.Random rng;
 
-        public LineShapeRandomizer(LineShape shape)
+        public LineShapeRandomizer(LineShape shape, int seed)
         {
             this.shape = shape;
-            this.rng = new System.Random();
+            this.rng = new System.Random(seed);
         }
 
         public Vector3[] GetRandomPoints(int count, float maxDist)
@@ -50,33 +50,88 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
     {
         LineShape triangleShape = LineShapeUtils.CreateTriangle(-0.3f, 0.2f, -0.5f, -0.1f, 1.6f, -0.4f);
 
+        int seed = 2296343;
+        float expectedPositionEpsilon = 0.2f;
+        float expectedAngleEpsilon = 1.0e-1f;
+
+        // Hurwitz units that form the icosahedral group
+        Quaternion[] initialRotations = new Quaternion[]
+        {
+            new Quaternion(+1, 0, 0, 0),
+            new Quaternion(-1, 0, 0, 0),
+            new Quaternion(0, +1, 0, 0),
+            new Quaternion(0, -1, 0, 0),
+            new Quaternion(0, 0, +1, 0),
+            new Quaternion(0, 0, -1, 0),
+            new Quaternion(0, 0, 0, +1),
+            new Quaternion(0, 0, 0, -1),
+
+            new Quaternion(+.5f, +.5f, +.5f, +.5f),
+            new Quaternion(-.5f, +.5f, +.5f, +.5f),
+            new Quaternion(+.5f, -.5f, +.5f, +.5f),
+            new Quaternion(-.5f, -.5f, +.5f, +.5f),
+            new Quaternion(+.5f, +.5f, -.5f, +.5f),
+            new Quaternion(-.5f, +.5f, -.5f, +.5f),
+            new Quaternion(+.5f, -.5f, -.5f, +.5f),
+            new Quaternion(-.5f, -.5f, -.5f, +.5f),
+
+            new Quaternion(+.5f, +.5f, +.5f, -.5f),
+            new Quaternion(-.5f, +.5f, +.5f, -.5f),
+            new Quaternion(+.5f, -.5f, +.5f, -.5f),
+            new Quaternion(-.5f, -.5f, +.5f, -.5f),
+            new Quaternion(+.5f, +.5f, -.5f, -.5f),
+            new Quaternion(-.5f, +.5f, -.5f, -.5f),
+            new Quaternion(+.5f, -.5f, -.5f, -.5f),
+            new Quaternion(-.5f, -.5f, -.5f, -.5f),
+        };
+
+        [Test]
+        public void TestShapePrincipalComponents()
+        {
+            LineShape shape = triangleShape;
+
+            foreach (Quaternion initRot in initialRotations)
+            {
+                
+            }
+            // shape.PrincipalComponentsTransform
+        }
+
         [Test]
         public void TestPCASolver()
         {
             LineShape shape = triangleShape;
             PCASolver pcaSolver = new PCASolver();
-            var randomizer = new LineShapeRandomizer(shape);
+            var randomizer = new LineShapeRandomizer(shape, seed);
 
             int N = 100;
             float maxDist = 0.01f;
             Vector3[] points = randomizer.GetRandomPoints(N, maxDist);
 
-            Vector3 translation = new Vector3(3.6f, 0.2f, -86.2f);
-            Quaternion rotation = Quaternion.Euler(92.0f, -33.4f, -284.0f);
+            Pose offset = new Pose(new Vector3(3.6f, 0.2f, -86.2f), Quaternion.Euler(92.0f, -33.4f, -284.0f));
             for (int i = 0; i < points.Length; ++i)
             {
-                points[i] = rotation * points[i] + translation;
+                points[i] = offset.Multiply(points[i]);
             }
 
             pcaSolver.Solve(points);
-            
-            Vector3 translationDelta = pcaSolver.CentroidOffset - shape.PrincipalComponentsTransform.Position;
-            Quaternion rotationDelta = pcaSolver.RotationOffset * Quaternion.Inverse(shape.PrincipalComponentsTransform.Rotation);
-            rotationDelta.ToAngleAxis(out float rotationDeltaAngle, out Vector3 rotationDeltaAxis);
-            Debug.Log($"DELTA: {(translationDelta).magnitude} {rotationDeltaAngle}");
-            // Debug.Assert(pcaSolver.CentroidOffset)
 
-            // Pose inputPCAPose = new Pose(pcaSolver.CentroidOffset, pcaSolver.RotationOffset);
+            Vector3 expectedCentroid = offset.Multiply(shape.PrincipalComponentsTransform.Position);
+            Quaternion expectedRotation = offset.Multiply(shape.PrincipalComponentsTransform.Rotation);
+
+            Vector3 pointsCentroid = pcaSolver.CentroidOffset;
+            // Rotation can be rotated 180 on any axis, copy sign from expected rotation to match axis directions
+            Quaternion pointsRotation = MathUtils.CopySign(pcaSolver.RotationOffset, expectedRotation);
+
+            Vector3 centroidDelta = pointsCentroid - expectedCentroid;
+            Quaternion rotationDelta = pointsRotation * Quaternion.Inverse(expectedRotation);
+            rotationDelta.ToAngleAxis(out float rotationDeltaAngle, out Vector3 rotationDeltaAxis);
+            // Move angle to -180..180 range instead of 0..360 for comparisons
+            rotationDeltaAngle = rotationDeltaAngle < 180.0f ? rotationDeltaAngle : rotationDeltaAngle - 360.0f;
+
+            Assert.AreEqual(0.0f, centroidDelta.magnitude, expectedPositionEpsilon);
+            Assert.AreEqual(0.0f, rotationDeltaAngle, expectedAngleEpsilon);
+            Debug.Log($"DELTA: {centroidDelta.magnitude} {rotationDeltaAngle}");
         }
     }
 }

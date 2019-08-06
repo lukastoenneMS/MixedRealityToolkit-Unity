@@ -18,6 +18,45 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 
         private Vector3[] inputPoints;
 
+#if false
+        public bool Solve(Vector3[] input)
+        {
+            Init(input);
+
+            int count = input.Length;
+            if (count == 0)
+            {
+                CentroidOffset = Vector3.zero;
+                RotationOffset =  Quaternion.identity;
+                ConditionNumber = 0.0f;
+                ReflectionCase = false;
+                return false;
+            }
+
+            Vector3 centroid = Vector3.zero;
+            foreach (var p in input)
+            {
+                centroid += p;
+            }
+            centroid /= count;
+
+            Matrix4x4 I = Matrix4x4.zero;
+            foreach (var p in input)
+            {
+                Vector3 d = line.end - line.start;
+                Matrix4x4 diag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, d.sqrMagnitude);
+                I = MathUtils.AddMatrix3x3(I, MathUtils.SubMatrix3x3(diag, MathUtils.OuterProduct(d, d)));
+            }
+
+            JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
+            eigenSolver.Solve(I);
+
+            transform = new Pose(centroid, eigenSolver.Q.normalized);
+            moments = eigenSolver.S;
+
+            return true;
+        }
+#else
         public bool Solve(Vector3[] input)
         {
             Init(input);
@@ -96,6 +135,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             ConditionNumber = svdSolver.ConditionNumber;
             return true;
         }
+#endif
 
         private void Init(Vector3[] input)
         {
