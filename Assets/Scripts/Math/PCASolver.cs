@@ -13,12 +13,13 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
     {
         public Vector3 CentroidOffset;
         public Quaternion RotationOffset;
+        public Vector3 Scale;
         public bool ReflectionCase;
         public float ConditionNumber;
 
         private Vector3[] inputPoints;
 
-#if false
+#if true
         public bool Solve(Vector3[] input)
         {
             Init(input);
@@ -28,6 +29,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             {
                 CentroidOffset = Vector3.zero;
                 RotationOffset =  Quaternion.identity;
+                Scale = Vector3.one;
                 ConditionNumber = 0.0f;
                 ReflectionCase = false;
                 return false;
@@ -43,16 +45,27 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             Matrix4x4 I = Matrix4x4.zero;
             foreach (var p in input)
             {
-                Vector3 d = line.end - line.start;
-                Matrix4x4 diag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, d.sqrMagnitude);
-                I = MathUtils.AddMatrix3x3(I, MathUtils.SubMatrix3x3(diag, MathUtils.OuterProduct(d, d)));
+                Matrix4x4 Idiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, p.sqrMagnitude);
+                Matrix4x4 Iouter = MathUtils.OuterProduct(p, p);
+                Matrix4x4 Ipoint = MathUtils.SubMatrix3x3(Idiag, Iouter);
+
+                I = MathUtils.AddMatrix3x3(I, Ipoint);
             }
+
+            Matrix4x4 Icdiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, centroid.sqrMagnitude);
+            Matrix4x4 Icouter = MathUtils.OuterProduct(centroid, centroid);
+            Matrix4x4 Ioffset = MathUtils.SubMatrix3x3(Icdiag, Icouter);
+
+            I = MathUtils.AddMatrix3x3(I, Ioffset);
 
             JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
             eigenSolver.Solve(I);
 
-            transform = new Pose(centroid, eigenSolver.Q.normalized);
-            moments = eigenSolver.S;
+            CentroidOffset = centroid;
+            RotationOffset =  eigenSolver.Q;
+            Scale = eigenSolver.S;
+            ConditionNumber = 0.0f;
+            ReflectionCase = false;
 
             return true;
         }
@@ -65,6 +78,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             {
                 CentroidOffset = Vector3.zero;
                 RotationOffset =  Quaternion.identity;
+                Scale = Vector3.one;
                 ConditionNumber = 0.0f;
                 ReflectionCase = false;
                 return false;
@@ -74,6 +88,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             {
                 CentroidOffset = inputPoints[0];
                 RotationOffset =  Quaternion.identity;
+                Scale = Vector3.one;
                 ConditionNumber = 0.0f;
                 ReflectionCase = false;
                 return true;
@@ -88,6 +103,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 
                 CentroidOffset = toCentroid;
                 RotationOffset = Quaternion.FromToRotation(vFrom, vTo);
+                Scale = Vector3.one;
                 ConditionNumber = 0.0f;
                 ReflectionCase = false;
                 return true;
@@ -132,6 +148,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
 
             CentroidOffset = toCentroid;
             RotationOffset = GetQuaternionFromNMatrix(rotationMatrix);
+            Scale = Vector3.one;
             ConditionNumber = svdSolver.ConditionNumber;
             return true;
         }

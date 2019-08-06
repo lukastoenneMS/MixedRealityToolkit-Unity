@@ -52,7 +52,7 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
         public static LineShape CreateTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
         {
             LineShape shape = new LineShape();
-            shape.AddOpenShape(new Vector3[]
+            shape.AddClosedShape(new Vector3[]
             {
                 new Vector3(x1, y1),
                 new Vector3(x2, y2),

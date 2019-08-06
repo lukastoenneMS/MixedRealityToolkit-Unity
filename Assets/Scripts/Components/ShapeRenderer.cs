@@ -29,7 +29,7 @@ namespace Microsoft.MixedReality.Toolkit.Examples.Demos.ShapeMatching
             }
         }
 
-        void Awake()
+        protected void Awake()
         {
             meshFilter = GetComponent<MeshFilter>();
         }

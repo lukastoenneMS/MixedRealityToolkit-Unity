@@ -133,29 +133,18 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
             Matrix4x4 I = Matrix4x4.zero;
             foreach (var line in lines)
             {
-                Vector3 c = 0.5f * (line.end + line.start);
-                Vector3 d = 0.5f * (line.end - line.start);
+                Vector3 c = 0.5f * (line.end + line.start) - centroid;
+                Vector3 d = (line.end - line.start) * 1.0f / 3.0f;
 
-                Matrix4x4 Idiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, d.sqrMagnitude / 3.0f);
-                Matrix4x4 Iouter = MathUtils.ScalarMultiplyMatrix3x3(MathUtils.OuterProduct(d, d), 1.0f / 3.0f);
-                Matrix4x4 Icenter = MathUtils.AddMatrix3x3(Idiag, Iouter);
+                Matrix4x4 Idiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, d.sqrMagnitude);
+                Matrix4x4 Iouter = MathUtils.OuterProduct(d, d);
+                Matrix4x4 Icenter = MathUtils.SubMatrix3x3(Idiag, Iouter);
 
                 Matrix4x4 Icdiag = MathUtils.ScalarMultiplyMatrix3x3(Matrix4x4.identity, c.sqrMagnitude);
                 Matrix4x4 Icouter = MathUtils.OuterProduct(c, c);
-                Matrix4x4 Ioffset = MathUtils.AddMatrix3x3(Icdiag, Icouter);
+                Matrix4x4 Ioffset = MathUtils.SubMatrix3x3(Icdiag, Icouter);
 
                 I = MathUtils.AddMatrix3x3(I, MathUtils.AddMatrix3x3(Icenter, Ioffset));
-                // I = MathUtils.AddMatrix3x3(I, MathUtils.ScalarMultiplyMatrix3x3(MathUtils.OuterProduct(d, d), 1.0f / 3.0f));
-                // Matrix4x4 centerCov = MathUtils.OuterProduct(line.start, line.end);
-                // Matrix4x4 lineCov = MathUtils.ScalarMultiplyMatrix3x3(MathUtils.OuterProduct(d, d), 1.0f / 3.0f);
-                // I = MathUtils.AddMatrix3x3(I, MathUtils.AddMatrix3x3(centerCov, lineCov));
-                // int N = 1000;
-                // for (int i = 0; i < N; ++i)
-                // {
-                //     float lambda = (float)i / (float)(N-1) - 0.5f;
-                //     Vector3 q = centroid + lambda * d;
-                //     I = MathUtils.AddMatrix3x3(I, MathUtils.OuterProduct(d, d));
-                // }
             }
 
             JacobiEigenSolver eigenSolver = new JacobiEigenSolver();
