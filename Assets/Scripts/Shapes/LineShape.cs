@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using MathNet.Numerics.LinearAlgebra;
 using Microsoft.MixedReality.Toolkit.Utilities.MathSolvers;
 using System;
 using System.Collections.Generic;
@@ -131,21 +130,11 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.ShapeMatching
             centroid /= 2 * count;
 
             Matrix4x4 I = Matrix4x4.zero;
-            float mass = 0.0f;
             foreach (var line in lines)
             {
-                Vector3 c = 0.5f * (line.end + line.start) - centroid;
                 Vector3 d = (line.end - line.start) * 2.0f / 3.0f;
-                float lineMass = (line.end - line.start).magnitude;
-                mass += lineMass;
-
                 Matrix4x4 Icenter = MathUtils.OuterProduct(d, d);
-                Matrix4x4 Ioffset = MathUtils.OuterProduct(c, c);
-                I = MathUtils.AddMatrix3x3(I, MathUtils.ScalarMultiplyMatrix3x3(MathUtils.AddMatrix3x3(Icenter, Ioffset), lineMass));
-            }
-            if (mass > 0.0f)
-            {
-                I = MathUtils.ScalarMultiplyMatrix3x3(I, 1.0f / mass);
+                I = MathUtils.AddMatrix3x3(I, Icenter);
             }
 
             JacobiEigenSolver eigenSolver = new JacobiEigenSolver();

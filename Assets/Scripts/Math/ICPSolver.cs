@@ -92,33 +92,59 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
             Pose inputPCAPose = new Pose(pcaSolver.CentroidOffset, pcaSolver.RotationOffset);
 
             Pose offset = inputPCAPose.Multiply(targetPCAPose.Inverse());
-            // Pose invOffset = inputPCAPose.Inverse().Multiply(targetPCAPose);
+            // Pose invOffset = targetPCAPose.Multiply(inputPCAPose.Inverse());
             Vector3 scale = MathUtils.RScale(pcaSolver.Scale, targetPCAMoments);
-            // Vector3 invScale = MathUtils.RScale(targetPCAMoments, pcaSolver.Scale);
+            Vector3 invScale = MathUtils.RScale(targetPCAMoments, pcaSolver.Scale);
+
+            {
+                Vector3 c = targetPCAPose.Position;
+                float s = 0.3f;
+                Vector3 x = c + targetPCAPose.Rotation * new Vector3(1, 0, 0) * s * targetPCAMoments.x;
+                Vector3 y = c + targetPCAPose.Rotation * new Vector3(0, 1, 0) * s * targetPCAMoments.y;
+                Vector3 z = c + targetPCAPose.Rotation * new Vector3(0, 0, 1) * s * targetPCAMoments.z;
+
+                Debug.DrawLine(c, x, Color.red, debugDrawTime);
+                Debug.DrawLine(c, y, Color.green, debugDrawTime);
+                Debug.DrawLine(c, z, Color.blue, debugDrawTime);
+            }
+            {
+                Pose tfm = targetPCAPose.Multiply(inputPCAPose.Inverse());
+                // Pose tfm = Pose.ZeroIdentity;
+                Vector3 c = tfm.Multiply(pcaSolver.CentroidOffset);
+                float s = 0.3f;
+                Vector3 x = c + tfm.Rotation * pcaSolver.RotationOffset * new Vector3(1, 0, 0) * s * pcaSolver.Scale.x;
+                Vector3 y = c + tfm.Rotation * pcaSolver.RotationOffset * new Vector3(0, 1, 0) * s * pcaSolver.Scale.y;
+                Vector3 z = c + tfm.Rotation * pcaSolver.RotationOffset * new Vector3(0, 0, 1) * s * pcaSolver.Scale.z;
+
+                Debug.DrawLine(c, x, Color.magenta, debugDrawTime);
+                Debug.DrawLine(c, y, Color.yellow, debugDrawTime);
+                Debug.DrawLine(c, z, Color.cyan, debugDrawTime);
+            }
+
             for (int i = 0; i < points.Length; ++i)
             {
-                // points[i] = invOffset.Multiply(points[i].Scale);
-                // points[i] = targetPCAPose.Multiply(inputPCAPose.Inverse().Multiply(points[i]));
                 points[i] = inputPCAPose.Inverse().Multiply(points[i]);
+                points[i].Scale(scale);
+                points[i] = targetPCAPose.Multiply(points[i]);
             }
 
             targetOffset = offset;
-            // targetScale = scale;
-            targetScale = Vector3.one;
+            targetScale = invScale;
+            // targetScale = Vector3.one;
             // targetScale = MathUtils.VSqrt(MathUtils.RScale(moments, targetPCAMoments));
             // Debug.Log($"SCALE = {targetScale.x:F4}, {targetScale.y:F4}, {targetScale.z:F4}");
 
-            for (int i = 0; i < points.Length; ++i)
-            {
-                Vector3 p = points[i];
-                float s = 0.0005f;
-                Vector3 dx = new Vector3(1, 0, 0) * s;
-                Vector3 dy = new Vector3(0, 1, 0) * s;
-                Vector3 dz = new Vector3(0, 0, 1) * s;
-                Debug.DrawLine(p - dx, p + dx, Color.cyan, debugDrawTime);
-                Debug.DrawLine(p - dy, p + dy, Color.cyan, debugDrawTime);
-                Debug.DrawLine(p - dz, p + dz, Color.cyan, debugDrawTime);
-            }
+            // for (int i = 0; i < points.Length; ++i)
+            // {
+            //     Vector3 p = points[i];
+            //     float s = 0.0005f;
+            //     Vector3 dx = new Vector3(1, 0, 0) * s;
+            //     Vector3 dy = new Vector3(0, 1, 0) * s;
+            //     Vector3 dz = new Vector3(0, 0, 1) * s;
+            //     Debug.DrawLine(p - dx, p + dx, Color.cyan, debugDrawTime);
+            //     Debug.DrawLine(p - dy, p + dy, Color.cyan, debugDrawTime);
+            //     Debug.DrawLine(p - dz, p + dz, Color.cyan, debugDrawTime);
+            // }
         }
 
         public bool SolveStep()
@@ -155,21 +181,19 @@ namespace Microsoft.MixedReality.Toolkit.Utilities.MathSolvers
         private bool FindClosestPoints()
         {
             targetPointFinder.FindClosestPoints(points, closestPoints);
-            if (DebugDrawingEnabled)
-            {
-                for (int i = 0; i < points.Length; ++i)
-                {
-                    if (i % 20 != 0)
-                    {
-                        continue;
-                    }
-                    // Vector3 a = targetOffset.Multiply(points[i]);
-                    // Vector3 b = targetOffset.Multiply(closestPoints[i]);
-                    Vector3 a = points[i];
-                    Vector3 b = closestPoints[i];
-                    Debug.DrawLine(a, b, Color.white, debugDrawTime);
-                }
-            }
+            // if (DebugDrawingEnabled)
+            // {
+            //     for (int i = 0; i < points.Length; ++i)
+            //     {
+            //         if (i % 20 != 0)
+            //         {
+            //             continue;
+            //         }
+            //         Vector3 a = points[i];
+            //         Vector3 b = closestPoints[i];
+            //         Debug.DrawLine(a, b, Color.white, debugDrawTime);
+            //     }
+            // }
             return true;
         }
     }
